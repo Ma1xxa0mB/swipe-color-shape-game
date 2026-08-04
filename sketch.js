@@ -26,7 +26,8 @@ const GAME_CONFIG = {
   level8StartScore: 36,
   level9StartScore: 42,
   level10StartScore: 48,
-  level11StartScore: 54,
+  level11StartScore: 58,
+  level11IntroDurationMs: 1400,
   level10WallRotationIntervalMs: 1000,
   level10WallRotationDurationMs: 180,
   level10GravityMultiplier: 0.55,
@@ -121,7 +122,7 @@ const NEON_COLORS = {
   green: "#39ff72",
   red: "#ff3048",
   blue: "#3192ff",
-  yellow: "#ffbd3f"
+  yellow: "#e2ff05"
 };
 
 const RECEIVER_DEFINITIONS = [
@@ -1113,6 +1114,8 @@ class NeonSwipeGame {
     this.lastAnimationTime = 0;
     this.centerMessage = "SWIPE";
     this.centerMessageUntil = 0;
+    this.hasPlayedLevel11Intro = false;
+    this.level11IntroEndsAt = 0;
   }
 
   start() {
@@ -1135,6 +1138,8 @@ class NeonSwipeGame {
     this.dynamicRuleSequence.reset();
     this.score = 0;
     this.state = "playing";
+    this.hasPlayedLevel11Intro = false;
+    this.level11IntroEndsAt = 0;
     this.currentShapes = [];
     this.activeShapeIndex = null;
     this.currentChallengePhase = null;
@@ -1150,6 +1155,8 @@ class NeonSwipeGame {
     this.dynamicRuleSequence.reset();
     this.score = 0;
     this.state = "waiting";
+    this.hasPlayedLevel11Intro = false;
+    this.level11IntroEndsAt = 0;
     this.activeShape = null;
     this.currentShapes = [];
     this.activeShapeIndex = null;
@@ -1169,6 +1176,8 @@ class NeonSwipeGame {
       this.updateActiveShape(deltaSeconds);
     } else if (this.state === "receiverPermutation") {
       this.updateReceiverPermutation(currentTime);
+    } else if (this.state === "level11Intro") {
+      this.updateLevel11Intro(currentTime);
     } else {
       this.updateLevel10WallRotation(currentTime);
     }
@@ -1343,6 +1352,11 @@ class NeonSwipeGame {
       this.showRuleTransitionFeedback(this.currentRuleName);
     }
 
+    if (this.shouldStartLevel11Intro(resolvedChallengePhase)) {
+      this.startLevel11Intro();
+      return;
+    }
+
     if (this.phasePermutesReceiversAfterSuccess(resolvedChallengePhase)) {
       this.startReceiverPermutation(resolvedChallengePhase);
       return;
@@ -1402,6 +1416,30 @@ class NeonSwipeGame {
     this.activeShapeIndex = null;
     this.currentChallengePhase = null;
     this.receiverPermutation.startPermutation(performance.now(), permutationPhase);
+  }
+
+  updateLevel11Intro(currentTime) {
+    this.level10WallRotation.update(currentTime, true);
+
+    if (currentTime < this.level11IntroEndsAt) return;
+
+    this.state = "playing";
+    this.spawnNextChallenge();
+  }
+
+  startLevel11Intro() {
+    const introStartedAt = performance.now();
+
+    this.clearPendingDuoSpawn();
+    this.level10WallRotation.start(introStartedAt);
+    this.level10WallRotation.rotateClockwise(introStartedAt);
+    this.hasPlayedLevel11Intro = true;
+    this.level11IntroEndsAt = introStartedAt + GAME_CONFIG.level11IntroDurationMs;
+    this.state = "level11Intro";
+    this.activeShape = null;
+    this.currentShapes = [];
+    this.activeShapeIndex = null;
+    this.currentChallengePhase = null;
   }
 
   updateLevel10WallRotation(currentTime) {
@@ -1604,6 +1642,11 @@ class NeonSwipeGame {
   }
 
   drawCenterLabel(currentTime) {
+    if (this.state === "level11Intro") {
+      this.drawLevel11IntroLabel();
+      return;
+    }
+
     const shouldShowTemporaryMessage = currentTime < this.centerMessageUntil || this.state === "ended" || this.state === "waiting";
     const label = shouldShowTemporaryMessage ? this.centerMessage : this.visibleRuleName;
     const isRuleLabel = label === "COLOR" || label === "SHAPE";
@@ -1622,6 +1665,28 @@ class NeonSwipeGame {
     this.context.font = `900 ${this.scaler.x(labelSize)}px ui-sans-serif, system-ui`;
     this.context.letterSpacing = `${this.scaler.x(isRuleLabel ? 13 : (isStartLabel ? 10 : 4))}px`;
     this.context.fillText(label, this.scaler.canvasWidth / 2, this.getCenterLabelY(isRuleLabel));
+    this.context.restore();
+  }
+
+  drawLevel11IntroLabel() {
+    const lines = ["LEVEL 11", "COLORS ROTATE", "↻ CLOCKWISE"];
+    const centerY = this.scaler.canvasHeight / 2 - this.scaler.y(28);
+    const lineGap = this.scaler.y(52);
+
+    this.context.save();
+    this.context.fillStyle = "#f8fbff";
+    this.context.shadowColor = "rgba(255, 255, 255, 0.92)";
+    this.context.shadowBlur = this.scaler.x(18);
+    this.context.textAlign = "center";
+    this.context.textBaseline = "middle";
+
+    lines.forEach((line, index) => {
+      const isTitle = index === 0;
+      this.context.font = `900 ${this.scaler.x(isTitle ? 38 : 28)}px ui-sans-serif, system-ui`;
+      this.context.letterSpacing = `${this.scaler.x(isTitle ? 5 : 3)}px`;
+      this.context.fillText(line, this.scaler.canvasWidth / 2, centerY + (index - 1) * lineGap);
+    });
+
     this.context.restore();
   }
 
@@ -1682,12 +1747,20 @@ class NeonSwipeGame {
     return Boolean(phase?.permutesReceiverColorsAfterSuccess || phase?.permutesReceiverShapesAfterSuccess);
   }
 
+  shouldStartLevel11Intro(resolvedChallengePhase) {
+    return (
+      !this.hasPlayedLevel11Intro &&
+      resolvedChallengePhase?.level !== 11 &&
+      this.currentPhase.level === 11
+    );
+  }
+
   get isLevel10ScoreActive() {
     return this.score >= GAME_CONFIG.level11StartScore;
   }
 
   get shouldRunLevel10WallRotation() {
-    return this.state === "playing" && this.isLevel10ScoreActive && Boolean(this.visiblePhase.usesDynamicWallColors);
+    return (this.state === "playing" || this.state === "level11Intro") && this.isLevel10ScoreActive && Boolean(this.visiblePhase.usesDynamicWallColors);
   }
 
   get currentRuleName() {
