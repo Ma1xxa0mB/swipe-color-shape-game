@@ -22,10 +22,10 @@ const GAME_CONFIG = {
   level7HorizontalImpulse: 64,
   level7SpawnImpulseMultiplier: 0.65, // 0.75
   ruleTransitionFeedbackDurationMs: 650,
-  level9StartScore: 38,
-  level9EndScore: 44,
+  level9StartScore: 46,
+  level9EndScore: 52,
   level9WallShuffleDurationMs: 280,
-  level10StartScore: 44,
+  level10StartScore: 52,
   level10WallRotationIntervalMs: 1000,
   level10WallRotationDurationMs: 180,
   level10GravityMultiplier: 0.55,
@@ -53,12 +53,14 @@ const WALL_LAYOUT_C_RECEIVER_COLORS_BY_POSITION_ID = {
   bottomRight: "red"
 };
 
-const PHASE_6_RECEIVER_COLORS_BY_POSITION_ID = {
+const WALL_LAYOUT_D_RECEIVER_COLORS_BY_POSITION_ID = {
   topLeft: "red",
   topRight: "green",
   bottomLeft: "yellow",
   bottomRight: "blue"
 };
+
+const PHASE_6_RECEIVER_COLORS_BY_POSITION_ID = WALL_LAYOUT_D_RECEIVER_COLORS_BY_POSITION_ID;
 
 const LEVEL_9_INITIAL_RECEIVER_COLORS_BY_POSITION_ID = PHASE_6_RECEIVER_COLORS_BY_POSITION_ID;
 const LEVEL_10_INITIAL_RECEIVER_COLORS_BY_POSITION_ID = PHASE_6_RECEIVER_COLORS_BY_POSITION_ID;
@@ -77,6 +79,20 @@ const PHASE_5_RECEIVER_SHAPES_BY_POSITION_ID = {
   bottomRight: "circle"
 };
 
+const LEVEL_6_RECEIVER_SHAPES_BY_POSITION_ID = {
+  topLeft: "circle",
+  topRight: "triangle",
+  bottomLeft: "star",
+  bottomRight: "square"
+};
+
+const LEVEL_7_RECEIVER_SHAPES_BY_POSITION_ID = {
+  topLeft: "square",
+  topRight: "circle",
+  bottomLeft: "triangle",
+  bottomRight: "star"
+};
+
 const PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID = {
   topLeft: "circle",
   topRight: "square",
@@ -90,11 +106,12 @@ const GAME_PHASES = [
   { level: 3, ruleName: "COLOR", startScore: 6, receiverColorsByPositionId: WALL_LAYOUT_A_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: DEFAULT_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 2, dynamicRuleMaxAnswers: 4 },
   { level: 4, ruleName: "COLOR", startScore: 12, receiverColorsByPositionId: WALL_LAYOUT_B_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: DEFAULT_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 2, dynamicRuleMaxAnswers: 4 },
   { level: 5, ruleName: "COLOR", startScore: 18, receiverColorsByPositionId: WALL_LAYOUT_C_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: DEFAULT_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 2, dynamicRuleMaxAnswers: 3 },
-  { level: 6, ruleName: "COLOR", startScore: 24, receiverColorsByPositionId: PHASE_6_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID },
-  { level: 7, ruleName: "COLOR", startScore: 28, receiverColorsByPositionId: PHASE_6_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDuoShapes: true },
-  { level: 8, ruleName: "SHAPE", startScore: 33, receiverColorsByPositionId: PHASE_6_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDuoShapes: true },
-  { level: 9, ruleName: "COLOR", startScore: GAME_CONFIG.level9StartScore, receiverColorsByPositionId: LEVEL_9_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesWallShuffleAfterSuccess: true },
-  { level: 10, ruleName: "COLOR", startScore: GAME_CONFIG.level10StartScore, receiverColorsByPositionId: LEVEL_10_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicWallColors: true }
+  { level: 6, ruleName: "COLOR", startScore: 24, receiverColorsByPositionId: WALL_LAYOUT_C_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: LEVEL_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 2, dynamicRuleMaxAnswers: 3 },
+  { level: 7, ruleName: "COLOR", startScore: 30, receiverColorsByPositionId: WALL_LAYOUT_D_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: LEVEL_7_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 2, dynamicRuleMaxAnswers: 3 },
+  { level: 8, ruleName: "COLOR", startScore: 36, receiverColorsByPositionId: PHASE_6_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDuoShapes: true },
+  { level: 9, ruleName: "SHAPE", startScore: 41, receiverColorsByPositionId: PHASE_6_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDuoShapes: true },
+  { level: 10, ruleName: "COLOR", startScore: GAME_CONFIG.level9StartScore, receiverColorsByPositionId: LEVEL_9_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesWallShuffleAfterSuccess: true },
+  { level: 11, ruleName: "COLOR", startScore: GAME_CONFIG.level10StartScore, receiverColorsByPositionId: LEVEL_10_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicWallColors: true }
 ];
 
 const NEON_COLORS = {
