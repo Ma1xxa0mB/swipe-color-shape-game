@@ -21,29 +21,36 @@ const GAME_CONFIG = {
   level7SecondShapeDelayMs: 500,
   level7HorizontalImpulse: 64,
   level7SpawnImpulseMultiplier: 0.65, // 0.75
-  ruleTransitionDurationMs: 700,
-  level9StartScore: 44,
-  level9EndScore: 51,
+  ruleTransitionDurationMs: 200,
+  level9StartScore: 38,
+  level9EndScore: 44,
   level9WallShuffleDurationMs: 280,
-  level10StartScore: 51,
+  level10StartScore: 44,
   level10WallRotationIntervalMs: 1000,
   level10WallRotationDurationMs: 180,
   level10GravityMultiplier: 0.55,
   level10SpawnImpulseMultiplier: 0.78
 };
 
-const DEFAULT_RECEIVER_COLORS_BY_POSITION_ID = {
+const WALL_LAYOUT_A_RECEIVER_COLORS_BY_POSITION_ID = {
   topLeft: "green",
   topRight: "red",
   bottomLeft: "blue",
   bottomRight: "yellow"
 };
 
-const PHASE_4_RECEIVER_COLORS_BY_POSITION_ID = {
+const WALL_LAYOUT_B_RECEIVER_COLORS_BY_POSITION_ID = {
   topLeft: "blue",
   topRight: "yellow",
   bottomLeft: "red",
   bottomRight: "green"
+};
+
+const WALL_LAYOUT_C_RECEIVER_COLORS_BY_POSITION_ID = {
+  topLeft: "yellow",
+  topRight: "blue",
+  bottomLeft: "green",
+  bottomRight: "red"
 };
 
 const PHASE_6_RECEIVER_COLORS_BY_POSITION_ID = {
@@ -78,14 +85,14 @@ const PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID = {
 };
 
 const GAME_PHASES = [
-  { level: 1, ruleName: "COLOR", startScore: 0, receiverColorsByPositionId: DEFAULT_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: DEFAULT_RECEIVER_SHAPES_BY_POSITION_ID },
-  { level: 2, ruleName: "SHAPE", startScore: 5, receiverColorsByPositionId: DEFAULT_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: DEFAULT_RECEIVER_SHAPES_BY_POSITION_ID },
-  { level: 3, ruleName: "COLOR", startScore: 10, receiverColorsByPositionId: DEFAULT_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: DEFAULT_RECEIVER_SHAPES_BY_POSITION_ID },
-  { level: 4, ruleName: "COLOR", startScore: 15, receiverColorsByPositionId: PHASE_4_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: DEFAULT_RECEIVER_SHAPES_BY_POSITION_ID },
-  { level: 5, ruleName: "SHAPE", startScore: 20, receiverColorsByPositionId: PHASE_4_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_5_RECEIVER_SHAPES_BY_POSITION_ID },
-  { level: 6, ruleName: "COLOR", startScore: 25, receiverColorsByPositionId: PHASE_6_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID },
-  { level: 7, ruleName: "COLOR", startScore: 30, receiverColorsByPositionId: PHASE_6_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDuoShapes: true },
-  { level: 8, ruleName: "SHAPE", startScore: 37, receiverColorsByPositionId: PHASE_6_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDuoShapes: true },
+  { level: 1, ruleName: "COLOR", startScore: 0, receiverColorsByPositionId: WALL_LAYOUT_A_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: DEFAULT_RECEIVER_SHAPES_BY_POSITION_ID },
+  { level: 2, ruleName: "SHAPE", startScore: 3, receiverColorsByPositionId: WALL_LAYOUT_A_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: DEFAULT_RECEIVER_SHAPES_BY_POSITION_ID },
+  { level: 3, ruleName: "COLOR", startScore: 6, receiverColorsByPositionId: WALL_LAYOUT_A_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: DEFAULT_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 2, dynamicRuleMaxAnswers: 4 },
+  { level: 4, ruleName: "COLOR", startScore: 12, receiverColorsByPositionId: WALL_LAYOUT_B_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: DEFAULT_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 2, dynamicRuleMaxAnswers: 4 },
+  { level: 5, ruleName: "COLOR", startScore: 18, receiverColorsByPositionId: WALL_LAYOUT_C_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: DEFAULT_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 2, dynamicRuleMaxAnswers: 3 },
+  { level: 6, ruleName: "COLOR", startScore: 24, receiverColorsByPositionId: PHASE_6_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID },
+  { level: 7, ruleName: "COLOR", startScore: 28, receiverColorsByPositionId: PHASE_6_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDuoShapes: true },
+  { level: 8, ruleName: "SHAPE", startScore: 33, receiverColorsByPositionId: PHASE_6_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDuoShapes: true },
   { level: 9, ruleName: "COLOR", startScore: GAME_CONFIG.level9StartScore, receiverColorsByPositionId: LEVEL_9_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesWallShuffleAfterSuccess: true },
   { level: 10, ruleName: "COLOR", startScore: GAME_CONFIG.level10StartScore, receiverColorsByPositionId: LEVEL_10_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicWallColors: true }
 ];
@@ -683,6 +690,65 @@ class GameRules {
   }
 }
 
+class DynamicRuleSequenceController {
+  constructor() {
+    this.reset();
+  }
+
+  reset() {
+    this.activeRuleName = null;
+    this.remainingAnswersInSequence = 0;
+  }
+
+  getRuleNameForPhase(phase) {
+    if (!phase.usesDynamicRuleSequence) return phase.ruleName;
+
+    this.ensureSequenceHasStarted(phase);
+    return this.activeRuleName;
+  }
+
+  getPhaseWithCurrentRule(phase) {
+    if (!phase.usesDynamicRuleSequence) return phase;
+
+    return {
+      ...phase,
+      ruleName: this.getRuleNameForPhase(phase)
+    };
+  }
+
+  consumeSuccessfulAnswer(answeredPhase, nextPhase = answeredPhase) {
+    if (!answeredPhase.usesDynamicRuleSequence) return null;
+
+    this.ensureSequenceHasStarted(answeredPhase);
+    this.remainingAnswersInSequence -= 1;
+
+    if (this.remainingAnswersInSequence > 0) return null;
+
+    this.activeRuleName = this.getOppositeRuleName(this.activeRuleName);
+    this.remainingAnswersInSequence = nextPhase.usesDynamicRuleSequence
+      ? this.createSequenceLength(nextPhase)
+      : 0;
+    return this.activeRuleName;
+  }
+
+  ensureSequenceHasStarted(phase) {
+    if (this.activeRuleName && this.remainingAnswersInSequence > 0) return;
+
+    this.activeRuleName = phase.ruleName;
+    this.remainingAnswersInSequence = this.createSequenceLength(phase);
+  }
+
+  createSequenceLength(phase) {
+    const minAnswers = phase.dynamicRuleMinAnswers;
+    const maxAnswers = phase.dynamicRuleMaxAnswers;
+    return minAnswers + Math.floor(Math.random() * (maxAnswers - minAnswers + 1));
+  }
+
+  getOppositeRuleName(ruleName) {
+    return ruleName === "COLOR" ? "SHAPE" : "COLOR";
+  }
+}
+
 class Level9WallShuffleController {
   constructor(initialReceiverColorsByPositionId) {
     this.initialReceiverColorsByPositionId = initialReceiverColorsByPositionId;
@@ -983,6 +1049,7 @@ class NeonSwipeGame {
     this.scaler = new GeometryScaler(GAME_CONFIG.designWidth, GAME_CONFIG.designHeight);
     this.arena = new Arena(this.scaler, RECEIVER_DEFINITIONS);
     this.rules = new GameRules(this.arena);
+    this.dynamicRuleSequence = new DynamicRuleSequenceController();
     this.level9WallShuffle = new Level9WallShuffleController(LEVEL_9_INITIAL_RECEIVER_COLORS_BY_POSITION_ID);
     this.level10WallRotation = new Level10WallRotationController(LEVEL_10_INITIAL_RECEIVER_COLORS_BY_POSITION_ID);
     this.particleSystem = new ParticleSystem(this.scaler);
@@ -1020,6 +1087,7 @@ class NeonSwipeGame {
     this.clearPendingDuoSpawn();
     this.clearPendingRuleTransition();
     this.resetWallColorMechanics();
+    this.dynamicRuleSequence.reset();
     this.score = 0;
     this.state = "playing";
     this.currentShapes = [];
@@ -1035,6 +1103,7 @@ class NeonSwipeGame {
     this.clearPendingDuoSpawn();
     this.clearPendingRuleTransition();
     this.resetWallColorMechanics();
+    this.dynamicRuleSequence.reset();
     this.score = 0;
     this.state = "waiting";
     this.activeShape = null;
@@ -1178,6 +1247,7 @@ class NeonSwipeGame {
     resolvedShape.state = "resolved";
     this.score += 1;
 
+    this.dynamicRuleSequence.consumeSuccessfulAnswer(challengePhase, this.currentPhase);
     const didRuleChange = this.currentRuleName !== challengePhase.ruleName;
 
     if (challengePhase.usesDuoShapes) {
@@ -1610,11 +1680,12 @@ class NeonSwipeGame {
   }
 
   get currentRuleName() {
-    return this.rules.getCurrentRuleName(this.score);
+    return this.currentPhase.ruleName;
   }
 
   get currentPhase() {
-    return this.rules.getCurrentPhase(this.score);
+    const basePhase = this.rules.getCurrentPhase(this.score);
+    return this.dynamicRuleSequence.getPhaseWithCurrentRule(basePhase);
   }
 
   get currentLevel() {
