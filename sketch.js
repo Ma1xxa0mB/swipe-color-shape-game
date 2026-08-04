@@ -22,10 +22,11 @@ const GAME_CONFIG = {
   level7HorizontalImpulse: 64,
   level7SpawnImpulseMultiplier: 0.65, // 0.75
   ruleTransitionFeedbackDurationMs: 650,
-  level9StartScore: 46,
-  level9EndScore: 52,
-  level9WallShuffleDurationMs: 280,
-  level10StartScore: 52,
+  receiverPermutationDurationMs: 280,
+  level8StartScore: 36,
+  level9StartScore: 42,
+  level10StartScore: 48,
+  level11StartScore: 54,
   level10WallRotationIntervalMs: 1000,
   level10WallRotationDurationMs: 180,
   level10GravityMultiplier: 0.55,
@@ -62,8 +63,10 @@ const WALL_LAYOUT_D_RECEIVER_COLORS_BY_POSITION_ID = {
 
 const PHASE_6_RECEIVER_COLORS_BY_POSITION_ID = WALL_LAYOUT_D_RECEIVER_COLORS_BY_POSITION_ID;
 
-const LEVEL_9_INITIAL_RECEIVER_COLORS_BY_POSITION_ID = PHASE_6_RECEIVER_COLORS_BY_POSITION_ID;
-const LEVEL_10_INITIAL_RECEIVER_COLORS_BY_POSITION_ID = PHASE_6_RECEIVER_COLORS_BY_POSITION_ID;
+const LEVEL_8_INITIAL_RECEIVER_COLORS_BY_POSITION_ID = WALL_LAYOUT_D_RECEIVER_COLORS_BY_POSITION_ID;
+const LEVEL_9_INITIAL_RECEIVER_COLORS_BY_POSITION_ID = WALL_LAYOUT_D_RECEIVER_COLORS_BY_POSITION_ID;
+const LEVEL_10_INITIAL_RECEIVER_COLORS_BY_POSITION_ID = WALL_LAYOUT_D_RECEIVER_COLORS_BY_POSITION_ID;
+const LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID = PHASE_6_RECEIVER_COLORS_BY_POSITION_ID;
 
 const DEFAULT_RECEIVER_SHAPES_BY_POSITION_ID = {
   topLeft: "triangle",
@@ -108,10 +111,10 @@ const GAME_PHASES = [
   { level: 5, ruleName: "COLOR", startScore: 18, receiverColorsByPositionId: WALL_LAYOUT_C_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: DEFAULT_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 2, dynamicRuleMaxAnswers: 3 },
   { level: 6, ruleName: "COLOR", startScore: 24, receiverColorsByPositionId: WALL_LAYOUT_C_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: LEVEL_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 2, dynamicRuleMaxAnswers: 3 },
   { level: 7, ruleName: "COLOR", startScore: 30, receiverColorsByPositionId: WALL_LAYOUT_D_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: LEVEL_7_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 2, dynamicRuleMaxAnswers: 3 },
-  { level: 8, ruleName: "COLOR", startScore: 36, receiverColorsByPositionId: PHASE_6_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDuoShapes: true },
-  { level: 9, ruleName: "SHAPE", startScore: 41, receiverColorsByPositionId: PHASE_6_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDuoShapes: true },
-  { level: 10, ruleName: "COLOR", startScore: GAME_CONFIG.level9StartScore, receiverColorsByPositionId: LEVEL_9_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesWallShuffleAfterSuccess: true },
-  { level: 11, ruleName: "COLOR", startScore: GAME_CONFIG.level10StartScore, receiverColorsByPositionId: LEVEL_10_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicWallColors: true }
+  { level: 8, ruleName: "COLOR", startScore: GAME_CONFIG.level8StartScore, receiverColorsByPositionId: LEVEL_8_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: LEVEL_7_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 2, dynamicRuleMaxAnswers: 3, permutesReceiverColorsAfterSuccess: true },
+  { level: 9, ruleName: "COLOR", startScore: GAME_CONFIG.level9StartScore, receiverColorsByPositionId: LEVEL_9_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: LEVEL_7_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 2, dynamicRuleMaxAnswers: 3, permutesReceiverShapesAfterSuccess: true },
+  { level: 10, ruleName: "COLOR", startScore: GAME_CONFIG.level10StartScore, receiverColorsByPositionId: LEVEL_10_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: LEVEL_7_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 2, dynamicRuleMaxAnswers: 3, permutesReceiverColorsAfterSuccess: true, permutesReceiverShapesAfterSuccess: true },
+  { level: 11, ruleName: "COLOR", startScore: GAME_CONFIG.level11StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicWallColors: true }
 ];
 
 const NEON_COLORS = {
@@ -491,7 +494,9 @@ class Arena {
 
   drawReceiverTracksWithWallColorAnimation(context, currentPhase, wallColorAnimation) {
     this.receivers.forEach((receiver) => {
-      const previousColor = NEON_COLORS[wallColorAnimation.previousColorsByPositionId[receiver.id]];
+      const previousColor = wallColorAnimation.previousColorsByPositionId
+        ? NEON_COLORS[wallColorAnimation.previousColorsByPositionId[receiver.id]]
+        : this.getReceiverNeonColor(receiver, currentPhase);
       const currentColor = this.getReceiverNeonColor(receiver, currentPhase);
       this.drawReceiverTrack(context, receiver, currentPhase, previousColor, 1 - wallColorAnimation.progress);
       this.drawReceiverTrack(context, receiver, currentPhase, currentColor, wallColorAnimation.progress);
@@ -501,7 +506,8 @@ class Arena {
   drawReceiverIconsWithWallColorAnimation(context, currentPhase, wallColorAnimation) {
     const previousIconPhase = {
       ...currentPhase,
-      receiverColorsByPositionId: wallColorAnimation.previousColorsByPositionId
+      receiverColorsByPositionId: wallColorAnimation.previousColorsByPositionId || currentPhase.receiverColorsByPositionId,
+      receiverShapesByPositionId: wallColorAnimation.previousShapesByPositionId || currentPhase.receiverShapesByPositionId
     };
 
     this.drawReceiverIcons(context, previousIconPhase, 1 - wallColorAnimation.progress);
@@ -766,102 +772,124 @@ class DynamicRuleSequenceController {
   }
 }
 
-class Level9WallShuffleController {
-  constructor(initialReceiverColorsByPositionId) {
+class ReceiverPermutationController {
+  constructor({ initialReceiverColorsByPositionId, initialReceiverShapesByPositionId }) {
     this.initialReceiverColorsByPositionId = initialReceiverColorsByPositionId;
+    this.initialReceiverShapesByPositionId = initialReceiverShapesByPositionId;
     this.receiverIds = Object.keys(initialReceiverColorsByPositionId);
     this.reset();
   }
 
   reset() {
     this.currentReceiverColorsByPositionId = { ...this.initialReceiverColorsByPositionId };
+    this.currentReceiverShapesByPositionId = { ...this.initialReceiverShapesByPositionId };
     this.previousReceiverColorsByPositionId = null;
-    this.shuffleStartedAt = 0;
-    this.shuffleProgress = 1;
+    this.previousReceiverShapesByPositionId = null;
+    this.permutationStartedAt = 0;
+    this.permutationProgress = 1;
     this.isAnimating = false;
   }
 
-  startShuffle(currentTime) {
-    this.previousReceiverColorsByPositionId = { ...this.currentReceiverColorsByPositionId };
-    this.currentReceiverColorsByPositionId = this.createForcedColorPermutation(this.previousReceiverColorsByPositionId);
-    this.shuffleStartedAt = currentTime;
-    this.shuffleProgress = 0;
-    this.isAnimating = true;
+  startPermutation(currentTime, phase) {
+    const shouldPermuteColors = Boolean(phase.permutesReceiverColorsAfterSuccess);
+    const shouldPermuteShapes = Boolean(phase.permutesReceiverShapesAfterSuccess);
+
+    this.previousReceiverColorsByPositionId = shouldPermuteColors ? { ...this.currentReceiverColorsByPositionId } : null;
+    this.previousReceiverShapesByPositionId = shouldPermuteShapes ? { ...this.currentReceiverShapesByPositionId } : null;
+
+    if (shouldPermuteColors) {
+      this.currentReceiverColorsByPositionId = this.createForcedPermutation(this.previousReceiverColorsByPositionId);
+    }
+
+    if (shouldPermuteShapes) {
+      this.currentReceiverShapesByPositionId = this.createForcedPermutation(this.previousReceiverShapesByPositionId);
+    }
+
+    this.permutationStartedAt = currentTime;
+    this.permutationProgress = 0;
+    this.isAnimating = shouldPermuteColors || shouldPermuteShapes;
   }
 
   update(currentTime) {
     if (!this.isAnimating) return false;
 
-    const elapsedShuffleMs = currentTime - this.shuffleStartedAt;
-    this.shuffleProgress = clamp(elapsedShuffleMs / GAME_CONFIG.level9WallShuffleDurationMs, 0, 1);
+    const elapsedPermutationMs = currentTime - this.permutationStartedAt;
+    this.permutationProgress = clamp(elapsedPermutationMs / GAME_CONFIG.receiverPermutationDurationMs, 0, 1);
 
-    if (this.shuffleProgress < 1) return false;
+    if (this.permutationProgress < 1) return false;
 
     this.previousReceiverColorsByPositionId = null;
+    this.previousReceiverShapesByPositionId = null;
     this.isAnimating = false;
     return true;
   }
 
-  createForcedColorPermutation(previousReceiverColorsByPositionId) {
-    const previousColors = this.receiverIds.map((receiverId) => previousReceiverColorsByPositionId[receiverId]);
+  createForcedPermutation(previousValuesByPositionId) {
+    const previousValues = this.receiverIds.map((receiverId) => previousValuesByPositionId[receiverId]);
 
     for (let attempt = 0; attempt < 40; attempt += 1) {
-      const shuffledColors = this.shuffleColors(previousColors);
-      const isForcedPermutation = shuffledColors.every((colorId, index) => {
-        return colorId !== previousReceiverColorsByPositionId[this.receiverIds[index]];
+      const shuffledValues = this.shuffleValues(previousValues);
+      const isForcedPermutation = shuffledValues.every((value, index) => {
+        return value !== previousValuesByPositionId[this.receiverIds[index]];
       });
 
       if (isForcedPermutation) {
-        return this.mapColorsToReceivers(shuffledColors);
+        return this.mapValuesToReceivers(shuffledValues);
       }
     }
 
-    return this.rotateColorsClockwise(previousReceiverColorsByPositionId);
+    return this.rotateValuesClockwise(previousValuesByPositionId);
   }
 
-  shuffleColors(colors) {
-    const shuffledColors = [...colors];
+  shuffleValues(values) {
+    const shuffledValues = [...values];
 
-    for (let index = shuffledColors.length - 1; index > 0; index -= 1) {
+    for (let index = shuffledValues.length - 1; index > 0; index -= 1) {
       const randomIndex = Math.floor(Math.random() * (index + 1));
-      [shuffledColors[index], shuffledColors[randomIndex]] = [shuffledColors[randomIndex], shuffledColors[index]];
+      [shuffledValues[index], shuffledValues[randomIndex]] = [shuffledValues[randomIndex], shuffledValues[index]];
     }
 
-    return shuffledColors;
+    return shuffledValues;
   }
 
-  mapColorsToReceivers(colors) {
-    return this.receiverIds.reduce((colorsByReceiverId, receiverId, index) => {
-      colorsByReceiverId[receiverId] = colors[index];
-      return colorsByReceiverId;
+  mapValuesToReceivers(values) {
+    return this.receiverIds.reduce((valuesByReceiverId, receiverId, index) => {
+      valuesByReceiverId[receiverId] = values[index];
+      return valuesByReceiverId;
     }, {});
   }
 
-  rotateColorsClockwise(previousReceiverColorsByPositionId) {
-    const nextReceiverColorsByPositionId = {};
+  rotateValuesClockwise(previousValuesByPositionId) {
+    const nextValuesByPositionId = {};
 
     Object.entries(CLOCKWISE_RECEIVER_ROTATION_BY_POSITION_ID).forEach(([fromReceiverId, toReceiverId]) => {
-      nextReceiverColorsByPositionId[toReceiverId] = previousReceiverColorsByPositionId[fromReceiverId];
+      nextValuesByPositionId[toReceiverId] = previousValuesByPositionId[fromReceiverId];
     });
 
-    return nextReceiverColorsByPositionId;
+    return nextValuesByPositionId;
   }
 
-  getPhaseWithCurrentColors(phase) {
-    if (!phase.usesWallShuffleAfterSuccess) return phase;
+  getPhaseWithCurrentPermutation(phase) {
+    if (!this.phaseUsesReceiverPermutation(phase)) return phase;
 
     return {
       ...phase,
-      receiverColorsByPositionId: this.currentReceiverColorsByPositionId
+      receiverColorsByPositionId: this.currentReceiverColorsByPositionId,
+      receiverShapesByPositionId: this.currentReceiverShapesByPositionId
     };
   }
 
+  phaseUsesReceiverPermutation(phase) {
+    return Boolean(phase.permutesReceiverColorsAfterSuccess || phase.permutesReceiverShapesAfterSuccess);
+  }
+
   get animationState() {
-    if (!this.previousReceiverColorsByPositionId || this.shuffleProgress >= 1) return null;
+    if (!this.isAnimating || this.permutationProgress >= 1) return null;
 
     return {
       previousColorsByPositionId: this.previousReceiverColorsByPositionId,
-      progress: this.shuffleProgress
+      previousShapesByPositionId: this.previousReceiverShapesByPositionId,
+      progress: this.permutationProgress
     };
   }
 }
@@ -1067,8 +1095,11 @@ class NeonSwipeGame {
     this.arena = new Arena(this.scaler, RECEIVER_DEFINITIONS);
     this.rules = new GameRules(this.arena);
     this.dynamicRuleSequence = new DynamicRuleSequenceController();
-    this.level9WallShuffle = new Level9WallShuffleController(LEVEL_9_INITIAL_RECEIVER_COLORS_BY_POSITION_ID);
-    this.level10WallRotation = new Level10WallRotationController(LEVEL_10_INITIAL_RECEIVER_COLORS_BY_POSITION_ID);
+    this.receiverPermutation = new ReceiverPermutationController({
+      initialReceiverColorsByPositionId: LEVEL_8_INITIAL_RECEIVER_COLORS_BY_POSITION_ID,
+      initialReceiverShapesByPositionId: LEVEL_7_RECEIVER_SHAPES_BY_POSITION_ID
+    });
+    this.level10WallRotation = new Level10WallRotationController(LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID);
     this.particleSystem = new ParticleSystem(this.scaler);
     this.inputController = new InputController(this.canvas, this);
 
@@ -1136,8 +1167,8 @@ class NeonSwipeGame {
     if (this.state === "playing") {
       this.updateLevel10WallRotation(currentTime);
       this.updateActiveShape(deltaSeconds);
-    } else if (this.state === "wallShuffle") {
-      this.updateLevel9WallShuffle(currentTime);
+    } else if (this.state === "receiverPermutation") {
+      this.updateReceiverPermutation(currentTime);
     } else {
       this.updateLevel10WallRotation(currentTime);
     }
@@ -1264,11 +1295,11 @@ class NeonSwipeGame {
     const didRuleChange = this.currentRuleName !== challengePhase.ruleName;
 
     if (challengePhase.usesDuoShapes) {
-      this.finishDuoIfResolved(didRuleChange);
+      this.finishDuoIfResolved(didRuleChange, challengePhase);
       return;
     }
 
-    this.continueAfterResolvedChallenge(didRuleChange);
+    this.continueAfterResolvedChallenge(didRuleChange, challengePhase);
   }
 
   updateDuoShapes(deltaSeconds) {
@@ -1294,27 +1325,26 @@ class NeonSwipeGame {
     }
   }
 
-  finishDuoIfResolved(shouldStartRuleTransition) {
+  finishDuoIfResolved(shouldStartRuleTransition, resolvedChallengePhase) {
     const hasBothShapesSpawned = this.currentShapes.length === 2;
     const areBothShapesResolved = hasBothShapesSpawned && this.currentShapes.every((shape) => shape.state === "resolved");
 
     if (areBothShapesResolved) {
-      this.continueAfterResolvedChallenge(shouldStartRuleTransition);
+      this.continueAfterResolvedChallenge(shouldStartRuleTransition, resolvedChallengePhase);
     }
   }
 
-  continueAfterResolvedChallenge(shouldStartRuleTransition) {
+  continueAfterResolvedChallenge(shouldStartRuleTransition, resolvedChallengePhase = this.currentChallengePhase || this.currentPhase) {
     if (!this.isLevel10ScoreActive) {
       this.stopLevel10WallRotation();
     }
 
     if (shouldStartRuleTransition) {
-      this.startRuleTransition(this.currentRuleName);
-      return;
+      this.showRuleTransitionFeedback(this.currentRuleName);
     }
 
-    if (this.shouldShuffleLevel9WallsAfterSuccess) {
-      this.startLevel9WallShuffle();
+    if (this.phasePermutesReceiversAfterSuccess(resolvedChallengePhase)) {
+      this.startReceiverPermutation(resolvedChallengePhase);
       return;
     }
 
@@ -1322,9 +1352,13 @@ class NeonSwipeGame {
   }
 
   startRuleTransition(nextRuleName) {
+    this.showRuleTransitionFeedback(nextRuleName);
+    this.spawnNextChallenge();
+  }
+
+  showRuleTransitionFeedback(nextRuleName) {
     navigator.vibrate?.(50);
     this.showCenterMessage(nextRuleName, GAME_CONFIG.ruleTransitionFeedbackDurationMs);
-    this.spawnNextChallenge();
   }
 
   clearPendingDuoSpawn() {
@@ -1335,12 +1369,12 @@ class NeonSwipeGame {
   }
 
   resetWallColorMechanics() {
-    this.level9WallShuffle.reset();
+    this.receiverPermutation.reset();
     this.level10WallRotation.reset();
   }
 
   stopWallColorMechanics() {
-    this.level9WallShuffle.reset();
+    this.receiverPermutation.reset();
     this.level10WallRotation.stop();
   }
 
@@ -1352,22 +1386,22 @@ class NeonSwipeGame {
     this.level10WallRotation.stop();
   }
 
-  updateLevel9WallShuffle(currentTime) {
-    const didFinishShuffle = this.level9WallShuffle.update(currentTime);
-    if (!didFinishShuffle || this.state !== "wallShuffle") return;
+  updateReceiverPermutation(currentTime) {
+    const didFinishPermutation = this.receiverPermutation.update(currentTime);
+    if (!didFinishPermutation || this.state !== "receiverPermutation") return;
 
     this.state = "playing";
     this.spawnNextChallenge();
   }
 
-  startLevel9WallShuffle() {
+  startReceiverPermutation(permutationPhase) {
     this.clearPendingDuoSpawn();
-    this.state = "wallShuffle";
+    this.state = "receiverPermutation";
     this.activeShape = null;
     this.currentShapes = [];
     this.activeShapeIndex = null;
     this.currentChallengePhase = null;
-    this.level9WallShuffle.startShuffle(performance.now());
+    this.receiverPermutation.startPermutation(performance.now(), permutationPhase);
   }
 
   updateLevel10WallRotation(currentTime) {
@@ -1608,7 +1642,7 @@ class NeonSwipeGame {
   }
 
   get wallColorAnimationState() {
-    return this.level9WallShuffle.animationState || this.level10WallRotation.animationState;
+    return this.receiverPermutation.animationState || this.level10WallRotation.animationState;
   }
 
   get level10ReceiverColorsByPositionId() {
@@ -1628,8 +1662,8 @@ class NeonSwipeGame {
   }
 
   getPhaseWithCurrentWallColors(phase) {
-    const level9Phase = this.level9WallShuffle.getPhaseWithCurrentColors(phase);
-    return this.level10WallRotation.getPhaseWithCurrentColors(level9Phase);
+    const receiverPermutationPhase = this.receiverPermutation.getPhaseWithCurrentPermutation(phase);
+    return this.level10WallRotation.getPhaseWithCurrentColors(receiverPermutationPhase);
   }
 
   get activeChallengeUsesDuoShapes() {
@@ -1644,13 +1678,12 @@ class NeonSwipeGame {
     return ChallengePhysics.getSpawnImpulse(this.currentChallengePhase || this.currentPhase);
   }
 
-  get shouldShuffleLevel9WallsAfterSuccess() {
-    const challengePhase = this.currentChallengePhase || this.currentPhase;
-    return Boolean(challengePhase.usesWallShuffleAfterSuccess) && this.score < GAME_CONFIG.level9EndScore;
+  phasePermutesReceiversAfterSuccess(phase) {
+    return Boolean(phase?.permutesReceiverColorsAfterSuccess || phase?.permutesReceiverShapesAfterSuccess);
   }
 
   get isLevel10ScoreActive() {
-    return this.score >= GAME_CONFIG.level10StartScore;
+    return this.score >= GAME_CONFIG.level11StartScore;
   }
 
   get shouldRunLevel10WallRotation() {
