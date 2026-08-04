@@ -21,7 +21,7 @@ const GAME_CONFIG = {
   level7SecondShapeDelayMs: 500,
   level7HorizontalImpulse: 64,
   level7SpawnImpulseMultiplier: 0.65, // 0.75
-  ruleTransitionDurationMs: 200,
+  ruleTransitionFeedbackDurationMs: 650,
   level9StartScore: 38,
   level9EndScore: 44,
   level9WallShuffleDurationMs: 280,
@@ -1061,8 +1061,6 @@ class NeonSwipeGame {
     this.currentShapes = [];
     this.activeShapeIndex = null;
     this.secondDuoShapeTimeoutId = null;
-    this.ruleTransitionTimeoutId = null;
-    this.transitionRuleName = null;
     this.currentChallengePhase = null;
     this.lastAnimationTime = 0;
     this.centerMessage = "SWIPE";
@@ -1085,7 +1083,6 @@ class NeonSwipeGame {
 
   reset() {
     this.clearPendingDuoSpawn();
-    this.clearPendingRuleTransition();
     this.resetWallColorMechanics();
     this.dynamicRuleSequence.reset();
     this.score = 0;
@@ -1101,7 +1098,6 @@ class NeonSwipeGame {
 
   showWaitingScreen() {
     this.clearPendingDuoSpawn();
-    this.clearPendingRuleTransition();
     this.resetWallColorMechanics();
     this.dynamicRuleSequence.reset();
     this.score = 0;
@@ -1309,29 +1305,9 @@ class NeonSwipeGame {
   }
 
   startRuleTransition(nextRuleName) {
-    this.stopWallColorMechanics();
-
-    this.clearPendingDuoSpawn();
-    this.clearPendingRuleTransition();
-    this.state = "transition";
     navigator.vibrate?.(50);
-    this.activeShape = null;
-    this.currentShapes = [];
-    this.activeShapeIndex = null;
-    this.currentChallengePhase = null;
-    this.transitionRuleName = nextRuleName;
-    this.centerMessage = nextRuleName;
-    this.centerMessageUntil = Infinity;
-
-    this.ruleTransitionTimeoutId = window.setTimeout(() => {
-      if (this.state !== "transition" || this.transitionRuleName !== nextRuleName) return;
-
-      this.ruleTransitionTimeoutId = null;
-      this.transitionRuleName = null;
-      this.state = "playing";
-      this.showCenterMessage(nextRuleName, 0);
-      this.spawnNextChallenge();
-    }, GAME_CONFIG.ruleTransitionDurationMs);
+    this.showCenterMessage(nextRuleName, GAME_CONFIG.ruleTransitionFeedbackDurationMs);
+    this.spawnNextChallenge();
   }
 
   clearPendingDuoSpawn() {
@@ -1339,14 +1315,6 @@ class NeonSwipeGame {
 
     window.clearTimeout(this.secondDuoShapeTimeoutId);
     this.secondDuoShapeTimeoutId = null;
-  }
-
-  clearPendingRuleTransition() {
-    if (this.ruleTransitionTimeoutId === null) return;
-
-    window.clearTimeout(this.ruleTransitionTimeoutId);
-    this.ruleTransitionTimeoutId = null;
-    this.transitionRuleName = null;
   }
 
   resetWallColorMechanics() {
@@ -1486,7 +1454,6 @@ class NeonSwipeGame {
 
   endGame(message) {
     this.clearPendingDuoSpawn();
-    this.clearPendingRuleTransition();
     this.stopWallColorMechanics();
     this.state = "ended";
     this.centerMessage = message;
@@ -1506,12 +1473,6 @@ class NeonSwipeGame {
     this.context.clearRect(0, 0, this.scaler.canvasWidth, this.scaler.canvasHeight);
     this.drawBackground();
     this.arena.draw(this.context, this.visiblePhase, this.wallColorAnimationState);
-
-    if (this.state === "transition") {
-      this.drawHud();
-      this.drawCenterLabel(currentTime);
-      return;
-    }
 
     this.drawHud();
     this.drawActiveShape();
@@ -1592,18 +1553,18 @@ class NeonSwipeGame {
   }
 
   drawCenterLabel(currentTime) {
-    const shouldShowTemporaryMessage = currentTime < this.centerMessageUntil || this.state === "ended" || this.state === "waiting" || this.state === "transition";
-    const label = this.state === "transition" ? this.transitionRuleName : (shouldShowTemporaryMessage ? this.centerMessage : this.visibleRuleName);
+    const shouldShowTemporaryMessage = currentTime < this.centerMessageUntil || this.state === "ended" || this.state === "waiting";
+    const label = shouldShowTemporaryMessage ? this.centerMessage : this.visibleRuleName;
     const isRuleLabel = label === "COLOR" || label === "SHAPE";
     const isStartLabel = this.state === "waiting";
-    const isTransitionLabel = this.state === "transition";
+    const isTemporaryRuleFeedback = isRuleLabel && shouldShowTemporaryMessage && !isStartLabel;
     const labelSize = isStartLabel ? 21 : (isRuleLabel ? 50 : 35);
-    const shadowBlur = isTransitionLabel ? 22 : (isStartLabel ? 24 : (isRuleLabel ? 0 : 18));
+    const shadowBlur = isTemporaryRuleFeedback ? 22 : (isStartLabel ? 24 : (isRuleLabel ? 0 : 18));
 
     this.context.save();
     this.context.globalAlpha = isStartLabel ? 0.82 : 1;
-    this.context.fillStyle = isTransitionLabel ? "#f8fbff" : (isRuleLabel ? "#8f98a8" : "#eef4ff");
-    this.context.shadowColor = isTransitionLabel ? "rgba(255, 255, 255, 0.95)" : (isRuleLabel ? "transparent" : "rgba(255, 255, 255, 0.95)");
+    this.context.fillStyle = isTemporaryRuleFeedback ? "#f8fbff" : (isRuleLabel ? "#8f98a8" : "#eef4ff");
+    this.context.shadowColor = isTemporaryRuleFeedback ? "rgba(255, 255, 255, 0.95)" : (isRuleLabel ? "transparent" : "rgba(255, 255, 255, 0.95)");
     this.context.shadowBlur = this.scaler.x(shadowBlur);
     this.context.textAlign = "center";
     this.context.textBaseline = "middle";
