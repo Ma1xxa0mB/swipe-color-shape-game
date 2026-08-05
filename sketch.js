@@ -27,7 +27,13 @@ const GAME_CONFIG = {
   level9StartScore: 21,
   level10StartScore: 25,
   level11StartScore: 35,
+  level12StartScore: 41,
+  level13StartScore: 47,
   level11IntroDurationMs: 1400,
+  level12IntroDurationMs: 1400,
+  level13IntroDurationMs: 1600,
+  shapeRotationIntervalMs: 1000,
+  shapeRotationDurationMs: 180,
   level10WallRotationIntervalMs: 1000,
   level10WallRotationDurationMs: 180,
   level10GravityMultiplier: 0.55,
@@ -115,7 +121,9 @@ const GAME_PHASES = [
   { level: 8, ruleName: "COLOR", startScore: GAME_CONFIG.level8StartScore, receiverColorsByPositionId: LEVEL_8_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: LEVEL_7_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 3, permutesReceiverColorsAfterSuccess: true },
   { level: 9, ruleName: "COLOR", startScore: GAME_CONFIG.level9StartScore, receiverColorsByPositionId: LEVEL_9_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: LEVEL_7_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 3, permutesReceiverShapesAfterSuccess: true },
   { level: 10, ruleName: "COLOR", startScore: GAME_CONFIG.level10StartScore, receiverColorsByPositionId: LEVEL_10_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: LEVEL_7_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 3, permutesReceiverColorsAfterSuccess: true, permutesReceiverShapesAfterSuccess: true },
-  { level: 11, ruleName: "COLOR", startScore: GAME_CONFIG.level11StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicWallColors: true }
+  { level: 11, ruleName: "COLOR", startScore: GAME_CONFIG.level11StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicWallColors: true, usesMobileReceiverPhysics: true },
+  { level: 12, ruleName: "SHAPE", startScore: GAME_CONFIG.level12StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicReceiverShapes: true, usesMobileReceiverPhysics: true },
+  { level: 13, ruleName: "COLOR", startScore: GAME_CONFIG.level13StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2, usesRuleControlledReceiverRotation: true, usesMobileReceiverPhysics: true }
 ];
 
 const NEON_COLORS = {
@@ -768,6 +776,13 @@ class DynamicRuleSequenceController {
     return minAnswers + Math.floor(Math.random() * (maxAnswers - minAnswers + 1));
   }
 
+  forceNewSequence(phase) {
+    if (!phase.usesDynamicRuleSequence) return;
+
+    this.activeRuleName = this.activeRuleName || phase.ruleName;
+    this.remainingAnswersInSequence = this.createSequenceLength(phase);
+  }
+
   getOppositeRuleName(ruleName) {
     return ruleName === "COLOR" ? "SHAPE" : "COLOR";
   }
@@ -895,27 +910,29 @@ class ReceiverPermutationController {
   }
 }
 
-class Level10WallRotationController {
-  constructor(initialReceiverColorsByPositionId) {
-    this.initialReceiverColorsByPositionId = initialReceiverColorsByPositionId;
+class ReceiverRotationController {
+  constructor({ initialValuesByPositionId, intervalMs, durationMs }) {
+    this.initialValuesByPositionId = initialValuesByPositionId;
+    this.intervalMs = intervalMs;
+    this.durationMs = durationMs;
     this.reset();
   }
 
   reset() {
-    this.currentReceiverColorsByPositionId = { ...this.initialReceiverColorsByPositionId };
-    this.previousReceiverColorsByPositionId = null;
+    this.currentValuesByPositionId = { ...this.initialValuesByPositionId };
+    this.previousValuesByPositionId = null;
     this.isActive = false;
-    this.lastWallRotationTime = 0;
-    this.wallRotationStartedAt = 0;
-    this.wallRotationProgress = 1;
+    this.lastRotationTime = 0;
+    this.rotationStartedAt = 0;
+    this.rotationProgress = 1;
   }
 
   stop() {
     this.isActive = false;
-    this.previousReceiverColorsByPositionId = null;
-    this.lastWallRotationTime = 0;
-    this.wallRotationStartedAt = 0;
-    this.wallRotationProgress = 1;
+    this.previousValuesByPositionId = null;
+    this.lastRotationTime = 0;
+    this.rotationStartedAt = 0;
+    this.rotationProgress = 1;
   }
 
   update(currentTime, shouldRunRotation) {
@@ -933,68 +950,59 @@ class Level10WallRotationController {
 
     this.updateAnimationProgress(currentTime);
 
-    if (currentTime - this.lastWallRotationTime >= GAME_CONFIG.level10WallRotationIntervalMs) {
+    if (currentTime - this.lastRotationTime >= this.intervalMs) {
       this.rotateClockwise(currentTime);
     }
   }
 
   start(currentTime) {
     this.isActive = true;
-    this.currentReceiverColorsByPositionId = { ...this.initialReceiverColorsByPositionId };
-    this.previousReceiverColorsByPositionId = null;
-    this.lastWallRotationTime = currentTime;
-    this.wallRotationStartedAt = 0;
-    this.wallRotationProgress = 1;
+    this.previousValuesByPositionId = null;
+    this.lastRotationTime = currentTime;
+    this.rotationStartedAt = 0;
+    this.rotationProgress = 1;
   }
 
   updateAnimationProgress(currentTime) {
-    if (this.wallRotationProgress >= 1) return;
+    if (this.rotationProgress >= 1) return;
 
-    const elapsedRotationMs = currentTime - this.wallRotationStartedAt;
-    this.wallRotationProgress = clamp(elapsedRotationMs / GAME_CONFIG.level10WallRotationDurationMs, 0, 1);
+    const elapsedRotationMs = currentTime - this.rotationStartedAt;
+    this.rotationProgress = clamp(elapsedRotationMs / this.durationMs, 0, 1);
 
-    if (this.wallRotationProgress === 1) {
-      this.previousReceiverColorsByPositionId = null;
+    if (this.rotationProgress === 1) {
+      this.previousValuesByPositionId = null;
     }
   }
 
   rotateClockwise(currentTime) {
-    const previousReceiverColorsByPositionId = { ...this.currentReceiverColorsByPositionId };
-    const nextReceiverColorsByPositionId = {};
+    const previousValuesByPositionId = { ...this.currentValuesByPositionId };
+    const nextValuesByPositionId = {};
 
     Object.entries(CLOCKWISE_RECEIVER_ROTATION_BY_POSITION_ID).forEach(([fromReceiverId, toReceiverId]) => {
-      nextReceiverColorsByPositionId[toReceiverId] = previousReceiverColorsByPositionId[fromReceiverId];
+      nextValuesByPositionId[toReceiverId] = previousValuesByPositionId[fromReceiverId];
     });
 
-    this.previousReceiverColorsByPositionId = previousReceiverColorsByPositionId;
-    this.currentReceiverColorsByPositionId = nextReceiverColorsByPositionId;
-    this.wallRotationStartedAt = currentTime;
-    this.lastWallRotationTime = currentTime;
-    this.wallRotationProgress = 0;
+    this.previousValuesByPositionId = previousValuesByPositionId;
+    this.currentValuesByPositionId = nextValuesByPositionId;
+    this.rotationStartedAt = currentTime;
+    this.lastRotationTime = currentTime;
+    this.rotationProgress = 0;
   }
 
-  getPhaseWithCurrentColors(phase) {
-    if (!phase.usesDynamicWallColors) return phase;
-
-    return {
-      ...phase,
-      receiverColorsByPositionId: this.currentReceiverColorsByPositionId
-    };
+  get animationProgress() {
+    return this.rotationProgress;
   }
 
-  get animationState() {
-    if (!this.previousReceiverColorsByPositionId || this.wallRotationProgress >= 1) return null;
-
-    return {
-      previousColorsByPositionId: this.previousReceiverColorsByPositionId,
-      progress: this.wallRotationProgress
-    };
+  get previousValues() {
+    if (!this.previousValuesByPositionId || this.rotationProgress >= 1) return null;
+    return this.previousValuesByPositionId;
   }
 }
 
+
 class ChallengePhysics {
   static getSpawnImpulse(challengePhase) {
-    if (challengePhase.usesDynamicWallColors) {
+    if (challengePhase.usesMobileReceiverPhysics || challengePhase.usesDynamicWallColors) {
       return GAME_CONFIG.spawnImpulse * GAME_CONFIG.level10SpawnImpulseMultiplier;
     }
 
@@ -1002,7 +1010,7 @@ class ChallengePhysics {
   }
 
   static getGravity(challengePhase) {
-    if (challengePhase.usesDynamicWallColors) {
+    if (challengePhase.usesMobileReceiverPhysics || challengePhase.usesDynamicWallColors) {
       return GAME_CONFIG.gravity * GAME_CONFIG.level10GravityMultiplier;
     }
 
@@ -1100,7 +1108,16 @@ class NeonSwipeGame {
       initialReceiverColorsByPositionId: LEVEL_8_INITIAL_RECEIVER_COLORS_BY_POSITION_ID,
       initialReceiverShapesByPositionId: LEVEL_7_RECEIVER_SHAPES_BY_POSITION_ID
     });
-    this.level10WallRotation = new Level10WallRotationController(LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID);
+    this.receiverColorRotation = new ReceiverRotationController({
+      initialValuesByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID,
+      intervalMs: GAME_CONFIG.level10WallRotationIntervalMs,
+      durationMs: GAME_CONFIG.level10WallRotationDurationMs
+    });
+    this.receiverShapeRotation = new ReceiverRotationController({
+      initialValuesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID,
+      intervalMs: GAME_CONFIG.shapeRotationIntervalMs,
+      durationMs: GAME_CONFIG.shapeRotationDurationMs
+    });
     this.particleSystem = new ParticleSystem(this.scaler);
     this.inputController = new InputController(this.canvas, this);
 
@@ -1115,7 +1132,11 @@ class NeonSwipeGame {
     this.centerMessage = "SWIPE";
     this.centerMessageUntil = 0;
     this.hasPlayedLevel11Intro = false;
-    this.level11IntroEndsAt = 0;
+    this.hasPlayedLevel12Intro = false;
+    this.hasPlayedLevel13Intro = false;
+    this.levelIntroEndsAt = 0;
+    this.level13IntroStartedAt = 0;
+    this.hasStartedLevel13ShapeIntroRotation = false;
   }
 
   start() {
@@ -1138,8 +1159,8 @@ class NeonSwipeGame {
     this.dynamicRuleSequence.reset();
     this.score = 0;
     this.state = "playing";
-    this.hasPlayedLevel11Intro = false;
-    this.level11IntroEndsAt = 0;
+    this.resetLevelIntroFlags();
+    this.activeShape = null;
     this.currentShapes = [];
     this.activeShapeIndex = null;
     this.currentChallengePhase = null;
@@ -1155,8 +1176,7 @@ class NeonSwipeGame {
     this.dynamicRuleSequence.reset();
     this.score = 0;
     this.state = "waiting";
-    this.hasPlayedLevel11Intro = false;
-    this.level11IntroEndsAt = 0;
+    this.resetLevelIntroFlags();
     this.activeShape = null;
     this.currentShapes = [];
     this.activeShapeIndex = null;
@@ -1172,14 +1192,14 @@ class NeonSwipeGame {
     this.lastAnimationTime = currentTime;
 
     if (this.state === "playing") {
-      this.updateLevel10WallRotation(currentTime);
+      this.updateReceiverRotations(currentTime);
       this.updateActiveShape(deltaSeconds);
     } else if (this.state === "receiverPermutation") {
       this.updateReceiverPermutation(currentTime);
-    } else if (this.state === "level11Intro") {
-      this.updateLevel11Intro(currentTime);
+    } else if (this.isShowingLevelIntro) {
+      this.updateLevelIntro(currentTime);
     } else {
-      this.updateLevel10WallRotation(currentTime);
+      this.updateReceiverRotations(currentTime);
     }
 
     this.particleSystem.update(deltaSeconds);
@@ -1344,16 +1364,16 @@ class NeonSwipeGame {
   }
 
   continueAfterResolvedChallenge(shouldStartRuleTransition, resolvedChallengePhase = this.currentChallengePhase || this.currentPhase) {
-    if (!this.isLevel10ScoreActive) {
-      this.stopLevel10WallRotation();
+    if (!this.currentPhaseUsesReceiverRotation) {
+      this.stopReceiverRotations();
     }
 
     if (shouldStartRuleTransition) {
       this.showRuleTransitionFeedback(this.currentRuleName);
     }
 
-    if (this.shouldStartLevel11Intro(resolvedChallengePhase)) {
-      this.startLevel11Intro();
+    if (this.shouldStartLevelIntro(resolvedChallengePhase)) {
+      this.startLevelIntro();
       return;
     }
 
@@ -1384,20 +1404,28 @@ class NeonSwipeGame {
 
   resetWallColorMechanics() {
     this.receiverPermutation.reset();
-    this.level10WallRotation.reset();
+    this.receiverColorRotation.reset();
+    this.receiverShapeRotation.reset();
   }
 
   stopWallColorMechanics() {
     this.receiverPermutation.reset();
-    this.level10WallRotation.stop();
+    this.receiverColorRotation.reset();
+    this.receiverShapeRotation.reset();
   }
 
-  resetLevel10WallRotation() {
-    this.level10WallRotation.reset();
+  stopReceiverRotations() {
+    this.receiverColorRotation.stop();
+    this.receiverShapeRotation.stop();
   }
 
-  stopLevel10WallRotation() {
-    this.level10WallRotation.stop();
+  resetLevelIntroFlags() {
+    this.hasPlayedLevel11Intro = false;
+    this.hasPlayedLevel12Intro = false;
+    this.hasPlayedLevel13Intro = false;
+    this.levelIntroEndsAt = 0;
+    this.level13IntroStartedAt = 0;
+    this.hasStartedLevel13ShapeIntroRotation = false;
   }
 
   updateReceiverPermutation(currentTime) {
@@ -1418,36 +1446,87 @@ class NeonSwipeGame {
     this.receiverPermutation.startPermutation(performance.now(), permutationPhase);
   }
 
-  updateLevel11Intro(currentTime) {
-    this.level10WallRotation.update(currentTime, true);
+  updateLevelIntro(currentTime) {
+    if (this.state === "level11Intro") {
+      this.receiverColorRotation.update(currentTime, true);
+    } else if (this.state === "level12Intro") {
+      this.receiverShapeRotation.update(currentTime, true);
+    } else if (this.state === "level13Intro") {
+      this.updateLevel13IntroDemo(currentTime);
+    }
 
-    if (currentTime < this.level11IntroEndsAt) return;
+    if (currentTime < this.levelIntroEndsAt) return;
+
+    if (this.state === "level13Intro") {
+      this.dynamicRuleSequence.forceNewSequence(this.currentPhase);
+    }
 
     this.state = "playing";
     this.spawnNextChallenge();
   }
 
-  startLevel11Intro() {
+  updateLevel13IntroDemo(currentTime) {
+    const elapsedIntroMs = currentTime - this.level13IntroStartedAt;
+    const shapeDemoStartsAt = GAME_CONFIG.level13IntroDurationMs / 2;
+
+    if (elapsedIntroMs < shapeDemoStartsAt) {
+      this.receiverColorRotation.update(currentTime, true);
+      this.receiverShapeRotation.stop();
+      return;
+    }
+
+    this.receiverColorRotation.stop();
+
+    if (!this.hasStartedLevel13ShapeIntroRotation) {
+      this.receiverShapeRotation.start(currentTime);
+      this.receiverShapeRotation.rotateClockwise(currentTime);
+      this.hasStartedLevel13ShapeIntroRotation = true;
+    }
+
+    this.receiverShapeRotation.update(currentTime, true);
+  }
+
+  startLevelIntro() {
     const introStartedAt = performance.now();
+    const introPhase = this.currentPhase;
 
     this.clearPendingDuoSpawn();
-    this.level10WallRotation.start(introStartedAt);
-    this.level10WallRotation.rotateClockwise(introStartedAt);
-    this.hasPlayedLevel11Intro = true;
-    this.level11IntroEndsAt = introStartedAt + GAME_CONFIG.level11IntroDurationMs;
-    this.state = "level11Intro";
+    this.stopReceiverRotations();
     this.activeShape = null;
     this.currentShapes = [];
     this.activeShapeIndex = null;
     this.currentChallengePhase = null;
+
+    if (introPhase.level === 11) {
+      this.receiverColorRotation.start(introStartedAt);
+      this.receiverColorRotation.rotateClockwise(introStartedAt);
+      this.hasPlayedLevel11Intro = true;
+      this.levelIntroEndsAt = introStartedAt + GAME_CONFIG.level11IntroDurationMs;
+      this.state = "level11Intro";
+      return;
+    }
+
+    if (introPhase.level === 12) {
+      this.receiverShapeRotation.start(introStartedAt);
+      this.receiverShapeRotation.rotateClockwise(introStartedAt);
+      this.hasPlayedLevel12Intro = true;
+      this.levelIntroEndsAt = introStartedAt + GAME_CONFIG.level12IntroDurationMs;
+      this.state = "level12Intro";
+      return;
+    }
+
+    this.receiverColorRotation.start(introStartedAt);
+    this.receiverColorRotation.rotateClockwise(introStartedAt);
+    this.hasPlayedLevel13Intro = true;
+    this.hasStartedLevel13ShapeIntroRotation = false;
+    this.level13IntroStartedAt = introStartedAt;
+    this.levelIntroEndsAt = introStartedAt + GAME_CONFIG.level13IntroDurationMs;
+    this.state = "level13Intro";
   }
 
-  updateLevel10WallRotation(currentTime) {
-    this.level10WallRotation.update(currentTime, this.shouldRunLevel10WallRotation);
-  }
-
-  startLevel10WallRotation(currentTime) {
-    this.level10WallRotation.rotateClockwise(currentTime);
+  updateReceiverRotations(currentTime) {
+    this.receiverColorRotation.update(currentTime, this.shouldRunReceiverColorRotation);
+    this.receiverShapeRotation.update(currentTime, this.shouldRunReceiverShapeRotation);
   }
 
   throwActiveShapeFromSwipe(swipeGesture) {
@@ -1548,6 +1627,7 @@ class NeonSwipeGame {
     this.centerMessage = message;
     this.centerMessageUntil = Infinity;
     this.activeShape = null;
+    this.currentShapes = [];
     this.activeShapeIndex = null;
     this.currentChallengePhase = null;
     this.restartButton.classList.add("is-visible");
@@ -1642,8 +1722,8 @@ class NeonSwipeGame {
   }
 
   drawCenterLabel(currentTime) {
-    if (this.state === "level11Intro") {
-      this.drawLevel11IntroLabel();
+    if (this.isShowingLevelIntro) {
+      this.drawLevelIntroLabel();
       return;
     }
 
@@ -1668,8 +1748,8 @@ class NeonSwipeGame {
     this.context.restore();
   }
 
-  drawLevel11IntroLabel() {
-    const lines = ["LEVEL 11", "COLORS ROTATE", "↻ CLOCKWISE"];
+  drawLevelIntroLabel() {
+    const lines = this.levelIntroLines;
     const centerY = this.scaler.canvasHeight / 2 - this.scaler.y(28);
     const lineGap = this.scaler.y(52);
 
@@ -1686,6 +1766,14 @@ class NeonSwipeGame {
       this.context.letterSpacing = `${this.scaler.x(isTitle ? 5 : 3)}px`;
       this.context.fillText(line, this.scaler.canvasWidth / 2, centerY + (index - 1) * lineGap);
     });
+
+    if (this.state === "level13Intro") {
+      const elapsedIntroMs = performance.now() - this.level13IntroStartedAt;
+      const activeRuleLabel = elapsedIntroMs < GAME_CONFIG.level13IntroDurationMs / 2 ? "COLOR" : "SHAPE";
+      this.context.font = `900 ${this.scaler.x(24)}px ui-sans-serif, system-ui`;
+      this.context.letterSpacing = `${this.scaler.x(8)}px`;
+      this.context.fillText(activeRuleLabel, this.scaler.canvasWidth / 2, centerY + lineGap * 1.9);
+    }
 
     this.context.restore();
   }
@@ -1707,36 +1795,40 @@ class NeonSwipeGame {
   }
 
   get wallColorAnimationState() {
-    return this.receiverPermutation.animationState || this.level10WallRotation.animationState;
+    return this.receiverPermutation.animationState || this.receiverRotationAnimationState;
   }
 
-  get level10ReceiverColorsByPositionId() {
-    return this.level10WallRotation.currentReceiverColorsByPositionId;
-  }
+  get receiverRotationAnimationState() {
+    const previousColorsByPositionId = this.receiverColorRotation.previousValues;
+    const previousShapesByPositionId = this.receiverShapeRotation.previousValues;
 
-  get level10PreviousReceiverColorsByPositionId() {
-    return this.level10WallRotation.previousReceiverColorsByPositionId;
-  }
+    if (!previousColorsByPositionId && !previousShapesByPositionId) return null;
 
-  get isLevel10WallRotationActive() {
-    return this.level10WallRotation.isActive;
-  }
-
-  get wallRotationProgress() {
-    return this.level10WallRotation.wallRotationProgress;
+    return {
+      previousColorsByPositionId,
+      previousShapesByPositionId,
+      progress: previousColorsByPositionId
+        ? this.receiverColorRotation.animationProgress
+        : this.receiverShapeRotation.animationProgress
+    };
   }
 
   getPhaseWithCurrentWallColors(phase) {
     const receiverPermutationPhase = this.receiverPermutation.getPhaseWithCurrentPermutation(phase);
-    return this.level10WallRotation.getPhaseWithCurrentColors(receiverPermutationPhase);
+
+    return {
+      ...receiverPermutationPhase,
+      receiverColorsByPositionId: this.phaseUsesReceiverColorRotationLayout(receiverPermutationPhase)
+        ? this.receiverColorRotation.currentValuesByPositionId
+        : receiverPermutationPhase.receiverColorsByPositionId,
+      receiverShapesByPositionId: this.phaseUsesReceiverShapeRotationLayout(receiverPermutationPhase)
+        ? this.receiverShapeRotation.currentValuesByPositionId
+        : receiverPermutationPhase.receiverShapesByPositionId
+    };
   }
 
   get activeChallengeUsesDuoShapes() {
     return Boolean((this.currentChallengePhase || this.currentPhase).usesDuoShapes);
-  }
-
-  get currentChallengeUsesDynamicWallPhysics() {
-    return Boolean((this.currentChallengePhase || this.currentPhase).usesDynamicWallColors);
   }
 
   get currentChallengeSpawnImpulse() {
@@ -1747,20 +1839,54 @@ class NeonSwipeGame {
     return Boolean(phase?.permutesReceiverColorsAfterSuccess || phase?.permutesReceiverShapesAfterSuccess);
   }
 
-  shouldStartLevel11Intro(resolvedChallengePhase) {
-    return (
-      !this.hasPlayedLevel11Intro &&
-      resolvedChallengePhase?.level !== 11 &&
-      this.currentPhase.level === 11
-    );
+  shouldStartLevelIntro(resolvedChallengePhase) {
+    const nextLevel = this.currentPhase.level;
+    const previousLevel = resolvedChallengePhase?.level;
+
+    if (previousLevel === nextLevel) return false;
+    if (nextLevel === 11) return !this.hasPlayedLevel11Intro;
+    if (nextLevel === 12) return !this.hasPlayedLevel12Intro;
+    if (nextLevel === 13) return !this.hasPlayedLevel13Intro;
+    return false;
   }
 
-  get isLevel10ScoreActive() {
-    return this.score >= GAME_CONFIG.level11StartScore;
+  phaseUsesReceiverColorRotation(phase) {
+    return Boolean(phase.usesDynamicWallColors || (phase.usesRuleControlledReceiverRotation && phase.ruleName === "COLOR"));
   }
 
-  get shouldRunLevel10WallRotation() {
-    return (this.state === "playing" || this.state === "level11Intro") && this.isLevel10ScoreActive && Boolean(this.visiblePhase.usesDynamicWallColors);
+  phaseUsesReceiverShapeRotation(phase) {
+    return Boolean(phase.usesDynamicReceiverShapes || (phase.usesRuleControlledReceiverRotation && phase.ruleName === "SHAPE"));
+  }
+
+  phaseUsesReceiverColorRotationLayout(phase) {
+    return Boolean(phase.usesDynamicWallColors || phase.usesDynamicReceiverShapes || phase.usesRuleControlledReceiverRotation);
+  }
+
+  phaseUsesReceiverShapeRotationLayout(phase) {
+    return Boolean(phase.usesDynamicReceiverShapes || phase.usesRuleControlledReceiverRotation);
+  }
+
+  get currentPhaseUsesReceiverRotation() {
+    return this.phaseUsesReceiverColorRotation(this.currentPhase) || this.phaseUsesReceiverShapeRotation(this.currentPhase);
+  }
+
+  get shouldRunReceiverColorRotation() {
+    return this.state === "playing" && this.phaseUsesReceiverColorRotation(this.visiblePhase);
+  }
+
+  get shouldRunReceiverShapeRotation() {
+    return this.state === "playing" && this.phaseUsesReceiverShapeRotation(this.visiblePhase);
+  }
+
+  get isShowingLevelIntro() {
+    return this.state === "level11Intro" || this.state === "level12Intro" || this.state === "level13Intro";
+  }
+
+  get levelIntroLines() {
+    if (this.state === "level12Intro") return ["LEVEL 12", "SHAPES ROTATE", "↻ CLOCKWISE"];
+    if (this.state === "level13Intro") return ["LEVEL 13", "RULE CONTROLS", "THE ROTATION"];
+
+    return ["LEVEL 11", "COLORS ROTATE", "↻ CLOCKWISE"];
   }
 
   get currentRuleName() {
