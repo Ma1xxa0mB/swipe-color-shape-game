@@ -1511,7 +1511,7 @@ class NeonSwipeGame {
     this.resetWallColorMechanics();
     this.dynamicRuleSequence.reset();
     // TEMP TEST LEVEL 18 - restore to 0 after validation
-    this.score = 87;
+    this.score = 90;
     this.state = "playing";
     this.resetLevelIntroFlags();
     this.movingReceiverOffset = 0;
@@ -2028,8 +2028,14 @@ class NeonSwipeGame {
   throwActiveShapeFromSwipe(swipeGesture) {
     if (!this.activeShape || !this.activeShape.canReceiveSwipe || swipeGesture.distance < this.scaler.x(GAME_CONFIG.minSwipeDistance)) return;
 
-    const targetReceiverId = this.inferReceiverIdFromSwipe(swipeGesture.deltaX, swipeGesture.deltaY);
-    this.throwActiveShapeAtTarget(targetReceiverId, swipeGesture.distance, swipeGesture.durationMs);
+    const direction = {
+      x: swipeGesture.deltaX,
+      y: swipeGesture.deltaY
+    };
+    const throwForce = this.calculateSwipeThrowForce(swipeGesture.distance, swipeGesture.durationMs);
+
+    this.activeShape.throwToward(direction, throwForce, this.activeChallengeUsesDuoShapes);
+    this.activateNextDuoShape();
   }
 
   throwActiveShapeAtTarget(target, gestureDistance = this.scaler.x(120), gestureDurationMs = 110) {
@@ -2079,6 +2085,16 @@ class NeonSwipeGame {
     };
   }
 
+  calculateSwipeThrowForce(gestureDistance, gestureDurationMs) {
+    const gestureForce = (gestureDistance / Math.max(gestureDurationMs, 1)) * this.scaler.x(760);
+
+    return clamp(
+      gestureForce,
+      this.scaler.x(GAME_CONFIG.minThrowForce),
+      this.scaler.x(GAME_CONFIG.maxThrowForce)
+    );
+  }
+
   calculateThrowForce(direction, gestureDistance, gestureDurationMs) {
     const directionLength = Math.hypot(direction.x, direction.y) || 1;
     const normalizedY = direction.y / directionLength;
@@ -2090,16 +2106,6 @@ class NeonSwipeGame {
       this.scaler.x(GAME_CONFIG.minThrowForce),
       this.scaler.x(GAME_CONFIG.maxThrowForce)
     );
-  }
-
-  inferReceiverIdFromSwipe(deltaX, deltaY) {
-    const isSwipeGoingUp = deltaY < 0;
-    const isSwipeGoingLeft = deltaX < 0;
-
-    if (isSwipeGoingUp && isSwipeGoingLeft) return "topLeft";
-    if (isSwipeGoingUp) return "topRight";
-    if (isSwipeGoingLeft) return "bottomLeft";
-    return "bottomRight";
   }
 
   canReceiveInput() {
