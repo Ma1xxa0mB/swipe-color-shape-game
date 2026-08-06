@@ -34,9 +34,14 @@ const GAME_CONFIG = {
   level15StartScore: 63,
   level16StartScore: 71,
   level17StartScore: 79,
+  level18StartScore: 87,
   sideEntryHeightRatio: 0.58,
   sideEntryHorizontalImpulse: 460,
   sideEntryUpwardImpulse: -920,
+  movingReceiverSpeed: 90,
+  movingGapSpawnOffset: 42,
+  movingGapEntryImpulse: 460,
+  movingReceiverIconInset: 72,
   level11IntroDurationMs: 1400,
   level12IntroDurationMs: 1400,
   level13IntroDurationMs: 1600,
@@ -135,7 +140,8 @@ const GAME_PHASES = [
   { level: 14, ruleName: "COLOR", startScore: GAME_CONFIG.level14StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2, permutesReceiverColorsAfterSuccess: true, permutesReceiverShapesAfterSuccess: true, usesShortReceiverTracks: true },
   { level: 15, ruleName: "COLOR", startScore: GAME_CONFIG.level15StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2, permutesReceiverColorsAfterSuccess: true, permutesReceiverShapesAfterSuccess: true, usesShortReceiverTracks: true, projectileEntry: "top" },
   { level: 16, ruleName: "COLOR", startScore: GAME_CONFIG.level16StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2, permutesReceiverColorsAfterSuccess: true, permutesReceiverShapesAfterSuccess: true, usesShortReceiverTracks: true, projectileEntry: "side" },
-  { level: 17, ruleName: "COLOR", startScore: GAME_CONFIG.level17StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2, permutesReceiverColorsAfterSuccess: true, permutesReceiverShapesAfterSuccess: true, usesShortReceiverTracks: true, projectileEntry: "random" }
+  { level: 17, ruleName: "COLOR", startScore: GAME_CONFIG.level17StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2, permutesReceiverColorsAfterSuccess: true, permutesReceiverShapesAfterSuccess: true, usesShortReceiverTracks: true, projectileEntry: "random" },
+  { level: 18, ruleName: "COLOR", startScore: GAME_CONFIG.level18StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2, usesShortReceiverTracks: true, usesMovingReceiverTracks: true, projectileEntry: "movingGap" }
 ];
 
 const NEON_COLORS = {
@@ -458,6 +464,10 @@ class Arena {
   }
 
   getReceiverHitAreas(receiver, currentPhase) {
+    if (currentPhase?.usesMovingReceiverTracks) {
+      return this.getMovingReceiverTrackHitAreas(receiver, currentPhase);
+    }
+
     if (currentPhase?.usesShortReceiverTracks) {
       return this.getShortReceiverTrackHitAreas(receiver);
     }
@@ -493,6 +503,166 @@ class Arena {
       { x: rightRailX, y: middleY, width: layout.railSize, height: layout.outerHeight / 2 },
       { x: middleX, y: bottomRailY, width: layout.outerWidth / 2, height: layout.railSize }
     ];
+  }
+
+  getOuterTrackBounds() {
+    const layout = this.getScaledLayout();
+    return {
+      left: layout.outerX + layout.railSize / 2,
+      top: layout.outerY + layout.railSize / 2,
+      right: layout.outerX + layout.outerWidth - layout.railSize / 2,
+      bottom: layout.outerY + layout.outerHeight - layout.railSize / 2
+    };
+  }
+
+  getOuterTrackPerimeterLength() {
+    const bounds = this.getOuterTrackBounds();
+    return 2 * ((bounds.right - bounds.left) + (bounds.bottom - bounds.top));
+  }
+
+  normalizeOuterTrackDistance(distance) {
+    const perimeterLength = this.getOuterTrackPerimeterLength();
+    return ((distance % perimeterLength) + perimeterLength) % perimeterLength;
+  }
+
+  getPointOnOuterTrack(distance) {
+    const bounds = this.getOuterTrackBounds();
+    const horizontalLength = bounds.right - bounds.left;
+    const verticalLength = bounds.bottom - bounds.top;
+    let normalizedDistance = this.normalizeOuterTrackDistance(distance);
+
+    if (normalizedDistance <= horizontalLength) {
+      return {
+        x: bounds.left + normalizedDistance,
+        y: bounds.top,
+        side: "top",
+        inwardNormalX: 0,
+        inwardNormalY: 1
+      };
+    }
+
+    normalizedDistance -= horizontalLength;
+    if (normalizedDistance <= verticalLength) {
+      return {
+        x: bounds.right,
+        y: bounds.top + normalizedDistance,
+        side: "right",
+        inwardNormalX: -1,
+        inwardNormalY: 0
+      };
+    }
+
+    normalizedDistance -= verticalLength;
+    if (normalizedDistance <= horizontalLength) {
+      return {
+        x: bounds.right - normalizedDistance,
+        y: bounds.bottom,
+        side: "bottom",
+        inwardNormalX: 0,
+        inwardNormalY: -1
+      };
+    }
+
+    normalizedDistance -= horizontalLength;
+    return {
+      x: bounds.left,
+      y: bounds.bottom - normalizedDistance,
+      side: "left",
+      inwardNormalX: 1,
+      inwardNormalY: 0
+    };
+  }
+
+  getDistanceToOuterTrackCorner(distance) {
+    const bounds = this.getOuterTrackBounds();
+    const horizontalLength = bounds.right - bounds.left;
+    const verticalLength = bounds.bottom - bounds.top;
+    const normalizedDistance = this.normalizeOuterTrackDistance(distance);
+
+    if (normalizedDistance < horizontalLength) return horizontalLength - normalizedDistance;
+    if (normalizedDistance < horizontalLength + verticalLength) return horizontalLength + verticalLength - normalizedDistance;
+    if (normalizedDistance < horizontalLength * 2 + verticalLength) return horizontalLength * 2 + verticalLength - normalizedDistance;
+    return this.getOuterTrackPerimeterLength() - normalizedDistance;
+  }
+
+  getTrackSegmentsOnOuterPerimeter(startDistance, length) {
+    const segments = [];
+    let remainingLength = length;
+    let currentDistance = this.normalizeOuterTrackDistance(startDistance);
+
+    while (remainingLength > 0.001) {
+      let distanceToCorner = this.getDistanceToOuterTrackCorner(currentDistance);
+      if (distanceToCorner <= 0.001) {
+        currentDistance += 0.001;
+        distanceToCorner = this.getDistanceToOuterTrackCorner(currentDistance);
+      }
+
+      const segmentLength = Math.min(remainingLength, distanceToCorner);
+      const segmentStart = this.getPointOnOuterTrack(currentDistance);
+      const segmentEnd = this.getPointOnOuterTrack(currentDistance + segmentLength);
+
+      segments.push({
+        start: segmentStart,
+        end: segmentEnd,
+        side: segmentStart.side
+      });
+
+      remainingLength -= segmentLength;
+      currentDistance += segmentLength;
+    }
+
+    return segments;
+  }
+
+  getMovingReceiverTrackLength() {
+    return this.scaler.x(GAME_CONFIG.level14ReceiverTrackLength);
+  }
+
+  getMovingReceiverBaseDistance(receiver) {
+    const receiverIndex = this.receivers.findIndex((candidate) => candidate.id === receiver.id);
+    return (this.getOuterTrackPerimeterLength() / this.receivers.length) * receiverIndex;
+  }
+
+  getMovingReceiverStartDistance(receiver, currentPhase) {
+    return this.getMovingReceiverBaseDistance(receiver) + (currentPhase.movingReceiverOffset || 0);
+  }
+
+  getMovingReceiverTrackSegments(receiver, currentPhase) {
+    return this.getTrackSegmentsOnOuterPerimeter(
+      this.getMovingReceiverStartDistance(receiver, currentPhase),
+      this.getMovingReceiverTrackLength()
+    );
+  }
+
+  getMovingReceiverTrackHitAreas(receiver, currentPhase) {
+    const layout = this.getScaledLayout();
+    return this.getMovingReceiverTrackSegments(receiver, currentPhase).map((segment) => {
+      return this.getSegmentHitArea(segment.start, segment.end, layout.railSize);
+    });
+  }
+
+  getMovingReceiverIconPoint(receiver, currentPhase) {
+    const centerDistance = this.getMovingReceiverStartDistance(receiver, currentPhase) + this.getMovingReceiverTrackLength() / 2;
+    const centerPoint = this.getPointOnOuterTrack(centerDistance);
+    const iconInset = this.scaler.x(GAME_CONFIG.movingReceiverIconInset);
+
+    return {
+      x: centerPoint.x + centerPoint.inwardNormalX * iconInset,
+      y: centerPoint.y + centerPoint.inwardNormalY * iconInset
+    };
+  }
+
+  getRandomMovingReceiverGapPoint(currentPhase) {
+    const receiver = getRandomItem(this.receivers);
+    const spacing = this.getOuterTrackPerimeterLength() / this.receivers.length;
+    const receiverLength = this.getMovingReceiverTrackLength();
+    const gapLength = spacing - receiverLength;
+    const gapCenterDistance = this.getMovingReceiverBaseDistance(receiver)
+      + receiverLength
+      + gapLength / 2
+      + (currentPhase.movingReceiverOffset || 0);
+
+    return this.getPointOnOuterTrack(gapCenterDistance);
   }
 
   getShortReceiverTrackGeometry(receiver) {
@@ -578,6 +748,13 @@ class Arena {
   }
 
   draw(context, currentPhase, wallColorAnimation = null) {
+    if (currentPhase.usesMovingReceiverTracks) {
+      this.receivers.forEach((receiver) => this.drawMovingReceiverTrack(context, receiver, currentPhase));
+      this.drawReceiverIcons(context, currentPhase);
+      this.drawInnerGuide(context);
+      return;
+    }
+
     if (wallColorAnimation && wallColorAnimation.progress < 1) {
       this.drawReceiverTracksWithWallColorAnimation(context, currentPhase, wallColorAnimation);
       this.drawReceiverIconsWithWallColorAnimation(context, currentPhase, wallColorAnimation);
@@ -619,6 +796,31 @@ class Arena {
     context.lineTo(geometry.horizontalStart.x, geometry.horizontalStart.y);
     context.quadraticCurveTo(geometry.curveControl.x, geometry.curveControl.y, geometry.curveEnd.x, geometry.curveEnd.y);
     context.lineTo(geometry.verticalEnd.x, geometry.verticalEnd.y);
+  }
+
+  drawMovingReceiverTrack(context, receiver, currentPhase) {
+    const receiverNeonColor = this.getReceiverNeonColor(receiver, currentPhase);
+
+    context.save();
+    context.shadowColor = receiverNeonColor;
+    context.shadowBlur = this.scaler.x(18);
+    context.strokeStyle = receiverNeonColor;
+    context.lineCap = "round";
+    context.lineJoin = "round";
+
+    context.beginPath();
+    this.getMovingReceiverTrackSegments(receiver, currentPhase).forEach((segment) => {
+      context.moveTo(segment.start.x, segment.start.y);
+      context.lineTo(segment.end.x, segment.end.y);
+    });
+
+    context.globalAlpha = 0.45;
+    context.lineWidth = this.scaler.x(15);
+    context.stroke();
+    context.globalAlpha = 1;
+    context.lineWidth = this.scaler.x(4);
+    context.stroke();
+    context.restore();
   }
 
   drawReceiverTrack(context, receiver, currentPhase, colorOverride = null, opacity = 1) {
@@ -678,12 +880,17 @@ class Arena {
     const layout = this.layout;
     const iconMargin = 64;
     const receiverIconRadius = this.scaler.x(GAME_CONFIG.shapeRadius);
-    const iconPositionsByReceiverId = {
-      topLeft: this.scaler.point(layout.innerX + iconMargin, layout.innerY + iconMargin),
-      topRight: this.scaler.point(layout.innerX + layout.innerWidth - iconMargin, layout.innerY + iconMargin),
-      bottomLeft: this.scaler.point(layout.innerX + iconMargin, layout.innerY + layout.innerHeight - iconMargin),
-      bottomRight: this.scaler.point(layout.innerX + layout.innerWidth - iconMargin, layout.innerY + layout.innerHeight - iconMargin)
-    };
+    const iconPositionsByReceiverId = currentPhase.usesMovingReceiverTracks
+      ? this.receivers.reduce((positionsByReceiverId, receiver) => {
+        positionsByReceiverId[receiver.id] = this.getMovingReceiverIconPoint(receiver, currentPhase);
+        return positionsByReceiverId;
+      }, {})
+      : {
+        topLeft: this.scaler.point(layout.innerX + iconMargin, layout.innerY + iconMargin),
+        topRight: this.scaler.point(layout.innerX + layout.innerWidth - iconMargin, layout.innerY + iconMargin),
+        bottomLeft: this.scaler.point(layout.innerX + iconMargin, layout.innerY + layout.innerHeight - iconMargin),
+        bottomRight: this.scaler.point(layout.innerX + layout.innerWidth - iconMargin, layout.innerY + layout.innerHeight - iconMargin)
+      };
 
     // Les symboles de reference sont dans les coins du carre interieur,
     // separes des rails neon pour ne pas donner l'impression qu'ils sont sur le mur.
@@ -1244,6 +1451,7 @@ class NeonSwipeGame {
     this.hasPlayedLevel11Intro = false;
     this.hasPlayedLevel12Intro = false;
     this.hasPlayedLevel13Intro = false;
+    this.movingReceiverOffset = 0;
     this.levelIntroEndsAt = 0;
     this.level13IntroStartedAt = 0;
     this.hasStartedLevel13ShapeIntroRotation = false;
@@ -1267,10 +1475,11 @@ class NeonSwipeGame {
     this.clearPendingDuoSpawn();
     this.resetWallColorMechanics();
     this.dynamicRuleSequence.reset();
-    // TEMP TEST LEVEL 17 - restore to 0 after validation
-    this.score = 79;
+    // TEMP TEST LEVEL 18 - restore to 0 after validation
+    this.score = 87;
     this.state = "playing";
     this.resetLevelIntroFlags();
+    this.movingReceiverOffset = 0;
     this.receiverPermutation.syncToPhase(this.currentPhase);
     this.activeShape = null;
     this.currentShapes = [];
@@ -1289,6 +1498,7 @@ class NeonSwipeGame {
     this.score = 0;
     this.state = "waiting";
     this.resetLevelIntroFlags();
+    this.movingReceiverOffset = 0;
     this.activeShape = null;
     this.currentShapes = [];
     this.activeShapeIndex = null;
@@ -1305,6 +1515,7 @@ class NeonSwipeGame {
 
     if (this.state === "playing") {
       this.updateReceiverRotations(currentTime);
+      this.updateMovingReceiverTracks(deltaSeconds);
       this.updateActiveShape(deltaSeconds);
     } else if (this.state === "receiverPermutation") {
       this.updateReceiverPermutation(currentTime);
@@ -1380,6 +1591,10 @@ class NeonSwipeGame {
       });
     }
 
+    if (phase.projectileEntry === "movingGap") {
+      return this.getMovingGapShapeSpawn(phase);
+    }
+
     if (phase.projectileEntry === "top") {
       return {
         x: this.scaler.x(GAME_CONFIG.designWidth / 2),
@@ -1417,6 +1632,20 @@ class NeonSwipeGame {
       y: this.scaler.y(GAME_CONFIG.designHeight + 38),
       velocityX: 0,
       velocityY: this.scaler.y(this.currentChallengeSpawnImpulse)
+    };
+  }
+
+  getMovingGapShapeSpawn(phase) {
+    const gapPoint = this.arena.getRandomMovingReceiverGapPoint({
+      ...phase,
+      movingReceiverOffset: this.movingReceiverOffset
+    });
+
+    return {
+      x: gapPoint.x - gapPoint.inwardNormalX * this.scaler.x(GAME_CONFIG.movingGapSpawnOffset),
+      y: gapPoint.y - gapPoint.inwardNormalY * this.scaler.y(GAME_CONFIG.movingGapSpawnOffset),
+      velocityX: gapPoint.inwardNormalX * this.scaler.x(GAME_CONFIG.movingGapEntryImpulse),
+      velocityY: gapPoint.inwardNormalY * this.scaler.y(GAME_CONFIG.movingGapEntryImpulse)
     };
   }
 
@@ -1550,6 +1779,13 @@ class NeonSwipeGame {
       this.receiverPermutation.syncToPhase(this.currentPhase);
     }
 
+    if (resolvedChallengePhase?.level !== this.currentPhase.level && this.currentPhase.usesMovingReceiverTracks) {
+      this.receiverPermutation.syncToPhase(this.currentPhase);
+      this.movingReceiverOffset = 0;
+      this.spawnNextChallenge();
+      return;
+    }
+
     if (this.phasePermutesReceiversAfterSuccess(resolvedChallengePhase)) {
       this.startReceiverPermutation(resolvedChallengePhase);
       return;
@@ -1596,6 +1832,7 @@ class NeonSwipeGame {
     this.hasPlayedLevel11Intro = false;
     this.hasPlayedLevel12Intro = false;
     this.hasPlayedLevel13Intro = false;
+    this.movingReceiverOffset = 0;
     this.levelIntroEndsAt = 0;
     this.level13IntroStartedAt = 0;
     this.hasStartedLevel13ShapeIntroRotation = false;
@@ -1700,6 +1937,13 @@ class NeonSwipeGame {
   updateReceiverRotations(currentTime) {
     this.receiverColorRotation.update(currentTime, this.shouldRunReceiverColorRotation);
     this.receiverShapeRotation.update(currentTime, this.shouldRunReceiverShapeRotation);
+  }
+
+  updateMovingReceiverTracks(deltaSeconds) {
+    if (!this.visiblePhase.usesMovingReceiverTracks) return;
+
+    const perimeterLength = this.arena.getOuterTrackPerimeterLength();
+    this.movingReceiverOffset = (this.movingReceiverOffset + GAME_CONFIG.movingReceiverSpeed * deltaSeconds) % perimeterLength;
   }
 
   throwActiveShapeFromSwipe(swipeGesture) {
@@ -1960,7 +2204,14 @@ class NeonSwipeGame {
   }
 
   get visiblePhase() {
-    return this.getPhaseWithCurrentWallColors(this.currentChallengePhase || this.currentPhase);
+    const visiblePhase = this.getPhaseWithCurrentWallColors(this.currentChallengePhase || this.currentPhase);
+
+    if (!visiblePhase.usesMovingReceiverTracks) return visiblePhase;
+
+    return {
+      ...visiblePhase,
+      movingReceiverOffset: this.movingReceiverOffset
+    };
   }
 
   get visibleRuleName() {
