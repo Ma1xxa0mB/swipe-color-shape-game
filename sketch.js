@@ -32,6 +32,11 @@ const GAME_CONFIG = {
   level14StartScore: 55,
   level14ReceiverTrackLength: 160,
   level15StartScore: 63,
+  level16StartScore: 71,
+  level17StartScore: 79,
+  sideEntryHeightRatio: 0.58,
+  sideEntryHorizontalImpulse: 460,
+  sideEntryUpwardImpulse: -920,
   level11IntroDurationMs: 1400,
   level12IntroDurationMs: 1400,
   level13IntroDurationMs: 1600,
@@ -128,7 +133,9 @@ const GAME_PHASES = [
   { level: 12, ruleName: "SHAPE", startScore: GAME_CONFIG.level12StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicReceiverShapes: true, usesMobileReceiverPhysics: true },
   { level: 13, ruleName: "COLOR", startScore: GAME_CONFIG.level13StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2, usesRuleControlledReceiverRotation: true, usesMobileReceiverPhysics: true },
   { level: 14, ruleName: "COLOR", startScore: GAME_CONFIG.level14StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2, permutesReceiverColorsAfterSuccess: true, permutesReceiverShapesAfterSuccess: true, usesShortReceiverTracks: true },
-  { level: 15, ruleName: "COLOR", startScore: GAME_CONFIG.level15StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2, permutesReceiverColorsAfterSuccess: true, permutesReceiverShapesAfterSuccess: true, usesShortReceiverTracks: true, projectileEntry: "top" }
+  { level: 15, ruleName: "COLOR", startScore: GAME_CONFIG.level15StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2, permutesReceiverColorsAfterSuccess: true, permutesReceiverShapesAfterSuccess: true, usesShortReceiverTracks: true, projectileEntry: "top" },
+  { level: 16, ruleName: "COLOR", startScore: GAME_CONFIG.level16StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2, permutesReceiverColorsAfterSuccess: true, permutesReceiverShapesAfterSuccess: true, usesShortReceiverTracks: true, projectileEntry: "side" },
+  { level: 17, ruleName: "COLOR", startScore: GAME_CONFIG.level17StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2, permutesReceiverColorsAfterSuccess: true, permutesReceiverShapesAfterSuccess: true, usesShortReceiverTracks: true, projectileEntry: "random" }
 ];
 
 const NEON_COLORS = {
@@ -1260,8 +1267,8 @@ class NeonSwipeGame {
     this.clearPendingDuoSpawn();
     this.resetWallColorMechanics();
     this.dynamicRuleSequence.reset();
-    // TEMP TEST LEVEL 15 - restore to 0 after validation
-    this.score = 63;
+    // TEMP TEST LEVEL 17 - restore to 0 after validation
+    this.score = 79;
     this.state = "playing";
     this.resetLevelIntroFlags();
     this.receiverPermutation.syncToPhase(this.currentPhase);
@@ -1360,12 +1367,48 @@ class NeonSwipeGame {
   }
 
   getSingleShapeSpawn(phase) {
+    if (phase.projectileEntry === "random") {
+      const randomEntry = getRandomItem([
+        "bottom",
+        "top",
+        "left",
+        "right"
+      ]);
+      return this.getSingleShapeSpawn({
+        ...phase,
+        projectileEntry: randomEntry
+      });
+    }
+
     if (phase.projectileEntry === "top") {
       return {
         x: this.scaler.x(GAME_CONFIG.designWidth / 2),
         y: this.scaler.y(40),
         velocityX: 0,
         velocityY: 0
+      };
+    }
+
+    if (phase.projectileEntry === "side" || phase.projectileEntry === "left" || phase.projectileEntry === "right") {
+      const sideEntry = phase.projectileEntry === "side"
+        ? (Math.random() < 0.5 ? "left" : "right")
+        : phase.projectileEntry;
+      const spawnY = this.scaler.y(GAME_CONFIG.designHeight * GAME_CONFIG.sideEntryHeightRatio);
+
+      if (sideEntry === "left") {
+        return {
+          x: this.scaler.x(-GAME_CONFIG.shapeRadius - 8),
+          y: spawnY,
+          velocityX: this.scaler.x(GAME_CONFIG.sideEntryHorizontalImpulse),
+          velocityY: this.scaler.y(GAME_CONFIG.sideEntryUpwardImpulse)
+        };
+      }
+
+      return {
+        x: this.scaler.x(GAME_CONFIG.designWidth + GAME_CONFIG.shapeRadius + 8),
+        y: spawnY,
+        velocityX: this.scaler.x(-GAME_CONFIG.sideEntryHorizontalImpulse),
+        velocityY: this.scaler.y(GAME_CONFIG.sideEntryUpwardImpulse)
       };
     }
 
