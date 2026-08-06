@@ -29,6 +29,9 @@ const GAME_CONFIG = {
   level11StartScore: 35,
   level12StartScore: 41,
   level13StartScore: 47,
+  level14StartScore: 55,
+  level14ReceiverTrackLength: 160,
+  level15StartScore: 63,
   level11IntroDurationMs: 1400,
   level12IntroDurationMs: 1400,
   level13IntroDurationMs: 1600,
@@ -123,7 +126,9 @@ const GAME_PHASES = [
   { level: 10, ruleName: "COLOR", startScore: GAME_CONFIG.level10StartScore, receiverColorsByPositionId: LEVEL_10_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: LEVEL_7_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 3, permutesReceiverColorsAfterSuccess: true, permutesReceiverShapesAfterSuccess: true },
   { level: 11, ruleName: "COLOR", startScore: GAME_CONFIG.level11StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicWallColors: true, usesMobileReceiverPhysics: true },
   { level: 12, ruleName: "SHAPE", startScore: GAME_CONFIG.level12StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicReceiverShapes: true, usesMobileReceiverPhysics: true },
-  { level: 13, ruleName: "COLOR", startScore: GAME_CONFIG.level13StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2, usesRuleControlledReceiverRotation: true, usesMobileReceiverPhysics: true }
+  { level: 13, ruleName: "COLOR", startScore: GAME_CONFIG.level13StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2, usesRuleControlledReceiverRotation: true, usesMobileReceiverPhysics: true },
+  { level: 14, ruleName: "COLOR", startScore: GAME_CONFIG.level14StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2, permutesReceiverColorsAfterSuccess: true, permutesReceiverShapesAfterSuccess: true, usesShortReceiverTracks: true },
+  { level: 15, ruleName: "COLOR", startScore: GAME_CONFIG.level15StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2, permutesReceiverColorsAfterSuccess: true, permutesReceiverShapesAfterSuccess: true, usesShortReceiverTracks: true, projectileEntry: "top" }
 ];
 
 const NEON_COLORS = {
@@ -406,12 +411,12 @@ class Arena {
     return NEON_COLORS[this.getReceiverColorId(receiver, currentPhase)];
   }
 
-  findReceiverHitByShape(fallingShape) {
+  findReceiverHitByShape(fallingShape, currentPhase) {
     if (!fallingShape.canHitReceiver) return null;
 
     const collisionRadius = fallingShape.radius * 0.55;
     return this.receivers.find((receiver) => {
-      return this.getReceiverHitAreas(receiver).some((hitArea) => {
+      return this.getReceiverHitAreas(receiver, currentPhase).some((hitArea) => {
         return this.circleOverlapsRect(fallingShape.x, fallingShape.y, collisionRadius, hitArea);
       });
     });
@@ -445,7 +450,11 @@ class Arena {
     };
   }
 
-  getReceiverHitAreas(receiver) {
+  getReceiverHitAreas(receiver, currentPhase) {
+    if (currentPhase?.usesShortReceiverTracks) {
+      return this.getShortReceiverTrackHitAreas(receiver);
+    }
+
     const layout = this.getScaledLayout();
     const middleX = layout.outerX + layout.outerWidth / 2;
     const middleY = layout.outerY + layout.outerHeight / 2;
@@ -477,6 +486,79 @@ class Arena {
       { x: rightRailX, y: middleY, width: layout.railSize, height: layout.outerHeight / 2 },
       { x: middleX, y: bottomRailY, width: layout.outerWidth / 2, height: layout.railSize }
     ];
+  }
+
+  getShortReceiverTrackGeometry(receiver) {
+    const layout = this.getScaledLayout();
+    const trackLength = this.scaler.x(GAME_CONFIG.level14ReceiverTrackLength);
+    const rightX = layout.outerX + layout.outerWidth;
+    const bottomY = layout.outerY + layout.outerHeight;
+    const leftTrackX = layout.outerX + layout.railSize / 2;
+    const rightTrackX = rightX - layout.railSize / 2;
+    const topTrackY = layout.outerY + layout.railSize / 2;
+    const bottomTrackY = bottomY - layout.railSize / 2;
+
+    if (receiver.id === "topLeft") {
+      return {
+        horizontalStart: { x: leftTrackX + layout.cornerRadius, y: topTrackY },
+        horizontalEnd: { x: leftTrackX + trackLength, y: topTrackY },
+        curveControl: { x: leftTrackX, y: topTrackY },
+        curveEnd: { x: leftTrackX, y: layout.outerY + layout.cornerRadius },
+        verticalStart: { x: leftTrackX, y: layout.outerY + layout.cornerRadius },
+        verticalEnd: { x: leftTrackX, y: topTrackY + trackLength }
+      };
+    }
+
+    if (receiver.id === "topRight") {
+      return {
+        horizontalStart: { x: rightTrackX - layout.cornerRadius, y: topTrackY },
+        horizontalEnd: { x: rightTrackX - trackLength, y: topTrackY },
+        curveControl: { x: rightTrackX, y: topTrackY },
+        curveEnd: { x: rightTrackX, y: layout.outerY + layout.cornerRadius },
+        verticalStart: { x: rightTrackX, y: layout.outerY + layout.cornerRadius },
+        verticalEnd: { x: rightTrackX, y: topTrackY + trackLength }
+      };
+    }
+
+    if (receiver.id === "bottomLeft") {
+      return {
+        horizontalStart: { x: leftTrackX + layout.cornerRadius, y: bottomTrackY },
+        horizontalEnd: { x: leftTrackX + trackLength, y: bottomTrackY },
+        curveControl: { x: leftTrackX, y: bottomTrackY },
+        curveEnd: { x: leftTrackX, y: bottomY - layout.cornerRadius },
+        verticalStart: { x: leftTrackX, y: bottomY - layout.cornerRadius },
+        verticalEnd: { x: leftTrackX, y: bottomTrackY - trackLength }
+      };
+    }
+
+    return {
+      horizontalStart: { x: rightTrackX - layout.cornerRadius, y: bottomTrackY },
+      horizontalEnd: { x: rightTrackX - trackLength, y: bottomTrackY },
+      curveControl: { x: rightTrackX, y: bottomTrackY },
+      curveEnd: { x: rightTrackX, y: bottomY - layout.cornerRadius },
+      verticalStart: { x: rightTrackX, y: bottomY - layout.cornerRadius },
+      verticalEnd: { x: rightTrackX, y: bottomTrackY - trackLength }
+    };
+  }
+
+  getShortReceiverTrackHitAreas(receiver) {
+    const geometry = this.getShortReceiverTrackGeometry(receiver);
+    const layout = this.getScaledLayout();
+    const horizontalHitArea = this.getSegmentHitArea(geometry.horizontalStart, geometry.horizontalEnd, layout.railSize);
+    const verticalHitArea = this.getSegmentHitArea(geometry.verticalStart, geometry.verticalEnd, layout.railSize);
+
+    return [horizontalHitArea, verticalHitArea];
+  }
+
+  getSegmentHitArea(startPoint, endPoint, thickness) {
+    const halfThickness = thickness / 2;
+
+    return {
+      x: Math.min(startPoint.x, endPoint.x) - halfThickness,
+      y: Math.min(startPoint.y, endPoint.y) - halfThickness,
+      width: Math.abs(endPoint.x - startPoint.x) + thickness,
+      height: Math.abs(endPoint.y - startPoint.y) + thickness
+    };
   }
 
   circleOverlapsRect(circleX, circleY, radius, rectangle) {
@@ -523,6 +605,15 @@ class Arena {
     this.drawReceiverIcons(context, currentPhase, wallColorAnimation.progress);
   }
 
+  drawShortReceiverTrackPath(context, receiver) {
+    const geometry = this.getShortReceiverTrackGeometry(receiver);
+
+    context.moveTo(geometry.horizontalEnd.x, geometry.horizontalEnd.y);
+    context.lineTo(geometry.horizontalStart.x, geometry.horizontalStart.y);
+    context.quadraticCurveTo(geometry.curveControl.x, geometry.curveControl.y, geometry.curveEnd.x, geometry.curveEnd.y);
+    context.lineTo(geometry.verticalEnd.x, geometry.verticalEnd.y);
+  }
+
   drawReceiverTrack(context, receiver, currentPhase, colorOverride = null, opacity = 1) {
     const layout = this.getScaledLayout();
     const middleX = layout.outerX + layout.outerWidth / 2;
@@ -542,7 +633,9 @@ class Arena {
 
     context.beginPath();
 
-    if (receiver.id === "topLeft") {
+    if (currentPhase.usesShortReceiverTracks) {
+      this.drawShortReceiverTrackPath(context, receiver);
+    } else if (receiver.id === "topLeft") {
       context.moveTo(middleX, layout.outerY + layout.railSize / 2);
       context.lineTo(layout.outerX + layout.cornerRadius, layout.outerY + layout.railSize / 2);
       context.quadraticCurveTo(layout.outerX + layout.railSize / 2, layout.outerY + layout.railSize / 2, layout.outerX + layout.railSize / 2, layout.outerY + layout.cornerRadius);
@@ -799,6 +892,16 @@ class ReceiverPermutationController {
   reset() {
     this.currentReceiverColorsByPositionId = { ...this.initialReceiverColorsByPositionId };
     this.currentReceiverShapesByPositionId = { ...this.initialReceiverShapesByPositionId };
+    this.previousReceiverColorsByPositionId = null;
+    this.previousReceiverShapesByPositionId = null;
+    this.permutationStartedAt = 0;
+    this.permutationProgress = 1;
+    this.isAnimating = false;
+  }
+
+  syncToPhase(phase) {
+    this.currentReceiverColorsByPositionId = { ...phase.receiverColorsByPositionId };
+    this.currentReceiverShapesByPositionId = { ...phase.receiverShapesByPositionId };
     this.previousReceiverColorsByPositionId = null;
     this.previousReceiverShapesByPositionId = null;
     this.permutationStartedAt = 0;
@@ -1157,9 +1260,11 @@ class NeonSwipeGame {
     this.clearPendingDuoSpawn();
     this.resetWallColorMechanics();
     this.dynamicRuleSequence.reset();
-    this.score = 0;
+    // TEMP TEST LEVEL 15 - restore to 0 after validation
+    this.score = 63;
     this.state = "playing";
     this.resetLevelIntroFlags();
+    this.receiverPermutation.syncToPhase(this.currentPhase);
     this.activeShape = null;
     this.currentShapes = [];
     this.activeShapeIndex = null;
@@ -1217,7 +1322,7 @@ class NeonSwipeGame {
 
     this.activeShape.update(deltaSeconds, this.currentGravity);
 
-    const touchedReceiver = this.arena.findReceiverHitByShape(this.activeShape);
+    const touchedReceiver = this.arena.findReceiverHitByShape(this.activeShape, this.visiblePhase);
     if (touchedReceiver) {
       this.resolveReceiverTouch(this.activeShape, touchedReceiver);
       return;
@@ -1239,16 +1344,37 @@ class NeonSwipeGame {
 
   spawnSingleShape() {
     this.currentChallengePhase = this.currentPhase;
+    const spawn = this.getSingleShapeSpawn(this.currentChallengePhase);
+
     this.activeShape = new FallingShape({
-      x: this.scaler.x(GAME_CONFIG.designWidth / 2),
-      y: this.scaler.y(GAME_CONFIG.designHeight + 38),
+      x: spawn.x,
+      y: spawn.y,
       radius: this.scaler.x(GAME_CONFIG.shapeRadius),
       colorId: getRandomItem(AVAILABLE_COLOR_IDS),
       shapeName: getRandomItem(AVAILABLE_SHAPES),
-      velocityY: this.scaler.y(this.currentChallengeSpawnImpulse)
+      velocityX: spawn.velocityX,
+      velocityY: spawn.velocityY
     });
     this.currentShapes = [this.activeShape];
     this.activeShapeIndex = 0;
+  }
+
+  getSingleShapeSpawn(phase) {
+    if (phase.projectileEntry === "top") {
+      return {
+        x: this.scaler.x(GAME_CONFIG.designWidth / 2),
+        y: this.scaler.y(40),
+        velocityX: 0,
+        velocityY: 0
+      };
+    }
+
+    return {
+      x: this.scaler.x(GAME_CONFIG.designWidth / 2),
+      y: this.scaler.y(GAME_CONFIG.designHeight + 38),
+      velocityX: 0,
+      velocityY: this.scaler.y(this.currentChallengeSpawnImpulse)
+    };
   }
 
   spawnDuoShapes() {
@@ -1341,7 +1467,7 @@ class NeonSwipeGame {
     });
 
     for (const shape of this.currentShapes) {
-      const touchedReceiver = this.arena.findReceiverHitByShape(shape);
+      const touchedReceiver = this.arena.findReceiverHitByShape(shape, this.visiblePhase);
       if (touchedReceiver) {
         this.resolveReceiverTouch(shape, touchedReceiver);
         return;
@@ -1375,6 +1501,10 @@ class NeonSwipeGame {
     if (this.shouldStartLevelIntro(resolvedChallengePhase)) {
       this.startLevelIntro();
       return;
+    }
+
+    if (resolvedChallengePhase?.level !== this.currentPhase.level && this.currentPhase.usesShortReceiverTracks) {
+      this.receiverPermutation.syncToPhase(this.currentPhase);
     }
 
     if (this.phasePermutesReceiversAfterSuccess(resolvedChallengePhase)) {
