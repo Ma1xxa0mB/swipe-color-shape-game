@@ -42,6 +42,9 @@ const GAME_CONFIG = {
   movingGapSpawnOffset: 42,
   movingGapEntryImpulse: 460,
   movingReceiverIconInset: 72,
+  movingBottomSpawnSafetyMargin: 14,
+  movingBottomSpawnHorizontalImpulse: 110,
+  movingBottomSpawnCenterZoneWidth: 90,
   level11IntroDurationMs: 1400,
   level12IntroDurationMs: 1400,
   level13IntroDurationMs: 1600,
@@ -652,17 +655,48 @@ class Arena {
     };
   }
 
-  getRandomMovingReceiverGapPoint(currentPhase) {
-    const receiver = getRandomItem(this.receivers);
+  getMovingReceiverGapIntervals(currentPhase) {
     const spacing = this.getOuterTrackPerimeterLength() / this.receivers.length;
     const receiverLength = this.getMovingReceiverTrackLength();
     const gapLength = spacing - receiverLength;
-    const gapCenterDistance = this.getMovingReceiverBaseDistance(receiver)
-      + receiverLength
-      + gapLength / 2
-      + (currentPhase.movingReceiverOffset || 0);
 
-    return this.getPointOnOuterTrack(gapCenterDistance);
+    return this.receivers.map((receiver) => ({
+      startDistance: this.getMovingReceiverBaseDistance(receiver) + receiverLength + (currentPhase.movingReceiverOffset || 0),
+      length: gapLength
+    }));
+  }
+
+  getBottomSegmentsForPerimeterInterval(startDistance, length) {
+    return this.getTrackSegmentsOnOuterPerimeter(startDistance, length)
+      .filter((segment) => segment.side === "bottom")
+      .map((segment) => {
+        const leftX = Math.min(segment.start.x, segment.end.x);
+        const rightX = Math.max(segment.start.x, segment.end.x);
+        return {
+          leftX,
+          rightX,
+          availableWidth: rightX - leftX
+        };
+      });
+  }
+
+  getMovingBottomGapSpawnOptions(currentPhase) {
+    const shapeRadius = this.scaler.x(GAME_CONFIG.shapeRadius);
+    const safetyMargin = this.scaler.x(GAME_CONFIG.movingBottomSpawnSafetyMargin);
+    const minimumBottomSpawnWidth = shapeRadius * 2 + safetyMargin * 2;
+
+    return this.getMovingReceiverGapIntervals(currentPhase)
+      .flatMap((gapInterval) => {
+        return this.getBottomSegmentsForPerimeterInterval(gapInterval.startDistance, gapInterval.length);
+      })
+      .filter((bottomSegment) => bottomSegment.availableWidth >= minimumBottomSpawnWidth)
+      .map((bottomSegment) => {
+        const safeLeftX = bottomSegment.leftX + shapeRadius + safetyMargin;
+        const safeRightX = bottomSegment.rightX - shapeRadius - safetyMargin;
+        return {
+          spawnX: (safeLeftX + safeRightX) / 2
+        };
+      });
   }
 
   getShortReceiverTrackGeometry(receiver) {
@@ -1455,6 +1489,7 @@ class NeonSwipeGame {
     this.levelIntroEndsAt = 0;
     this.level13IntroStartedAt = 0;
     this.hasStartedLevel13ShapeIntroRotation = false;
+    this.isWaitingForMovingBottomSpawn = false;
   }
 
   start() {
@@ -1480,6 +1515,7 @@ class NeonSwipeGame {
     this.state = "playing";
     this.resetLevelIntroFlags();
     this.movingReceiverOffset = 0;
+    this.isWaitingForMovingBottomSpawn = false;
     this.receiverPermutation.syncToPhase(this.currentPhase);
     this.activeShape = null;
     this.currentShapes = [];
@@ -1499,6 +1535,7 @@ class NeonSwipeGame {
     this.state = "waiting";
     this.resetLevelIntroFlags();
     this.movingReceiverOffset = 0;
+    this.isWaitingForMovingBottomSpawn = false;
     this.activeShape = null;
     this.currentShapes = [];
     this.activeShapeIndex = null;
@@ -1564,6 +1601,18 @@ class NeonSwipeGame {
     this.currentChallengePhase = this.currentPhase;
     const spawn = this.getSingleShapeSpawn(this.currentChallengePhase);
 
+    if (!spawn) {
+      this.activeShape = null;
+      this.currentShapes = [];
+      this.activeShapeIndex = null;
+      this.isWaitingForMovingBottomSpawn = true;
+      return;
+    }
+
+    this.createSingleShapeFromSpawn(spawn);
+  }
+
+  createSingleShapeFromSpawn(spawn) {
     this.activeShape = new FallingShape({
       x: spawn.x,
       y: spawn.y,
@@ -1575,6 +1624,7 @@ class NeonSwipeGame {
     });
     this.currentShapes = [this.activeShape];
     this.activeShapeIndex = 0;
+    this.isWaitingForMovingBottomSpawn = false;
   }
 
   getSingleShapeSpawn(phase) {
@@ -1636,17 +1686,45 @@ class NeonSwipeGame {
   }
 
   getMovingGapShapeSpawn(phase) {
-    const gapPoint = this.arena.getRandomMovingReceiverGapPoint({
+    const movingPhase = {
       ...phase,
       movingReceiverOffset: this.movingReceiverOffset
-    });
+    };
+    const spawnOptions = this.arena.getMovingBottomGapSpawnOptions(movingPhase);
+    if (spawnOptions.length === 0) return null;
+
+    const { spawnX } = getRandomItem(spawnOptions);
 
     return {
-      x: gapPoint.x - gapPoint.inwardNormalX * this.scaler.x(GAME_CONFIG.movingGapSpawnOffset),
-      y: gapPoint.y - gapPoint.inwardNormalY * this.scaler.y(GAME_CONFIG.movingGapSpawnOffset),
-      velocityX: gapPoint.inwardNormalX * this.scaler.x(GAME_CONFIG.movingGapEntryImpulse),
-      velocityY: gapPoint.inwardNormalY * this.scaler.y(GAME_CONFIG.movingGapEntryImpulse)
+      x: spawnX,
+      y: this.scaler.y(GAME_CONFIG.designHeight + 38),
+      velocityX: this.getMovingBottomSpawnVelocityX(spawnX),
+      velocityY: this.scaler.y(this.currentChallengeSpawnImpulse)
     };
+  }
+
+  getMovingBottomSpawnVelocityX(spawnX) {
+    const arenaCenterX = this.scaler.x(GAME_CONFIG.designWidth / 2);
+    const centerZoneHalfWidth = this.scaler.x(GAME_CONFIG.movingBottomSpawnCenterZoneWidth / 2);
+
+    if (spawnX < arenaCenterX - centerZoneHalfWidth) {
+      return this.scaler.x(GAME_CONFIG.movingBottomSpawnHorizontalImpulse);
+    }
+
+    if (spawnX > arenaCenterX + centerZoneHalfWidth) {
+      return -this.scaler.x(GAME_CONFIG.movingBottomSpawnHorizontalImpulse);
+    }
+
+    return 0;
+  }
+
+  trySpawnMovingShapeFromBottomGap() {
+    if (!this.isWaitingForMovingBottomSpawn || !this.currentChallengePhase?.usesMovingReceiverTracks) return;
+
+    const spawn = this.getMovingGapShapeSpawn(this.currentChallengePhase);
+    if (!spawn) return;
+
+    this.createSingleShapeFromSpawn(spawn);
   }
 
   spawnDuoShapes() {
@@ -1944,6 +2022,7 @@ class NeonSwipeGame {
 
     const perimeterLength = this.arena.getOuterTrackPerimeterLength();
     this.movingReceiverOffset = (this.movingReceiverOffset + GAME_CONFIG.movingReceiverSpeed * deltaSeconds) % perimeterLength;
+    this.trySpawnMovingShapeFromBottomGap();
   }
 
   throwActiveShapeFromSwipe(swipeGesture) {
@@ -2047,6 +2126,7 @@ class NeonSwipeGame {
     this.currentShapes = [];
     this.activeShapeIndex = null;
     this.currentChallengePhase = null;
+    this.isWaitingForMovingBottomSpawn = false;
     this.restartButton.classList.add("is-visible");
   }
 
