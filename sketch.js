@@ -2095,6 +2095,7 @@ class ChallengeManager {
   constructor() {
     this.clear();
     this.secondDuoShapeTimeoutId = null;
+    this.nextSingleShapeTimeoutId = null;
   }
 
   clear() {
@@ -2105,10 +2106,12 @@ class ChallengeManager {
     this.selectedShape = null;
   }
 
-  setSingleShape(fallingShape) {
+  setSingleShape(fallingShape, challengePhase = null) {
+    this.currentShapes = this.currentShapes.filter((shape) => shape.state !== "resolved");
     this.activeShape = fallingShape;
-    this.currentShapes = [fallingShape];
-    this.activeShapeIndex = 0;
+    this.currentShapes.push(fallingShape);
+    this.activeShapeIndex = this.currentShapes.indexOf(fallingShape);
+    this.currentChallengePhase = challengePhase;
     this.selectedShape = null;
   }
 
@@ -2122,6 +2125,16 @@ class ChallengeManager {
 
   appendSecondDuoShape(fallingShape) {
     this.currentShapes.push(fallingShape);
+  }
+
+  moveActiveShapeToLaunchedShapes() {
+    const launchedShape = this.activeShape;
+    if (!launchedShape) return null;
+
+    this.activeShape = null;
+    this.activeShapeIndex = null;
+    this.selectedShape = null;
+    return launchedShape;
   }
 
   selectShapeForSwipe(fallingShape) {
@@ -2163,8 +2176,27 @@ class ChallengeManager {
     this.secondDuoShapeTimeoutId = null;
   }
 
+  setNextSingleShapeTimeout(timeoutId) {
+    this.nextSingleShapeTimeoutId = timeoutId;
+  }
+
+  clearNextSingleShapeTimeout() {
+    if (this.nextSingleShapeTimeoutId === null) return;
+
+    window.clearTimeout(this.nextSingleShapeTimeoutId);
+    this.nextSingleShapeTimeoutId = null;
+  }
+
+  hasPendingNextSingleShape() {
+    return this.nextSingleShapeTimeoutId !== null;
+  }
+
+  hasUnresolvedShapes() {
+    return this.currentShapes.some((fallingShape) => fallingShape.state !== "resolved");
+  }
+
   getVisibleShapes(usesDuoShapes) {
-    return usesDuoShapes ? this.currentShapes : [this.activeShape].filter(Boolean);
+    return usesDuoShapes ? this.currentShapes : this.currentShapes;
   }
 }
 
@@ -2189,6 +2221,7 @@ class ThrowController {
 
     activeShape.throwToward(direction, throwForce, this.usesDuoShapes());
     this.activateNextDuoShape();
+    return activeShape;
   }
 
   throwAtTarget(target, gestureDistance = this.scaler.x(120), gestureDurationMs = 110) {
@@ -2201,6 +2234,7 @@ class ThrowController {
     const throwForce = this.calculateThrowForce(direction, gestureDistance, gestureDurationMs);
     activeShape.throwToward(direction, throwForce, this.usesDuoShapes());
     this.activateNextDuoShape();
+    return activeShape;
   }
 
   resolveThrowDirection(target) {
@@ -2653,6 +2687,8 @@ class NeonSwipeGame {
     this.lastAnimationTime = 0;
     this.centerMessage = "SWIPE";
     this.centerMessageUntil = 0;
+    this.activeShapeRuleName = null;
+    this.pendingLevelIntroPhase = null;
     this.movingReceiverOffset = 0;
   }
 
@@ -2675,12 +2711,14 @@ class NeonSwipeGame {
     this.receiverEffects.reset();
     this.dynamicRuleSequence.reset();
     // TEMP TEST LEVEL 18 - restore to 0 after validation
-    this.score = 55;
+    this.score = 23;
     this.state = "playing";
     this.resetLevelRuntime();
     this.movingReceiverOffset = 0;
     this.receiverEffects.syncPermutationToPhase(this.currentPhase);
     this.clearCurrentChallenge();
+    this.activeShapeRuleName = null;
+    this.pendingLevelIntroPhase = null;
     this.particleSystem.clear();
     this.showCenterMessage("COLOR", 1100);
 
@@ -2696,6 +2734,8 @@ class NeonSwipeGame {
     this.resetLevelRuntime();
     this.movingReceiverOffset = 0;
     this.clearCurrentChallenge();
+    this.activeShapeRuleName = null;
+    this.pendingLevelIntroPhase = null;
     this.particleSystem.clear();
     this.centerMessage = "PRESS TO START";
     this.centerMessageUntil = Infinity;
@@ -2708,6 +2748,7 @@ class NeonSwipeGame {
 
     if (this.state === "playing") {
       this.updateReceiverRotations(currentTime);
+      this.updateReceiverPermutation(currentTime);
       this.updateMovingReceiverTracks(deltaSeconds);
       this.updateActiveShape(deltaSeconds);
     } else if (this.state === "receiverPermutation") {
@@ -2729,18 +2770,27 @@ class NeonSwipeGame {
       return;
     }
 
-    if (!this.activeShape) return;
+    if (this.currentShapes.length === 0) return;
 
-    this.activeShape.update(deltaSeconds, this.currentGravity);
+    this.currentShapes.forEach((shape) => {
+      if (shape.state !== "resolved") {
+        shape.update(deltaSeconds, shape.gravity || this.currentGravity);
+      }
+    });
 
-    const touchedReceiver = this.arena.findReceiverHitByShape(this.activeShape, this.visiblePhase);
-    if (touchedReceiver) {
-      this.resolveReceiverTouch(this.activeShape, touchedReceiver);
-      return;
-    }
+    for (const shape of this.currentShapes) {
+      if (shape.state === "resolved") continue;
 
-    if (this.activeShape.isBelowScreen(this.scaler.canvasHeight, this.scaler.y(28))) {
-      this.endGame("GAME OVER");
+      const touchedReceiver = this.arena.findReceiverHitByShape(shape, this.getCollisionPhaseForShape(shape));
+      if (touchedReceiver) {
+        this.resolveReceiverTouch(shape, touchedReceiver);
+        return;
+      }
+
+      if (shape.isBelowScreen(this.scaler.canvasHeight, this.scaler.y(28))) {
+        this.endGame("GAME OVER");
+        return;
+      }
     }
   }
 
@@ -2766,11 +2816,45 @@ class NeonSwipeGame {
   }
 
   createSingleShapeFromSpawn(spawn) {
-    this.challengeManager.setSingleShape(this.createShapeFromSpawn(spawn));
+    const challengePhaseSnapshot = this.createPhaseSnapshot(this.currentChallengePhase);
+    const validationPhaseSnapshot = this.createPhaseSnapshot(
+      this.getPhaseWithCurrentWallColors(this.currentChallengePhase)
+    );
+    const fallingShape = this.createShapeFromSpawn(spawn);
+    const previousActiveShapeRuleName = this.activeShapeRuleName;
+
+    fallingShape.challengePhase = challengePhaseSnapshot;
+    fallingShape.validationPhase = validationPhaseSnapshot;
+    fallingShape.gravity = this.scaler.x(ChallengePhysics.getGravity(challengePhaseSnapshot));
+    fallingShape.advancedSpawnState = "none";
+
+    this.challengeManager.setSingleShape(fallingShape, challengePhaseSnapshot);
+    this.updateVisibleRuleForActiveShape(
+      challengePhaseSnapshot.ruleName,
+      previousActiveShapeRuleName
+    );
+  }
+
+  updateVisibleRuleForActiveShape(nextRuleName, previousRuleName = this.activeShapeRuleName) {
+    this.activeShapeRuleName = nextRuleName;
+
+    if (previousRuleName && previousRuleName !== nextRuleName) {
+      this.showRuleTransitionFeedback(nextRuleName);
+    }
   }
 
   getSingleShapeSpawn(phase) {
     return this.spawnController.getSingleShapeSpawn(phase);
+  }
+
+  createPhaseSnapshot(phase) {
+    if (!phase) return null;
+
+    return {
+      ...phase,
+      receiverColorsByPositionId: { ...phase.receiverColorsByPositionId },
+      receiverShapesByPositionId: { ...phase.receiverShapesByPositionId }
+    };
   }
 
   spawnPreciseDuoShapes() {
@@ -2851,9 +2935,43 @@ class NeonSwipeGame {
     });
   }
 
+  getCollisionPhaseForShape(shape) {
+    const shapeChallengePhase = shape.challengePhase || this.currentChallengePhase || this.currentPhase;
+
+    if (!shapeChallengePhase.usesMovingReceiverTracks) return shapeChallengePhase;
+
+    return {
+      ...shapeChallengePhase,
+      movingReceiverOffset: this.movingReceiverOffset
+    };
+  }
+
+  getValidationPhaseForShape(shape) {
+    const shapeChallengePhase = shape.challengePhase || this.currentChallengePhase || this.currentPhase;
+
+    if (this.phaseUsesLiveReceiverStateForValidation(shapeChallengePhase)) {
+      const liveReceiverPhase = this.getPhaseWithCurrentWallColors(shapeChallengePhase);
+      return this.createPhaseSnapshot({
+        ...liveReceiverPhase,
+        ruleName: shapeChallengePhase.ruleName
+      });
+    }
+
+    return shape.validationPhase || this.getPhaseWithCurrentWallColors(shapeChallengePhase);
+  }
+
+  phaseUsesLiveReceiverStateForValidation(phase) {
+    return Boolean(
+      phase?.usesDynamicWallColors ||
+      phase?.usesDynamicReceiverShapes ||
+      phase?.usesRuleControlledReceiverRotation ||
+      this.phasePermutesReceiversAfterSuccess(phase)
+    );
+  }
+
   resolveReceiverTouch(resolvedShape, touchedReceiver) {
-    const challengePhase = this.currentChallengePhase || this.currentPhase;
-    const validationPhase = this.getPhaseWithCurrentWallColors(challengePhase);
+    const challengePhase = resolvedShape.challengePhase || this.currentChallengePhase || this.currentPhase;
+    const validationPhase = this.getValidationPhaseForShape(resolvedShape);
     const expectedReceiver = this.rules.getExpectedReceiver(resolvedShape, validationPhase);
     const isCorrectReceiver = touchedReceiver.id === expectedReceiver.id;
 
@@ -2901,7 +3019,10 @@ class NeonSwipeGame {
       return;
     }
 
-    this.continueAfterResolvedChallenge(didRuleChange, challengePhase);
+    const didAlreadyAdvanceSpawn = resolvedShape.advancedSpawnState === "scheduled" || resolvedShape.advancedSpawnState === "created";
+    this.continueAfterResolvedChallenge(didRuleChange, challengePhase, {
+      skipSpawn: didAlreadyAdvanceSpawn
+    });
   }
 
   updateDuoShapes(deltaSeconds) {
@@ -2946,17 +3067,19 @@ class NeonSwipeGame {
     this.continueAfterResolvedChallenge(didRuleChange, resolvedChallengePhase);
   }
 
-  continueAfterResolvedChallenge(shouldStartRuleTransition, resolvedChallengePhase = this.currentChallengePhase || this.currentPhase) {
+  continueAfterResolvedChallenge(shouldStartRuleTransition, resolvedChallengePhase = this.currentChallengePhase || this.currentPhase, options = {}) {
+    if (this.tryStartPendingLevelIntro()) return;
+
     if (!this.currentPhaseUsesReceiverRotation) {
       this.receiverEffects.stopRotations();
     }
 
-    if (shouldStartRuleTransition) {
+    if (shouldStartRuleTransition && !options.skipSpawn) {
       this.showRuleTransitionFeedback(this.currentRuleName);
     }
 
     if (this.shouldStartLevelIntro(resolvedChallengePhase)) {
-      this.startLevelIntro();
+      this.startLevelIntroWhenReady();
       return;
     }
 
@@ -2967,7 +3090,9 @@ class NeonSwipeGame {
     if (resolvedChallengePhase?.level !== this.currentPhase.level && this.currentPhase.usesMovingReceiverTracks) {
       this.receiverEffects.syncPermutationToPhase(this.currentPhase);
       this.movingReceiverOffset = 0;
-      this.spawnNextChallenge();
+      if (!options.skipSpawn) {
+        this.spawnNextChallenge();
+      }
       return;
     }
 
@@ -2976,7 +3101,9 @@ class NeonSwipeGame {
       return;
     }
 
-    this.spawnNextChallenge();
+    if (!options.skipSpawn) {
+      this.spawnNextChallenge();
+    }
   }
 
   showRuleTransitionFeedback(nextRuleName) {
@@ -2986,6 +3113,7 @@ class NeonSwipeGame {
 
   clearPendingDuoSpawn() {
     this.challengeManager.clearSecondShapeTimeout();
+    this.challengeManager.clearNextSingleShapeTimeout();
   }
 
   resetLevelRuntime() {
@@ -3002,6 +3130,11 @@ class NeonSwipeGame {
   }
 
   startReceiverPermutation(permutationPhase) {
+    if (this.hasEngagedSingleShapes()) {
+      this.receiverEffects.startPermutation(performance.now(), permutationPhase);
+      return;
+    }
+
     this.clearPendingDuoSpawn();
     this.state = "receiverPermutation";
     this.clearCurrentChallenge();
@@ -3016,10 +3149,26 @@ class NeonSwipeGame {
     this.spawnNextChallenge();
   }
 
+  startLevelIntroWhenReady() {
+    this.pendingLevelIntroPhase = this.currentPhase;
+
+    if (this.hasEngagedSingleShapes()) return;
+
+    this.startLevelIntro();
+  }
+
+  tryStartPendingLevelIntro() {
+    if (!this.pendingLevelIntroPhase || this.hasEngagedSingleShapes()) return false;
+
+    this.startLevelIntro();
+    return true;
+  }
+
   startLevelIntro() {
     const introStartedAt = performance.now();
-    const introPhase = this.currentPhase;
+    const introPhase = this.pendingLevelIntroPhase || this.currentPhase;
 
+    this.pendingLevelIntroPhase = null;
     this.clearPendingDuoSpawn();
     this.receiverEffects.stopRotations();
     this.clearCurrentChallenge();
@@ -3048,14 +3197,44 @@ class NeonSwipeGame {
   }
 
   throwActiveShapeFromSwipe(swipeGesture) {
-    this.throwController.throwFromSwipe(swipeGesture);
+    const thrownShape = this.throwController.throwFromSwipe(swipeGesture);
+    this.handleShapeThrown(thrownShape);
     this.challengeManager.clearSelectedShape();
   }
 
   throwActiveShapeAtTarget(target, gestureDistance = this.scaler.x(120), gestureDurationMs = 110) {
     if (!this.canReceiveInput()) return;
 
-    this.throwController.throwAtTarget(target, gestureDistance, gestureDurationMs);
+    const thrownShape = this.throwController.throwAtTarget(target, gestureDistance, gestureDurationMs);
+    this.handleShapeThrown(thrownShape);
+  }
+
+  handleShapeThrown(thrownShape) {
+    if (!thrownShape || this.activeChallengeUsesDuoShapes) return;
+    if (this.pendingLevelIntroPhase) return;
+
+    const nextSpawnDelayMs = getNextSpawnDelayMs(this.score);
+    if (nextSpawnDelayMs === null) return;
+
+    this.challengeManager.moveActiveShapeToLaunchedShapes();
+    this.scheduleNextSingleShapeAfterThrow(thrownShape, nextSpawnDelayMs);
+  }
+
+  scheduleNextSingleShapeAfterThrow(thrownShape, nextSpawnDelayMs) {
+    if (thrownShape.advancedSpawnState !== "none") return;
+
+    thrownShape.advancedSpawnState = "scheduled";
+    const nextSingleShapeTimeoutId = window.setTimeout(() => {
+      this.challengeManager.nextSingleShapeTimeoutId = null;
+
+      if (this.state !== "playing") return;
+      if (this.currentPhase.usesPreciseDuoSelection || this.currentPhase.usesDuoShapes) return;
+
+      thrownShape.advancedSpawnState = "created";
+      this.spawnNextChallenge();
+    }, nextSpawnDelayMs);
+
+    this.challengeManager.setNextSingleShapeTimeout(nextSingleShapeTimeoutId);
   }
 
   activateNextDuoShape() {
@@ -3106,6 +3285,8 @@ class NeonSwipeGame {
     this.state = "ended";
     this.centerMessage = message;
     this.centerMessageUntil = Infinity;
+    this.activeShapeRuleName = null;
+    this.pendingLevelIntroPhase = null;
     this.clearCurrentChallenge();
   }
 
@@ -3462,7 +3643,7 @@ class NeonSwipeGame {
   }
 
   get visibleRuleName() {
-    return this.visiblePhase.ruleName;
+    return this.activeShape?.challengePhase?.ruleName || this.activeShapeRuleName || this.visiblePhase.ruleName;
   }
 
   get wallColorAnimationState() {
@@ -3484,6 +3665,12 @@ class NeonSwipeGame {
 
   phasePermutesReceiversAfterSuccess(phase) {
     return Boolean(phase?.permutesReceiverColorsAfterSuccess || phase?.permutesReceiverShapesAfterSuccess);
+  }
+
+  hasEngagedSingleShapes() {
+    if (this.activeChallengeUsesDuoShapes) return false;
+
+    return this.challengeManager.hasUnresolvedShapes() || this.challengeManager.hasPendingNextSingleShape();
   }
 
   shouldStartLevelIntro(resolvedChallengePhase) {
@@ -3589,6 +3776,15 @@ class NeonSwipeGame {
 
 function getRandomItem(items) {
   return items[Math.floor(Math.random() * items.length)];
+}
+
+function getNextSpawnDelayMs(score) {
+  if (score < 4) return null;
+
+  return Math.max(
+    200 - (score - 4) * 3,
+    50
+  );
 }
 
 function clamp(value, minValue, maxValue) {
