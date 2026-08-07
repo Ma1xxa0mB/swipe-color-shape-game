@@ -21,6 +21,7 @@ const GAME_CONFIG = {
   level19SpawnImpulseMultiplier: 0.75,
   level19GravityMultiplier: 0.4,
   level19SelectionHitboxMultiplier: 1.75,
+  spawnSquashStretchDurationMs: 350,
   ruleTransitionFeedbackDurationMs: 650,
   receiverPermutationDurationMs: 280,
   level8StartScore: 14,
@@ -273,6 +274,7 @@ class FallingShape {
     this.state = state;
     this.hasBeenThrown = false;
     this.createdAt = performance.now();
+    this.spawnAnimationStartedAt = null;
   }
 
   update(deltaSeconds, gravity) {
@@ -296,6 +298,41 @@ class FallingShape {
   isBelowScreen(canvasHeight, extraMargin) {
     const hasBeenVisibleLongEnough = performance.now() - this.createdAt > 500;
     return hasBeenVisibleLongEnough && this.y - this.radius > canvasHeight + extraMargin;
+  }
+
+  getSpawnRenderScale(currentTime) {
+    if (this.spawnAnimationStartedAt === null) {
+      return {
+        scaleX: 1,
+        scaleY: 1
+      };
+    }
+    const elapsedMs = currentTime - this.spawnAnimationStartedAt;
+
+    if (elapsedMs >= GAME_CONFIG.spawnSquashStretchDurationMs) {
+      return {
+        scaleX: 1,
+        scaleY: 1
+      };
+    }
+
+    const scaleKeyframes = [
+      { timeMs: 0, scaleX: 1.85, scaleY: 0.30 },
+      { timeMs: 100, scaleX: 0.52, scaleY: 1.90 },
+      { timeMs: 230, scaleX: 1.22, scaleY: 0.82 },
+      { timeMs: GAME_CONFIG.spawnSquashStretchDurationMs, scaleX: 1, scaleY: 1 }
+    ];
+
+    const nextKeyframeIndex = scaleKeyframes.findIndex((keyframe) => elapsedMs <= keyframe.timeMs);
+    const nextKeyframe = scaleKeyframes[nextKeyframeIndex];
+    const previousKeyframe = scaleKeyframes[Math.max(nextKeyframeIndex - 1, 0)];
+    const segmentDurationMs = nextKeyframe.timeMs - previousKeyframe.timeMs || 1;
+    const segmentProgress = clamp((elapsedMs - previousKeyframe.timeMs) / segmentDurationMs, 0, 1);
+
+    return {
+      scaleX: previousKeyframe.scaleX + (nextKeyframe.scaleX - previousKeyframe.scaleX) * segmentProgress,
+      scaleY: previousKeyframe.scaleY + (nextKeyframe.scaleY - previousKeyframe.scaleY) * segmentProgress
+    };
   }
 
   get canReceiveSwipe() {
@@ -2110,7 +2147,7 @@ class NeonSwipeGame {
     this.receiverEffects.reset();
     this.dynamicRuleSequence.reset();
     // TEMP TEST LEVEL 18 - restore to 0 after validation
-    this.score = 57;
+    this.score = 0;
     this.state = "playing";
     this.resetLevelRuntime();
     this.movingReceiverOffset = 0;
@@ -2544,7 +2581,7 @@ class NeonSwipeGame {
     this.arena.draw(this.context, this.visiblePhase, this.wallColorAnimationState);
 
     this.drawHud();
-    this.drawActiveShape();
+    this.drawActiveShape(currentTime);
     this.drawSwipeGuide();
     this.particleSystem.draw(this.context);
     this.drawCenterLabel(currentTime);
@@ -2584,17 +2621,29 @@ class NeonSwipeGame {
     this.context.restore();
   }
 
-  drawActiveShape() {
+  drawActiveShape(currentTime) {
     const visibleShapes = this.challengeManager.getVisibleShapes(this.activeChallengeUsesDuoShapes);
 
     visibleShapes
       .filter((shape) => shape.state !== "resolved")
       .forEach((shape) => {
+
+        if (
+          shape.spawnAnimationStartedAt === null &&
+          shape.y <= this.scaler.canvasHeight
+        ) {
+          shape.spawnAnimationStartedAt = currentTime;
+        }
+
+        const spawnRenderScale = shape.getSpawnRenderScale(currentTime);
+
         this.context.save();
         this.context.globalAlpha = shape.state === "inactive" ? 0.7 : 1;
+        this.context.translate(shape.x, shape.y);
+        this.context.scale(spawnRenderScale.scaleX, spawnRenderScale.scaleY);
         ShapeRenderer.draw(
           this.context,
-          { x: shape.x, y: shape.y },
+          { x: 0, y: 0 },
           shape.shapeName,
           NEON_COLORS[shape.colorId],
           this.scaler.x(shape.state === "active" ? GAME_CONFIG.shapeRadius * 1.08 : GAME_CONFIG.shapeRadius)
