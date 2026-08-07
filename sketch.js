@@ -22,6 +22,20 @@ const GAME_CONFIG = {
   level19GravityMultiplier: 0.4,
   level19SelectionHitboxMultiplier: 1.75,
   spawnSquashStretchDurationMs: 350,
+  spawnHaloAnimationDurationMs: 430,
+  spawnHaloMaxMultiplier: 3.0,
+  spawnTrailDurationMs: 600,
+  spawnTrailCopies: 3,
+  spawnTrailSpacing: 25,
+  spawnTrailMaxOpacity: 0.7,
+  swipeStretchDurationMs: 120,
+  swipeStretchAmount: 3,
+  swipeTrailDurationMs: 200,
+  swipeTrailCopies: 4,
+  swipeTrailSpacing: 20,
+  swipeTrailMaxOpacity: 0.25,
+  swipeHaloDurationMs: 170,
+  swipeHaloMaxMultiplier: 2.2,
   ruleTransitionFeedbackDurationMs: 650,
   receiverPermutationDurationMs: 280,
   level8StartScore: 14,
@@ -275,6 +289,7 @@ class FallingShape {
     this.hasBeenThrown = false;
     this.createdAt = performance.now();
     this.spawnAnimationStartedAt = null;
+    this.swipeAnimationStartedAt = null;
   }
 
   update(deltaSeconds, gravity) {
@@ -289,6 +304,7 @@ class FallingShape {
     this.velocityX = (direction.x / length) * force;
     this.velocityY = (direction.y / length) * force;
     this.hasBeenThrown = true;
+    this.swipeAnimationStartedAt = performance.now();
 
     if (shouldLockAfterThrow) {
       this.state = "launched";
@@ -329,10 +345,174 @@ class FallingShape {
     const segmentDurationMs = nextKeyframe.timeMs - previousKeyframe.timeMs || 1;
     const segmentProgress = clamp((elapsedMs - previousKeyframe.timeMs) / segmentDurationMs, 0, 1);
 
+    let easedProgress;
+
+    if (previousKeyframe.timeMs === 0) {
+      // Squash -> Stretch : départ rapide, arrivée plus douce
+      easedProgress = 1 - Math.pow(1 - segmentProgress, 3);
+    } else if (nextKeyframe.timeMs === GAME_CONFIG.spawnSquashStretchDurationMs) {
+      // Dernier rebond -> normal : stabilisation douce
+      easedProgress =
+        segmentProgress < 0.5
+          ? 2 * segmentProgress * segmentProgress
+          : 1 - Math.pow(-2 * segmentProgress + 2, 2) / 2;
+    } else {
+      // Stretch -> rebond inverse : ralentit en arrivant
+      easedProgress = 1 - Math.pow(1 - segmentProgress, 2);
+    }
+
     return {
-      scaleX: previousKeyframe.scaleX + (nextKeyframe.scaleX - previousKeyframe.scaleX) * segmentProgress,
-      scaleY: previousKeyframe.scaleY + (nextKeyframe.scaleY - previousKeyframe.scaleY) * segmentProgress
+      scaleX: previousKeyframe.scaleX + (nextKeyframe.scaleX - previousKeyframe.scaleX) * easedProgress,
+      scaleY: previousKeyframe.scaleY + (nextKeyframe.scaleY - previousKeyframe.scaleY) * easedProgress
     };
+  }
+
+  getSpawnHaloMultiplier(currentTime) {
+    if (this.spawnAnimationStartedAt === null) {
+      return 1;
+    }
+
+    const elapsedMs = currentTime - this.spawnAnimationStartedAt;
+
+    if (elapsedMs >= GAME_CONFIG.spawnHaloAnimationDurationMs) {
+      return 1;
+    }
+
+    // Le halo monte très vite pendant le stretch.
+    if (elapsedMs <= 100) {
+      const progress = elapsedMs / 100;
+
+      return 1 + (GAME_CONFIG.spawnHaloMaxMultiplier - 1) * progress;
+    }
+
+    // Puis il redescend plus lentement et continue légèrement
+    // après la fin du squash & stretch.
+    const returnProgress = clamp(
+      (elapsedMs - 100) /
+      (GAME_CONFIG.spawnHaloAnimationDurationMs - 100),
+      0,
+      1
+    );
+
+    return (
+      GAME_CONFIG.spawnHaloMaxMultiplier -
+      (GAME_CONFIG.spawnHaloMaxMultiplier - 1) * returnProgress
+    );
+  }
+
+  getSpawnTrailStrength(currentTime) {
+    if (
+      this.spawnAnimationStartedAt === null ||
+      this.hasBeenThrown
+    ) {
+      return 0;
+    }
+
+    const elapsedMs = currentTime - this.spawnAnimationStartedAt;
+
+    if (elapsedMs >= GAME_CONFIG.spawnTrailDurationMs) {
+      return 0;
+    }
+
+    const progress = clamp(
+      elapsedMs / GAME_CONFIG.spawnTrailDurationMs,
+      0,
+      1
+    );
+
+    // Forte au début puis disparaît progressivement.
+    return 1 - progress;
+  }
+
+  getSwipeRenderScale(currentTime) {
+    if (this.swipeAnimationStartedAt === null) {
+      return {
+        scaleAlongMovement: 1,
+        scalePerpendicular: 1
+      };
+    }
+
+    const elapsedMs =
+      currentTime - this.swipeAnimationStartedAt;
+
+    if (elapsedMs >= GAME_CONFIG.swipeStretchDurationMs) {
+      return {
+        scaleAlongMovement: 1,
+        scalePerpendicular: 1
+      };
+    }
+
+    const progress = clamp(
+      elapsedMs / GAME_CONFIG.swipeStretchDurationMs,
+      0,
+      1
+    );
+
+    const easedProgress =
+      1 - Math.pow(1 - progress, 3);
+
+    return {
+      scaleAlongMovement:
+        GAME_CONFIG.swipeStretchAmount -
+        (GAME_CONFIG.swipeStretchAmount - 1) *
+        easedProgress,
+
+      scalePerpendicular:
+        1 / (
+          GAME_CONFIG.swipeStretchAmount -
+          (GAME_CONFIG.swipeStretchAmount - 1) *
+          easedProgress
+        )
+    };
+  }
+
+  getSwipeHaloMultiplier(currentTime) {
+    if (this.swipeAnimationStartedAt === null) {
+      return 1;
+    }
+
+    const elapsedMs =
+      currentTime - this.swipeAnimationStartedAt;
+
+    if (elapsedMs >= GAME_CONFIG.swipeHaloDurationMs) {
+      return 1;
+    }
+
+    const progress = clamp(
+      elapsedMs / GAME_CONFIG.swipeHaloDurationMs,
+      0,
+      1
+    );
+
+    return (
+      GAME_CONFIG.swipeHaloMaxMultiplier -
+      (GAME_CONFIG.swipeHaloMaxMultiplier - 1) *
+      progress
+    );
+  }
+
+  getSwipeTrailStrength(currentTime) {
+    if (
+      this.swipeAnimationStartedAt === null ||
+      !this.hasBeenThrown
+    ) {
+      return 0;
+    }
+
+    const elapsedMs =
+      currentTime - this.swipeAnimationStartedAt;
+
+    if (elapsedMs >= GAME_CONFIG.swipeTrailDurationMs) {
+      return 0;
+    }
+
+    const progress = clamp(
+      elapsedMs / GAME_CONFIG.swipeTrailDurationMs,
+      0,
+      1
+    );
+
+    return 1 - progress;
   }
 
   get canReceiveSwipe() {
@@ -1066,18 +1246,18 @@ class Arena {
 }
 
 class ShapeRenderer {
-  static draw(context, center, shapeName, color, radius, opacity = 1) {
+  static draw(context, center, shapeName, color, radius, opacity = 1, glowMultiplier = 1) {
     context.save();
     context.strokeStyle = color;
     context.lineWidth = Math.max(radius * 0.06, 1.8);
     context.shadowColor = color;
-    context.shadowBlur = radius * 0.38;
+    context.shadowBlur = radius * 0.38 * glowMultiplier;
     context.lineJoin = "round";
     context.lineCap = "round";
 
     ShapeRenderer.createPath(context, center, shapeName, radius);
 
-    context.globalAlpha = 0.28 * opacity;
+    context.globalAlpha = Math.min(0.28 * glowMultiplier * opacity, 0.9);
     context.lineWidth = Math.max(radius * 0.19, 4);
     context.stroke();
     context.globalAlpha = opacity;
@@ -2621,6 +2801,71 @@ class NeonSwipeGame {
     this.context.restore();
   }
 
+  drawSpawnTrail(shape, currentTime, spawnRenderScale) {
+    const trailStrength = shape.getSpawnTrailStrength(currentTime);
+
+    if (trailStrength <= 0) return;
+
+    const velocityLength = Math.hypot(
+      shape.velocityX,
+      shape.velocityY
+    );
+
+    if (velocityLength < 1) return;
+
+    const directionX = shape.velocityX / velocityLength;
+    const directionY = shape.velocityY / velocityLength;
+
+    for (
+      let index = GAME_CONFIG.spawnTrailCopies;
+      index >= 1;
+      index -= 1
+    ) {
+      const distance = this.scaler.x(
+        GAME_CONFIG.spawnTrailSpacing * index
+      );
+
+      const trailX =
+        shape.x - directionX * distance;
+
+      const trailY =
+        shape.y - directionY * distance;
+
+      const copyProgress =
+        index / GAME_CONFIG.spawnTrailCopies;
+
+      const opacity =
+        GAME_CONFIG.spawnTrailMaxOpacity *
+        trailStrength *
+        (1 - copyProgress * 0.65);
+
+      this.context.save();
+
+      this.context.translate(trailX, trailY);
+
+      this.context.scale(
+        spawnRenderScale.scaleX,
+        spawnRenderScale.scaleY
+      );
+
+      ShapeRenderer.draw(
+        this.context,
+        { x: 0, y: 0 },
+        shape.shapeName,
+        NEON_COLORS[shape.colorId],
+        this.scaler.x(
+          shape.state === "active"
+            ? GAME_CONFIG.shapeRadius * 1.08
+            : GAME_CONFIG.shapeRadius
+        ),
+        opacity,
+        0.8
+      );
+
+      this.context.restore();
+    }
+  }
+
   drawActiveShape(currentTime) {
     const visibleShapes = this.challengeManager.getVisibleShapes(this.activeChallengeUsesDuoShapes);
 
@@ -2636,17 +2881,47 @@ class NeonSwipeGame {
         }
 
         const spawnRenderScale = shape.getSpawnRenderScale(currentTime);
+        const spawnGlowMultiplier = shape.getSpawnHaloMultiplier(currentTime);
+
+        const swipeRenderScale = shape.getSwipeRenderScale(currentTime);
+        const swipeGlowMultiplier = shape.getSwipeHaloMultiplier(currentTime);
+
+        this.drawSpawnTrail(
+          shape,
+          currentTime,
+          spawnRenderScale
+        );
+
+        this.drawSwipeTrail(shape, currentTime);
 
         this.context.save();
         this.context.globalAlpha = shape.state === "inactive" ? 0.7 : 1;
         this.context.translate(shape.x, shape.y);
-        this.context.scale(spawnRenderScale.scaleX, spawnRenderScale.scaleY);
+        const velocityAngle =
+          Math.atan2(shape.velocityY, shape.velocityX);
+
+        if (shape.hasBeenThrown) {
+          this.context.rotate(velocityAngle);
+
+          this.context.scale(
+            swipeRenderScale.scaleAlongMovement,
+            swipeRenderScale.scalePerpendicular
+          );
+
+          this.context.rotate(-velocityAngle);
+        } else {
+          this.context.scale(spawnRenderScale.scaleX, spawnRenderScale.scaleY);
+        }
         ShapeRenderer.draw(
           this.context,
           { x: 0, y: 0 },
           shape.shapeName,
           NEON_COLORS[shape.colorId],
-          this.scaler.x(shape.state === "active" ? GAME_CONFIG.shapeRadius * 1.08 : GAME_CONFIG.shapeRadius)
+          this.scaler.x(shape.state === "active" ? GAME_CONFIG.shapeRadius * 1.08 : GAME_CONFIG.shapeRadius),
+          1,
+          shape.hasBeenThrown
+            ? swipeGlowMultiplier
+            : spawnGlowMultiplier
         );
         this.context.restore();
       });
@@ -2668,6 +2943,60 @@ class NeonSwipeGame {
     this.context.lineTo(swipeGesture.currentX, swipeGesture.currentY);
     this.context.stroke();
     this.context.restore();
+  }
+
+  drawSwipeTrail(shape, currentTime) {
+    const trailStrength =
+      shape.getSwipeTrailStrength(currentTime);
+
+    if (trailStrength <= 0) return;
+
+    const velocityLength = Math.hypot(
+      shape.velocityX,
+      shape.velocityY
+    );
+
+    if (velocityLength < 1) return;
+
+    const directionX =
+      shape.velocityX / velocityLength;
+
+    const directionY =
+      shape.velocityY / velocityLength;
+
+    for (
+      let index = GAME_CONFIG.swipeTrailCopies;
+      index >= 1;
+      index -= 1
+    ) {
+      const distance = this.scaler.x(
+        GAME_CONFIG.swipeTrailSpacing * index
+      );
+
+      const opacity =
+        GAME_CONFIG.swipeTrailMaxOpacity *
+        trailStrength *
+        (1 - index / GAME_CONFIG.swipeTrailCopies * 0.55);
+
+      this.context.save();
+
+      this.context.translate(
+        shape.x - directionX * distance,
+        shape.y - directionY * distance
+      );
+
+      ShapeRenderer.draw(
+        this.context,
+        { x: 0, y: 0 },
+        shape.shapeName,
+        NEON_COLORS[shape.colorId],
+        this.scaler.x(GAME_CONFIG.shapeRadius),
+        opacity,
+        1.5
+      );
+
+      this.context.restore();
+    }
   }
 
   drawCenterLabel(currentTime) {
