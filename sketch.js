@@ -71,8 +71,8 @@ const GAME_CONFIG = {
   movingBottomSpawnSafetyMargin: 14,
   movingBottomSpawnHorizontalImpulse: 110,
   movingBottomSpawnCenterZoneWidth: 90,
-  level11IntroDurationMs: 1200,
-  level12IntroDurationMs: 1200,
+  level11IntroDurationMs: 2000,
+  level12IntroDurationMs: 2000,
   shapeRotationIntervalMs: 1000,
   shapeRotationDurationMs: 180,
   level10WallRotationIntervalMs: 1000,
@@ -1156,12 +1156,60 @@ class Arena {
   getShortReceiverTrackHitAreas(receiver) {
     const geometry = this.getShortReceiverTrackGeometry(receiver);
     const layout = this.getScaledLayout();
-    const horizontalHitArea = this.getSegmentHitArea(geometry.horizontalStart, geometry.horizontalEnd, layout.railSize);
-    const verticalHitArea = this.getSegmentHitArea(geometry.verticalStart, geometry.verticalEnd, layout.railSize);
 
-    return [horizontalHitArea, verticalHitArea];
+    const hitAreas = [];
+
+    // Partie horizontale
+    hitAreas.push(
+      this.getSegmentHitArea(
+        geometry.horizontalStart,
+        geometry.horizontalEnd,
+        layout.railSize
+      )
+    );
+
+    // Partie arrondie du récepteur
+    const curveSteps = 10;
+    let previousPoint = geometry.horizontalStart;
+
+    for (let step = 1; step <= curveSteps; step += 1) {
+      const t = step / curveSteps;
+      const inverseT = 1 - t;
+
+      const curvePoint = {
+        x:
+          inverseT * inverseT * geometry.horizontalStart.x +
+          2 * inverseT * t * geometry.curveControl.x +
+          t * t * geometry.curveEnd.x,
+
+        y:
+          inverseT * inverseT * geometry.horizontalStart.y +
+          2 * inverseT * t * geometry.curveControl.y +
+          t * t * geometry.curveEnd.y
+      };
+
+      hitAreas.push(
+        this.getSegmentHitArea(
+          previousPoint,
+          curvePoint,
+          layout.railSize
+        )
+      );
+
+      previousPoint = curvePoint;
+    }
+
+    // Partie verticale
+    hitAreas.push(
+      this.getSegmentHitArea(
+        geometry.verticalStart,
+        geometry.verticalEnd,
+        layout.railSize
+      )
+    );
+
+    return hitAreas;
   }
-
   getSegmentHitArea(startPoint, endPoint, thickness) {
     const halfThickness = thickness / 2;
 
@@ -2627,7 +2675,7 @@ class NeonSwipeGame {
     this.receiverEffects.reset();
     this.dynamicRuleSequence.reset();
     // TEMP TEST LEVEL 18 - restore to 0 after validation
-    this.score = 23;
+    this.score = 55;
     this.state = "playing";
     this.resetLevelRuntime();
     this.movingReceiverOffset = 0;
@@ -3364,25 +3412,31 @@ class NeonSwipeGame {
   }
 
   drawLevelIntroLabel() {
-    const label = this.levelIntroLines[0];
+    const [firstWord, secondWord] = this.levelIntroLines[0].split(" ");
     const centerY = this.scaler.canvasHeight / 2;
 
     this.context.save();
 
     this.context.fillStyle = "#ffffff";
     this.context.shadowColor = "rgba(255, 255, 255, 0.95)";
-    this.context.shadowBlur = this.scaler.x(22);
+    this.context.shadowBlur = this.scaler.x(26);
 
     this.context.textAlign = "center";
     this.context.textBaseline = "middle";
 
-    this.context.font = `600 ${this.scaler.x(38)}px Oxanium`;
-    this.context.letterSpacing = `${this.scaler.x(8)}px`;
+    this.context.font = `600 ${this.scaler.x(44)}px Oxanium`;
+    this.context.letterSpacing = `${this.scaler.x(10)}px`;
 
     this.context.fillText(
-      label,
+      firstWord,
       this.scaler.canvasWidth / 2,
-      centerY
+      centerY - this.scaler.y(30)
+    );
+
+    this.context.fillText(
+      secondWord,
+      this.scaler.canvasWidth / 2,
+      centerY + this.scaler.y(30)
     );
 
     this.context.restore();
@@ -3518,17 +3572,13 @@ class NeonSwipeGame {
       return null;
     }
 
-    if (this.state === "level11Intro") {
+    if (
+      this.state === "level11Intro" ||
+      this.state === "level12Intro"
+    ) {
       return {
-        railOpacity: 1,
-        iconOpacity: 0.45
-      };
-    }
-
-    if (this.state === "level12Intro") {
-      return {
-        railOpacity: 0.45,
-        iconOpacity: 1
+        railOpacity: 0.18,
+        iconOpacity: 0.18
       };
     }
 
