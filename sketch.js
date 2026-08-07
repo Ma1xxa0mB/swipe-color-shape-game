@@ -38,6 +38,16 @@ const GAME_CONFIG = {
   swipeHaloMaxMultiplier: 2.2,
   ruleTransitionFeedbackDurationMs: 650,
   receiverPermutationDurationMs: 280,
+  receiverHitFeedbackDurationMs: 180,
+  receiverHitThicknessMultiplier: 1.65,
+  receiverIconHitThicknessMultiplier: 2,
+  receiverHitHaloMultiplier: 4.8,
+  receiverIconHitHaloMultiplier: 5.2,
+  impactRingDurationMs: 180,
+  impactRingStartRadius: 12,
+  impactRingEndRadius: 85,
+  impactRingMaxOpacity: 0.85,
+  impactRingLineWidth: 4,
   level8StartScore: 14,
   level9StartScore: 17,
   level10StartScore: 20,
@@ -552,14 +562,42 @@ class Particle {
   }
 }
 
+class ImpactRing {
+  constructor(x, y, color, startedAt) {
+    this.x = x;
+    this.y = y;
+    this.color = color;
+    this.startedAt = startedAt;
+  }
+
+  getProgress(currentTime) {
+    return clamp(
+      (currentTime - this.startedAt) /
+      GAME_CONFIG.impactRingDurationMs,
+      0,
+      1
+    );
+  }
+
+  get isAlive() {
+    return (
+      performance.now() - this.startedAt <
+      GAME_CONFIG.impactRingDurationMs
+    );
+  }
+}
+
+
 class ParticleSystem {
   constructor(scaler) {
     this.scaler = scaler;
     this.particles = [];
+    this.impactRings = [];
   }
 
   clear() {
     this.particles = [];
+    this.impactRings = [];
   }
 
   createBurst(x, y, color, isSuccess) {
@@ -581,12 +619,75 @@ class ParticleSystem {
     }
   }
 
+  createImpactRing(x, y, color) {
+    this.impactRings.push(
+      new ImpactRing(
+        x,
+        y,
+        color,
+        performance.now()
+      )
+    );
+  }
+
   update(deltaSeconds) {
     this.particles.forEach((particle) => particle.update(deltaSeconds));
     this.particles = this.particles.filter((particle) => particle.isAlive);
+    this.impactRings = this.impactRings.filter((ring) => ring.isAlive);
   }
 
   draw(context) {
+
+    const currentTime = performance.now();
+
+    this.impactRings.forEach((ring) => {
+      const progress =
+        ring.getProgress(currentTime);
+
+      const easedProgress =
+        1 - Math.pow(1 - progress, 3);
+
+      const radius =
+        this.scaler.x(
+          GAME_CONFIG.impactRingStartRadius +
+          (
+            GAME_CONFIG.impactRingEndRadius -
+            GAME_CONFIG.impactRingStartRadius
+          ) *
+          easedProgress
+        );
+
+      const opacity =
+        GAME_CONFIG.impactRingMaxOpacity *
+        (1 - progress);
+
+      context.save();
+
+      context.globalAlpha = opacity;
+      context.strokeStyle = ring.color;
+      context.shadowColor = ring.color;
+      context.shadowBlur = this.scaler.x(18);
+
+      context.lineWidth =
+        this.scaler.x(
+          GAME_CONFIG.impactRingLineWidth
+        ) *
+        (1 - progress * 0.55);
+
+      context.beginPath();
+
+      context.arc(
+        ring.x,
+        ring.y,
+        radius,
+        0,
+        Math.PI * 2
+      );
+
+      context.stroke();
+      context.restore();
+    });
+
     this.particles.forEach((particle) => {
       context.save();
       context.globalAlpha = particle.alpha;
@@ -600,6 +701,8 @@ class ParticleSystem {
     });
   }
 }
+
+
 
 class Arena {
   constructor(scaler, receiverDefinitions) {
@@ -1074,46 +1177,47 @@ class Arena {
     );
   }
 
-  draw(context, currentPhase, wallColorAnimation = null) {
+  draw(context, currentPhase, wallColorAnimation = null, hitFeedbackByReceiverId = {}) {
     if (currentPhase.usesMovingReceiverTracks) {
-      this.receivers.forEach((receiver) => this.drawMovingReceiverTrack(context, receiver, currentPhase));
-      this.drawReceiverIcons(context, currentPhase);
+      this.receivers.forEach((receiver) => this.drawMovingReceiverTrack(context, receiver, currentPhase, hitFeedbackByReceiverId[receiver.id] || 0));
+      this.drawReceiverIcons(context, currentPhase, 1, hitFeedbackByReceiverId);
       this.drawInnerGuide(context);
       return;
     }
 
     if (wallColorAnimation && wallColorAnimation.progress < 1) {
-      this.drawReceiverTracksWithWallColorAnimation(context, currentPhase, wallColorAnimation);
-      this.drawReceiverIconsWithWallColorAnimation(context, currentPhase, wallColorAnimation);
+      this.drawReceiverTracksWithWallColorAnimation(context, currentPhase, wallColorAnimation, hitFeedbackByReceiverId);
+      this.drawReceiverIconsWithWallColorAnimation(context, currentPhase, wallColorAnimation, hitFeedbackByReceiverId);
       this.drawInnerGuide(context);
       return;
     }
 
-    this.receivers.forEach((receiver) => this.drawReceiverTrack(context, receiver, currentPhase));
-    this.drawReceiverIcons(context, currentPhase);
+    this.receivers.forEach((receiver) => this.drawReceiverTrack(context, receiver, currentPhase, null, 1, hitFeedbackByReceiverId[receiver.id] || 0));
+    this.drawReceiverIcons(context, currentPhase, 1, hitFeedbackByReceiverId);
     this.drawInnerGuide(context);
   }
 
-  drawReceiverTracksWithWallColorAnimation(context, currentPhase, wallColorAnimation) {
+  drawReceiverTracksWithWallColorAnimation(context, currentPhase, wallColorAnimation, hitFeedbackByReceiverId = {}) {
     this.receivers.forEach((receiver) => {
       const previousColor = wallColorAnimation.previousColorsByPositionId
         ? NEON_COLORS[wallColorAnimation.previousColorsByPositionId[receiver.id]]
         : this.getReceiverNeonColor(receiver, currentPhase);
       const currentColor = this.getReceiverNeonColor(receiver, currentPhase);
-      this.drawReceiverTrack(context, receiver, currentPhase, previousColor, 1 - wallColorAnimation.progress);
-      this.drawReceiverTrack(context, receiver, currentPhase, currentColor, wallColorAnimation.progress);
+      const hitStrength = hitFeedbackByReceiverId[receiver.id] || 0;
+      this.drawReceiverTrack(context, receiver, currentPhase, previousColor, 1 - wallColorAnimation.progress, hitStrength);
+      this.drawReceiverTrack(context, receiver, currentPhase, currentColor, wallColorAnimation.progress, hitStrength);
     });
   }
 
-  drawReceiverIconsWithWallColorAnimation(context, currentPhase, wallColorAnimation) {
+  drawReceiverIconsWithWallColorAnimation(context, currentPhase, wallColorAnimation, hitFeedbackByReceiverId = {}) {
     const previousIconPhase = {
       ...currentPhase,
       receiverColorsByPositionId: wallColorAnimation.previousColorsByPositionId || currentPhase.receiverColorsByPositionId,
       receiverShapesByPositionId: wallColorAnimation.previousShapesByPositionId || currentPhase.receiverShapesByPositionId
     };
 
-    this.drawReceiverIcons(context, previousIconPhase, 1 - wallColorAnimation.progress);
-    this.drawReceiverIcons(context, currentPhase, wallColorAnimation.progress);
+    this.drawReceiverIcons(context, previousIconPhase, 1 - wallColorAnimation.progress, hitFeedbackByReceiverId);
+    this.drawReceiverIcons(context, currentPhase, wallColorAnimation.progress, hitFeedbackByReceiverId);
   }
 
   drawShortReceiverTrackPath(context, receiver) {
@@ -1125,12 +1229,22 @@ class Arena {
     context.lineTo(geometry.verticalEnd.x, geometry.verticalEnd.y);
   }
 
-  drawMovingReceiverTrack(context, receiver, currentPhase) {
+  drawMovingReceiverTrack(context, receiver, currentPhase, hitStrength = 0) {
     const receiverNeonColor = this.getReceiverNeonColor(receiver, currentPhase);
+
+    const thicknessMultiplier =
+      1 +
+      hitStrength *
+      (GAME_CONFIG.receiverHitThicknessMultiplier - 1);
+
+    const haloMultiplier =
+      1 +
+      hitStrength *
+      (GAME_CONFIG.receiverHitHaloMultiplier - 1);
 
     context.save();
     context.shadowColor = receiverNeonColor;
-    context.shadowBlur = this.scaler.x(18);
+    context.shadowBlur = this.scaler.x(18) * haloMultiplier;
     context.strokeStyle = receiverNeonColor;
     context.lineCap = "round";
     context.lineJoin = "round";
@@ -1142,15 +1256,15 @@ class Arena {
     });
 
     context.globalAlpha = 0.45;
-    context.lineWidth = this.scaler.x(15);
+    context.lineWidth = this.scaler.x(15) * thicknessMultiplier;
     context.stroke();
     context.globalAlpha = 1;
-    context.lineWidth = this.scaler.x(4);
+    context.lineWidth = this.scaler.x(4) * thicknessMultiplier;
     context.stroke();
     context.restore();
   }
 
-  drawReceiverTrack(context, receiver, currentPhase, colorOverride = null, opacity = 1) {
+  drawReceiverTrack(context, receiver, currentPhase, colorOverride = null, opacity = 1, hitStrength = 0) {
     const layout = this.getScaledLayout();
     const middleX = layout.outerX + layout.outerWidth / 2;
     const middleY = layout.outerY + layout.outerHeight / 2;
@@ -1159,9 +1273,19 @@ class Arena {
 
     const receiverNeonColor = colorOverride || this.getReceiverNeonColor(receiver, currentPhase);
 
+    const thicknessMultiplier =
+      1 +
+      hitStrength *
+      (GAME_CONFIG.receiverHitThicknessMultiplier - 1);
+
+    const haloMultiplier =
+      1 +
+      hitStrength *
+      (GAME_CONFIG.receiverHitHaloMultiplier - 1);
+
     context.save();
     context.shadowColor = receiverNeonColor;
-    context.shadowBlur = this.scaler.x(18);
+    context.shadowBlur = this.scaler.x(18) * haloMultiplier;
     context.strokeStyle = receiverNeonColor;
     context.lineCap = "round";
     context.lineJoin = "round";
@@ -1195,15 +1319,15 @@ class Arena {
 
     // Double stroke : un trait large flou pour le halo, puis un trait fin lumineux.
     context.globalAlpha = 0.45 * opacity;
-    context.lineWidth = this.scaler.x(15);
+    context.lineWidth = this.scaler.x(15) * thicknessMultiplier;
     context.stroke();
     context.globalAlpha = opacity;
-    context.lineWidth = this.scaler.x(4);
+    context.lineWidth = this.scaler.x(4) * thicknessMultiplier;
     context.stroke();
     context.restore();
   }
 
-  drawReceiverIcons(context, currentPhase, opacity = 1) {
+  drawReceiverIcons(context, currentPhase, opacity = 1, hitFeedbackByReceiverId = {}) {
     const layout = this.layout;
     const iconMargin = 64;
     const receiverIconRadius = this.scaler.x(GAME_CONFIG.shapeRadius);
@@ -1222,13 +1346,28 @@ class Arena {
     // Les symboles de reference sont dans les coins du carre interieur,
     // separes des rails neon pour ne pas donner l'impression qu'ils sont sur le mur.
     this.receivers.forEach((receiver) => {
+      const hitStrength =
+        hitFeedbackByReceiverId[receiver.id] || 0;
+
+      const strokeMultiplier =
+        1 +
+        hitStrength *
+        (GAME_CONFIG.receiverIconHitThicknessMultiplier - 1);
+
+      const glowMultiplier =
+        1 +
+        hitStrength *
+        (GAME_CONFIG.receiverIconHitHaloMultiplier - 1);
+
       ShapeRenderer.draw(
         context,
         iconPositionsByReceiverId[receiver.id],
         this.getReceiverShapeName(receiver, currentPhase),
         this.getReceiverNeonColor(receiver, currentPhase),
         receiverIconRadius,
-        opacity
+        opacity,
+        glowMultiplier,
+        strokeMultiplier
       );
     });
   }
@@ -1246,7 +1385,7 @@ class Arena {
 }
 
 class ShapeRenderer {
-  static draw(context, center, shapeName, color, radius, opacity = 1, glowMultiplier = 1) {
+  static draw(context, center, shapeName, color, radius, opacity = 1, glowMultiplier = 1, strokeMultiplier = 1) {
     context.save();
     context.strokeStyle = color;
     context.lineWidth = Math.max(radius * 0.06, 1.8);
@@ -1258,10 +1397,10 @@ class ShapeRenderer {
     ShapeRenderer.createPath(context, center, shapeName, radius);
 
     context.globalAlpha = Math.min(0.28 * glowMultiplier * opacity, 0.9);
-    context.lineWidth = Math.max(radius * 0.19, 4);
+    context.lineWidth = Math.max(radius * 0.19, 4) * strokeMultiplier;
     context.stroke();
     context.globalAlpha = opacity;
-    context.lineWidth = Math.max(radius * 0.06, 1.8);
+    context.lineWidth = Math.max(radius * 0.06, 1.8) * strokeMultiplier;
     context.stroke();
     context.restore();
   }
@@ -1976,12 +2115,14 @@ class ReceiverEffectsController {
       intervalMs: GAME_CONFIG.shapeRotationIntervalMs,
       durationMs: GAME_CONFIG.shapeRotationDurationMs
     });
+    this.hitFeedbacks = [];
   }
 
   reset() {
     this.permutation.reset();
     this.colorRotation.reset();
     this.shapeRotation.reset();
+    this.hitFeedbacks = [];
   }
 
   stopAll() {
@@ -2088,6 +2229,53 @@ class ReceiverEffectsController {
   phaseUsesReceiverRotation(phase) {
     return this.phaseUsesColorRotation(phase) || this.phaseUsesShapeRotation(phase);
   }
+
+  startHitFeedback(receiverId, currentTime) {
+    this.hitFeedbacks.push({
+      receiverId,
+      startedAt: currentTime
+    });
+  }
+
+  getHitFeedbackByReceiverId(currentTime) {
+    this.hitFeedbacks = this.hitFeedbacks.filter(
+      (feedback) =>
+        currentTime - feedback.startedAt <
+        GAME_CONFIG.receiverHitFeedbackDurationMs
+    );
+
+    return this.hitFeedbacks.reduce(
+      (feedbackByReceiverId, feedback) => {
+        const elapsedMs =
+          currentTime - feedback.startedAt;
+
+        const progress = clamp(
+          elapsedMs / GAME_CONFIG.receiverHitFeedbackDurationMs,
+          0,
+          1
+        );
+
+        // Monte très vite, puis redescend doucement.
+        let strength;
+
+        if (progress < 0.3) {
+          strength = progress / 0.3;
+        } else {
+          strength = 1 - (progress - 0.3) / 0.7;
+        }
+
+        feedbackByReceiverId[feedback.receiverId] =
+          Math.max(
+            feedbackByReceiverId[feedback.receiverId] || 0,
+            strength
+          );
+
+        return feedbackByReceiverId;
+      },
+      {}
+    );
+  }
+
 }
 
 class LevelIntroController {
@@ -2516,10 +2704,26 @@ class NeonSwipeGame {
       isCorrectReceiver
     );
 
+    if (isCorrectReceiver) {
+      this.particleSystem.createImpactRing(
+        resolvedShape.x,
+        resolvedShape.y,
+        this.arena.getReceiverNeonColor(
+          touchedReceiver,
+          validationPhase
+        )
+      );
+    }
+
     if (!isCorrectReceiver) {
       this.endGame("GAME OVER");
       return;
     }
+
+    this.receiverEffects.startHitFeedback(
+      touchedReceiver.id,
+      performance.now()
+    );
 
     resolvedShape.state = "resolved";
     this.score += 1;
@@ -2758,7 +2962,7 @@ class NeonSwipeGame {
   draw(currentTime) {
     this.context.clearRect(0, 0, this.scaler.canvasWidth, this.scaler.canvasHeight);
     this.drawBackground();
-    this.arena.draw(this.context, this.visiblePhase, this.wallColorAnimationState);
+    this.arena.draw(this.context, this.visiblePhase, this.wallColorAnimationState, this.receiverEffects.getHitFeedbackByReceiverId(currentTime));
 
     this.drawHud();
     this.drawActiveShape(currentTime);
