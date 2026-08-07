@@ -71,10 +71,8 @@ const GAME_CONFIG = {
   movingBottomSpawnSafetyMargin: 14,
   movingBottomSpawnHorizontalImpulse: 110,
   movingBottomSpawnCenterZoneWidth: 90,
-  level11IntroDurationMs: 1400,
-  level12IntroDurationMs: 1400,
-  level13IntroDurationMs: 1600,
-  level19IntroDurationMs: 1600,
+  level11IntroDurationMs: 1200,
+  level12IntroDurationMs: 1200,
   shapeRotationIntervalMs: 1000,
   shapeRotationDurationMs: 180,
   level10WallRotationIntervalMs: 1000,
@@ -173,11 +171,18 @@ const GAME_PHASES = [
   { level: 19, ruleName: "COLOR", startScore: GAME_CONFIG.level19StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2, usesShortReceiverTracks: true, usesMovingReceiverTracks: true, usesPreciseDuoSelection: true, projectileEntry: "movingGapDuo" }
 ];
 
+// const NEON_COLORS = {
+//   green: "#39ff72",
+//   red: "#ff3048",
+//   blue: "#3192ff",
+//   yellow: "#e2ff05"
+// };
+
 const NEON_COLORS = {
-  green: "#39ff72",
-  red: "#ff3048",
-  blue: "#3192ff",
-  yellow: "#e2ff05"
+  green: "#4dff88",
+  red: "#ff4560",
+  blue: "#4da6ff",
+  yellow: "#efff2e"
 };
 
 const RECEIVER_DEFINITIONS = [
@@ -711,16 +716,16 @@ class Arena {
 
     // Les valeurs sont exprimees dans la taille de reference 540x960.
     this.layout = {
-      outerX: 18,
-      outerY: 78,
-      outerWidth: 504,
-      outerHeight: 874,
+      outerX: 2,
+      outerY: 52,
+      outerWidth: 536,
+      outerHeight: 906,
       innerX: 66,
       innerY: 152,
       innerWidth: 408,
       innerHeight: 730,
       railSize: 48,
-      cornerRadius: 28
+      cornerRadius: 150
     };
   }
 
@@ -1177,47 +1182,150 @@ class Arena {
     );
   }
 
-  draw(context, currentPhase, wallColorAnimation = null, hitFeedbackByReceiverId = {}) {
+  draw(
+    context,
+    currentPhase,
+    wallColorAnimation = null,
+    hitFeedbackByReceiverId = {},
+    introVisualState = null
+  ) {
+    const railOpacity = introVisualState?.railOpacity ?? 1;
+    const iconOpacity = introVisualState?.iconOpacity ?? 1;
+
     if (currentPhase.usesMovingReceiverTracks) {
-      this.receivers.forEach((receiver) => this.drawMovingReceiverTrack(context, receiver, currentPhase, hitFeedbackByReceiverId[receiver.id] || 0));
-      this.drawReceiverIcons(context, currentPhase, 1, hitFeedbackByReceiverId);
+      this.receivers.forEach((receiver) =>
+        this.drawMovingReceiverTrack(
+          context,
+          receiver,
+          currentPhase,
+          hitFeedbackByReceiverId[receiver.id] || 0
+        )
+      );
+
+      this.drawReceiverIcons(
+        context,
+        currentPhase,
+        iconOpacity,
+        hitFeedbackByReceiverId
+      );
+
       this.drawInnerGuide(context);
       return;
     }
 
     if (wallColorAnimation && wallColorAnimation.progress < 1) {
-      this.drawReceiverTracksWithWallColorAnimation(context, currentPhase, wallColorAnimation, hitFeedbackByReceiverId);
-      this.drawReceiverIconsWithWallColorAnimation(context, currentPhase, wallColorAnimation, hitFeedbackByReceiverId);
+      this.drawReceiverTracksWithWallColorAnimation(
+        context,
+        currentPhase,
+        wallColorAnimation,
+        hitFeedbackByReceiverId,
+        railOpacity
+      );
+
+      this.drawReceiverIconsWithWallColorAnimation(
+        context,
+        currentPhase,
+        wallColorAnimation,
+        hitFeedbackByReceiverId,
+        iconOpacity
+      );
+
       this.drawInnerGuide(context);
       return;
     }
 
-    this.receivers.forEach((receiver) => this.drawReceiverTrack(context, receiver, currentPhase, null, 1, hitFeedbackByReceiverId[receiver.id] || 0));
-    this.drawReceiverIcons(context, currentPhase, 1, hitFeedbackByReceiverId);
+    this.receivers.forEach((receiver) =>
+      this.drawReceiverTrack(
+        context,
+        receiver,
+        currentPhase,
+        null,
+        railOpacity,
+        hitFeedbackByReceiverId[receiver.id] || 0
+      )
+    );
+
+    this.drawReceiverIcons(
+      context,
+      currentPhase,
+      iconOpacity,
+      hitFeedbackByReceiverId
+    );
+
     this.drawInnerGuide(context);
   }
 
-  drawReceiverTracksWithWallColorAnimation(context, currentPhase, wallColorAnimation, hitFeedbackByReceiverId = {}) {
+  drawReceiverTracksWithWallColorAnimation(
+    context,
+    currentPhase,
+    wallColorAnimation,
+    hitFeedbackByReceiverId = {},
+    opacity = 1
+  ) {
     this.receivers.forEach((receiver) => {
       const previousColor = wallColorAnimation.previousColorsByPositionId
-        ? NEON_COLORS[wallColorAnimation.previousColorsByPositionId[receiver.id]]
+        ? NEON_COLORS[
+        wallColorAnimation.previousColorsByPositionId[receiver.id]
+        ]
         : this.getReceiverNeonColor(receiver, currentPhase);
-      const currentColor = this.getReceiverNeonColor(receiver, currentPhase);
-      const hitStrength = hitFeedbackByReceiverId[receiver.id] || 0;
-      this.drawReceiverTrack(context, receiver, currentPhase, previousColor, 1 - wallColorAnimation.progress, hitStrength);
-      this.drawReceiverTrack(context, receiver, currentPhase, currentColor, wallColorAnimation.progress, hitStrength);
+
+      const currentColor =
+        this.getReceiverNeonColor(receiver, currentPhase);
+
+      const hitStrength =
+        hitFeedbackByReceiverId[receiver.id] || 0;
+
+      this.drawReceiverTrack(
+        context,
+        receiver,
+        currentPhase,
+        previousColor,
+        (1 - wallColorAnimation.progress) * opacity,
+        hitStrength
+      );
+
+      this.drawReceiverTrack(
+        context,
+        receiver,
+        currentPhase,
+        currentColor,
+        wallColorAnimation.progress * opacity,
+        hitStrength
+      );
     });
   }
 
-  drawReceiverIconsWithWallColorAnimation(context, currentPhase, wallColorAnimation, hitFeedbackByReceiverId = {}) {
+  drawReceiverIconsWithWallColorAnimation(
+    context,
+    currentPhase,
+    wallColorAnimation,
+    hitFeedbackByReceiverId = {},
+    opacity = 1
+  ) {
     const previousIconPhase = {
       ...currentPhase,
-      receiverColorsByPositionId: wallColorAnimation.previousColorsByPositionId || currentPhase.receiverColorsByPositionId,
-      receiverShapesByPositionId: wallColorAnimation.previousShapesByPositionId || currentPhase.receiverShapesByPositionId
+      receiverColorsByPositionId:
+        wallColorAnimation.previousColorsByPositionId ||
+        currentPhase.receiverColorsByPositionId,
+
+      receiverShapesByPositionId:
+        wallColorAnimation.previousShapesByPositionId ||
+        currentPhase.receiverShapesByPositionId
     };
 
-    this.drawReceiverIcons(context, previousIconPhase, 1 - wallColorAnimation.progress, hitFeedbackByReceiverId);
-    this.drawReceiverIcons(context, currentPhase, wallColorAnimation.progress, hitFeedbackByReceiverId);
+    this.drawReceiverIcons(
+      context,
+      previousIconPhase,
+      (1 - wallColorAnimation.progress) * opacity,
+      hitFeedbackByReceiverId
+    );
+
+    this.drawReceiverIcons(
+      context,
+      currentPhase,
+      wallColorAnimation.progress * opacity,
+      hitFeedbackByReceiverId
+    );
   }
 
   drawShortReceiverTrackPath(context, receiver) {
@@ -1244,7 +1352,7 @@ class Arena {
 
     context.save();
     context.shadowColor = receiverNeonColor;
-    context.shadowBlur = this.scaler.x(18) * haloMultiplier;
+    context.shadowBlur = this.scaler.x(48) * haloMultiplier;
     context.strokeStyle = receiverNeonColor;
     context.lineCap = "round";
     context.lineJoin = "round";
@@ -1255,11 +1363,8 @@ class Arena {
       context.lineTo(segment.end.x, segment.end.y);
     });
 
-    context.globalAlpha = 0.45;
-    context.lineWidth = this.scaler.x(15) * thicknessMultiplier;
-    context.stroke();
     context.globalAlpha = 1;
-    context.lineWidth = this.scaler.x(4) * thicknessMultiplier;
+    context.lineWidth = this.scaler.x(7) * thicknessMultiplier;
     context.stroke();
     context.restore();
   }
@@ -1285,7 +1390,7 @@ class Arena {
 
     context.save();
     context.shadowColor = receiverNeonColor;
-    context.shadowBlur = this.scaler.x(18) * haloMultiplier;
+    context.shadowBlur = this.scaler.x(48) * haloMultiplier;
     context.strokeStyle = receiverNeonColor;
     context.lineCap = "round";
     context.lineJoin = "round";
@@ -1317,12 +1422,10 @@ class Arena {
       context.lineTo(middleX, bottomY - layout.railSize / 2);
     }
 
-    // Double stroke : un trait large flou pour le halo, puis un trait fin lumineux.
-    context.globalAlpha = 0.45 * opacity;
-    context.lineWidth = this.scaler.x(15) * thicknessMultiplier;
-    context.stroke();
+
     context.globalAlpha = opacity;
-    context.lineWidth = this.scaler.x(4) * thicknessMultiplier;
+    context.lineWidth = this.scaler.x(7) * thicknessMultiplier;
+    context.globalCompositeOperation = "lighter";
     context.stroke();
     context.restore();
   }
@@ -1390,17 +1493,15 @@ class ShapeRenderer {
     context.strokeStyle = color;
     context.lineWidth = Math.max(radius * 0.06, 1.8);
     context.shadowColor = color;
-    context.shadowBlur = radius * 0.38 * glowMultiplier;
+    context.shadowBlur = radius * 0.75 * glowMultiplier;
     context.lineJoin = "round";
     context.lineCap = "round";
 
     ShapeRenderer.createPath(context, center, shapeName, radius);
 
-    context.globalAlpha = Math.min(0.28 * glowMultiplier * opacity, 0.9);
-    context.lineWidth = Math.max(radius * 0.19, 4) * strokeMultiplier;
-    context.stroke();
     context.globalAlpha = opacity;
-    context.lineWidth = Math.max(radius * 0.06, 1.8) * strokeMultiplier;
+    context.lineWidth = Math.max(radius * 0.09, 2.6) * strokeMultiplier;
+    context.globalCompositeOperation = "lighter";
     context.stroke();
     context.restore();
   }
@@ -1826,7 +1927,7 @@ class GameStateController {
   }
 
   get isShowingLevelIntro() {
-    return this.is("level11Intro") || this.is("level12Intro") || this.is("level13Intro") || this.is("level19Intro");
+    return this.is("level11Intro") || this.is("level12Intro")
   }
 }
 
@@ -2288,13 +2389,14 @@ class LevelIntroController {
   reset() {
     this.playedIntroByLevel = {
       11: false,
-      12: false,
-      13: false,
-      19: false
+      12: false
     };
+
+    this.startedAt = 0;
     this.endsAt = 0;
-    this.level13StartedAt = 0;
-    this.hasStartedLevel13ShapeRotation = false;
+
+    this.hasStartedColorRotation = false;
+    this.hasStartedShapeRotation = false;
   }
 
   shouldStart(resolvedChallengePhase, nextPhase) {
@@ -2302,87 +2404,94 @@ class LevelIntroController {
     const previousLevel = resolvedChallengePhase?.level;
 
     if (previousLevel === nextLevel) return false;
-    return Boolean(this.playedIntroByLevel[nextLevel] === false);
+
+    return Boolean(
+      this.playedIntroByLevel[nextLevel] === false
+    );
   }
 
   start(currentTime, introPhase) {
+    this.startedAt = currentTime;
+
+    this.hasStartedColorRotation = false;
+    this.hasStartedShapeRotation = false;
+
     if (introPhase.level === 11) {
-      this.receiverEffects.startColorRotation(currentTime);
       this.playedIntroByLevel[11] = true;
-      this.endsAt = currentTime + GAME_CONFIG.level11IntroDurationMs;
+
+      this.endsAt =
+        currentTime +
+        GAME_CONFIG.level11IntroDurationMs;
+
       return "level11Intro";
     }
 
     if (introPhase.level === 12) {
-      this.receiverEffects.startShapeRotation(currentTime);
       this.playedIntroByLevel[12] = true;
-      this.endsAt = currentTime + GAME_CONFIG.level12IntroDurationMs;
+
+      this.endsAt =
+        currentTime +
+        GAME_CONFIG.level12IntroDurationMs;
+
       return "level12Intro";
     }
 
-    if (introPhase.level === 19) {
-      this.playedIntroByLevel[19] = true;
-      this.endsAt = currentTime + GAME_CONFIG.level19IntroDurationMs;
-      return "level19Intro";
-    }
-
-    this.receiverEffects.startColorRotation(currentTime);
-    this.playedIntroByLevel[13] = true;
-    this.hasStartedLevel13ShapeRotation = false;
-    this.level13StartedAt = currentTime;
-    this.endsAt = currentTime + GAME_CONFIG.level13IntroDurationMs;
-    return "level13Intro";
+    return null;
   }
 
-  update(currentTime, state, currentPhase) {
+  update(currentTime, state) {
+    const elapsedMs =
+      currentTime - this.startedAt;
+
     if (state === "level11Intro") {
-      this.receiverEffects.updateColorRotation(currentTime, true);
-    } else if (state === "level12Intro") {
-      this.receiverEffects.updateShapeRotation(currentTime, true);
-    } else if (state === "level13Intro") {
-      this.updateLevel13Demo(currentTime);
+      if (
+        elapsedMs >= 200 &&
+        !this.hasStartedColorRotation
+      ) {
+        this.receiverEffects.startColorRotation(
+          currentTime
+        );
+
+        this.hasStartedColorRotation = true;
+      }
+
+      if (this.hasStartedColorRotation) {
+        this.receiverEffects.updateColorRotation(
+          currentTime,
+          true
+        );
+      }
     }
 
-    if (currentTime < this.endsAt) return false;
+    if (state === "level12Intro") {
+      if (
+        elapsedMs >= 200 &&
+        !this.hasStartedShapeRotation
+      ) {
+        this.receiverEffects.startShapeRotation(
+          currentTime
+        );
 
-    if (state === "level13Intro") {
-      this.dynamicRuleSequence.forceNewSequence(currentPhase);
+        this.hasStartedShapeRotation = true;
+      }
+
+      if (this.hasStartedShapeRotation) {
+        this.receiverEffects.updateShapeRotation(
+          currentTime,
+          true
+        );
+      }
     }
 
-    return true;
-  }
-
-  updateLevel13Demo(currentTime) {
-    const elapsedIntroMs = currentTime - this.level13StartedAt;
-    const shapeDemoStartsAt = GAME_CONFIG.level13IntroDurationMs / 2;
-
-    if (elapsedIntroMs < shapeDemoStartsAt) {
-      this.receiverEffects.updateColorRotation(currentTime, true);
-      this.receiverEffects.stopShapeRotation();
-      return;
-    }
-
-    this.receiverEffects.stopColorRotation();
-
-    if (!this.hasStartedLevel13ShapeRotation) {
-      this.receiverEffects.startShapeRotation(currentTime);
-      this.hasStartedLevel13ShapeRotation = true;
-    }
-
-    this.receiverEffects.updateShapeRotation(currentTime, true);
+    return currentTime >= this.endsAt;
   }
 
   getLines(state) {
-    if (state === "level12Intro") return ["LEVEL 12", "SHAPES ROTATE", "↻ CLOCKWISE"];
-    if (state === "level13Intro") return ["LEVEL 13", "RULE CONTROLS", "THE ROTATION"];
-    if (state === "level19Intro") return ["LEVEL 19", "TWO SHAPES", "SWIPE THE SHAPE"];
+    if (state === "level12Intro") {
+      return ["SHAPE ROTATION"];
+    }
 
-    return ["LEVEL 11", "COLORS ROTATE", "↻ CLOCKWISE"];
-  }
-
-  getLevel13ActiveRuleLabel(currentTime) {
-    const elapsedIntroMs = currentTime - this.level13StartedAt;
-    return elapsedIntroMs < GAME_CONFIG.level13IntroDurationMs / 2 ? "COLOR" : "SHAPE";
+    return ["COLOR ROTATION"];
   }
 }
 
@@ -2402,7 +2511,10 @@ class InputController {
   handlePointerDown(event) {
     event.preventDefault();
 
-    if (this.game.isWaitingToStart()) {
+    if (
+      this.game.isWaitingToStart() ||
+      this.game.state === "ended"
+    ) {
       this.game.reset();
       return;
     }
@@ -2515,7 +2627,7 @@ class NeonSwipeGame {
     this.receiverEffects.reset();
     this.dynamicRuleSequence.reset();
     // TEMP TEST LEVEL 18 - restore to 0 after validation
-    this.score = 0;
+    this.score = 23;
     this.state = "playing";
     this.resetLevelRuntime();
     this.movingReceiverOffset = 0;
@@ -2523,7 +2635,7 @@ class NeonSwipeGame {
     this.clearCurrentChallenge();
     this.particleSystem.clear();
     this.showCenterMessage("COLOR", 1100);
-    this.restartButton.classList.remove("is-visible");
+
     this.spawnNextChallenge();
   }
 
@@ -2539,7 +2651,7 @@ class NeonSwipeGame {
     this.particleSystem.clear();
     this.centerMessage = "PRESS TO START";
     this.centerMessageUntil = Infinity;
-    this.restartButton.classList.remove("is-visible");
+
   }
 
   gameLoop(currentTime) {
@@ -2947,7 +3059,6 @@ class NeonSwipeGame {
     this.centerMessage = message;
     this.centerMessageUntil = Infinity;
     this.clearCurrentChallenge();
-    this.restartButton.classList.add("is-visible");
   }
 
   clearCurrentChallenge() {
@@ -2962,7 +3073,7 @@ class NeonSwipeGame {
   draw(currentTime) {
     this.context.clearRect(0, 0, this.scaler.canvasWidth, this.scaler.canvasHeight);
     this.drawBackground();
-    this.arena.draw(this.context, this.visiblePhase, this.wallColorAnimationState, this.receiverEffects.getHitFeedbackByReceiverId(currentTime));
+    this.arena.draw(this.context, this.visiblePhase, this.wallColorAnimationState, this.receiverEffects.getHitFeedbackByReceiverId(currentTime), this.introVisualState);
 
     this.drawHud();
     this.drawActiveShape(currentTime);
@@ -2995,13 +3106,9 @@ class NeonSwipeGame {
     this.context.shadowBlur = this.scaler.x(9);
     this.context.textAlign = "center";
     this.context.textBaseline = "middle";
-    this.context.font = `900 ${this.scaler.x(52)}px ui-sans-serif, system-ui`;
+    this.context.font = `400 ${this.scaler.x(56)}px Orbitron`;
     this.context.fillText(String(this.score).padStart(2, "0"), this.scaler.canvasWidth / 2, this.scaler.y(42));
 
-    this.context.shadowBlur = this.scaler.x(3);
-    this.context.font = `800 ${this.scaler.x(15)}px ui-sans-serif, system-ui`;
-    this.context.textAlign = "right";
-    this.context.fillText(`LEVEL ${this.currentLevel}`, this.scaler.x(512), this.scaler.y(38));
     this.context.restore();
   }
 
@@ -3214,47 +3321,69 @@ class NeonSwipeGame {
     const isRuleLabel = label === "COLOR" || label === "SHAPE";
     const isStartLabel = this.state === "waiting";
     const isTemporaryRuleFeedback = isRuleLabel && shouldShowTemporaryMessage && !isStartLabel;
-    const labelSize = isStartLabel ? 21 : (isRuleLabel ? 50 : 35);
-    const shadowBlur = isTemporaryRuleFeedback ? 22 : (isStartLabel ? 24 : (isRuleLabel ? 0 : 18));
+    const isGameOver = this.state === "ended";
+    const labelSize = isGameOver ? 48 : isStartLabel ? 21 : isRuleLabel ? 42 : 35;
+    const shadowBlur = isGameOver ? 12 : isTemporaryRuleFeedback ? 26 : isStartLabel ? 24 : 0;
 
     this.context.save();
     this.context.globalAlpha = isStartLabel ? 0.82 : 1;
-    this.context.fillStyle = isTemporaryRuleFeedback ? "#f8fbff" : (isRuleLabel ? "#8f98a8" : "#eef4ff");
+    this.context.fillStyle = isTemporaryRuleFeedback ? "#ffffff" : (isRuleLabel ? "#7f8da3" : "#eef4ff");
     this.context.shadowColor = isTemporaryRuleFeedback ? "rgba(255, 255, 255, 0.95)" : (isRuleLabel ? "transparent" : "rgba(255, 255, 255, 0.95)");
     this.context.shadowBlur = this.scaler.x(shadowBlur);
     this.context.textAlign = "center";
     this.context.textBaseline = "middle";
-    this.context.font = `900 ${this.scaler.x(labelSize)}px ui-sans-serif, system-ui`;
-    this.context.letterSpacing = `${this.scaler.x(isRuleLabel ? 13 : (isStartLabel ? 10 : 4))}px`;
-    this.context.fillText(label, this.scaler.canvasWidth / 2, this.getCenterLabelY(isRuleLabel));
+    if (isRuleLabel) {
+      this.context.font = `600 ${this.scaler.x(50)}px Oxanium`;
+    } else {
+      this.context.font = `600 ${this.scaler.x(labelSize)}px Oxanium`;
+    }
+    this.context.letterSpacing = `${this.scaler.x(isRuleLabel ? 20 : (isStartLabel ? 10 : 4))}px`;
+
+    this.context.fillText(
+      label,
+      this.scaler.canvasWidth / 2,
+      this.getCenterLabelY(isRuleLabel)
+    );
+
+    if (isGameOver) {
+      this.context.font = `400 ${this.scaler.x(20)}px Oxanium`;
+      this.context.letterSpacing = `${this.scaler.x(4)}px`;
+      this.context.fillStyle = "#7f8da3";
+      this.context.shadowColor = "transparent";
+      this.context.shadowBlur = 0;
+
+      this.context.fillText(
+        "TAP TO RESTART",
+        this.scaler.canvasWidth / 2,
+        this.getCenterLabelY(false) + this.scaler.y(70)
+      );
+    }
+
+    //this.context.fillText(label, this.scaler.canvasWidth / 2, this.getCenterLabelY(isRuleLabel));
     this.context.restore();
   }
 
   drawLevelIntroLabel() {
-    const lines = this.levelIntroLines;
-    const centerY = this.scaler.canvasHeight / 2 - this.scaler.y(28);
-    const lineGap = this.scaler.y(52);
+    const label = this.levelIntroLines[0];
+    const centerY = this.scaler.canvasHeight / 2;
 
     this.context.save();
-    this.context.fillStyle = "#f8fbff";
-    this.context.shadowColor = "rgba(255, 255, 255, 0.92)";
-    this.context.shadowBlur = this.scaler.x(18);
+
+    this.context.fillStyle = "#ffffff";
+    this.context.shadowColor = "rgba(255, 255, 255, 0.95)";
+    this.context.shadowBlur = this.scaler.x(22);
+
     this.context.textAlign = "center";
     this.context.textBaseline = "middle";
 
-    lines.forEach((line, index) => {
-      const isTitle = index === 0;
-      this.context.font = `900 ${this.scaler.x(isTitle ? 38 : 28)}px ui-sans-serif, system-ui`;
-      this.context.letterSpacing = `${this.scaler.x(isTitle ? 5 : 3)}px`;
-      this.context.fillText(line, this.scaler.canvasWidth / 2, centerY + (index - 1) * lineGap);
-    });
+    this.context.font = `600 ${this.scaler.x(38)}px Oxanium`;
+    this.context.letterSpacing = `${this.scaler.x(8)}px`;
 
-    if (this.state === "level13Intro") {
-      const activeRuleLabel = this.levelIntro.getLevel13ActiveRuleLabel(performance.now());
-      this.context.font = `900 ${this.scaler.x(24)}px ui-sans-serif, system-ui`;
-      this.context.letterSpacing = `${this.scaler.x(8)}px`;
-      this.context.fillText(activeRuleLabel, this.scaler.canvasWidth / 2, centerY + lineGap * 1.9);
-    }
+    this.context.fillText(
+      label,
+      this.scaler.canvasWidth / 2,
+      centerY
+    );
 
     this.context.restore();
   }
@@ -3383,6 +3512,29 @@ class NeonSwipeGame {
   get currentGravity() {
     return this.scaler.x(ChallengePhysics.getGravity(this.currentChallengePhase || this.currentPhase));
   }
+
+  get introVisualState() {
+    if (!this.isShowingLevelIntro) {
+      return null;
+    }
+
+    if (this.state === "level11Intro") {
+      return {
+        railOpacity: 1,
+        iconOpacity: 0.45
+      };
+    }
+
+    if (this.state === "level12Intro") {
+      return {
+        railOpacity: 0.45,
+        iconOpacity: 1
+      };
+    }
+
+    return null;
+  }
+
 }
 
 function getRandomItem(items) {
