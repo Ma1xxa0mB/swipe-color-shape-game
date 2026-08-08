@@ -17,24 +17,50 @@ const GAME_CONFIG = {
   maxThrowForce: 1560,
   upwardThrowBoost: 330,
   shapeRadius: 34,
-  level7GravityMultiplier: 0.4, // 0.36
-  level7SecondShapeDelayMs: 500,
-  level7HorizontalImpulse: 64,
-  level7SpawnImpulseMultiplier: 0.65, // 0.75
+  level19SecondShapeDelayMs: 500,
+  level19SpawnImpulseMultiplier: 0.75,
+  level19GravityMultiplier: 0.4,
+  level19SelectionHitboxMultiplier: 1.75,
+  spawnSquashStretchDurationMs: 350,
+  spawnHaloAnimationDurationMs: 430,
+  spawnHaloMaxMultiplier: 3.0,
+  spawnTrailDurationMs: 600,
+  spawnTrailCopies: 3,
+  spawnTrailSpacing: 25,
+  spawnTrailMaxOpacity: 0.7,
+  swipeStretchDurationMs: 120,
+  swipeStretchAmount: 3,
+  swipeTrailDurationMs: 200,
+  swipeTrailCopies: 4,
+  swipeTrailSpacing: 20,
+  swipeTrailMaxOpacity: 0.25,
+  swipeHaloDurationMs: 170,
+  swipeHaloMaxMultiplier: 2.2,
   ruleTransitionFeedbackDurationMs: 650,
   receiverPermutationDurationMs: 280,
-  level8StartScore: 17,
-  level9StartScore: 21,
-  level10StartScore: 25,
-  level11StartScore: 35,
-  level12StartScore: 41,
-  level13StartScore: 47,
-  level14StartScore: 55,
+  receiverHitFeedbackDurationMs: 180,
+  receiverHitThicknessMultiplier: 1.65,
+  receiverIconHitThicknessMultiplier: 2,
+  receiverHitHaloMultiplier: 4.8,
+  receiverIconHitHaloMultiplier: 5.2,
+  impactRingDurationMs: 180,
+  impactRingStartRadius: 12,
+  impactRingEndRadius: 85,
+  impactRingMaxOpacity: 0.85,
+  impactRingLineWidth: 4,
+  level8StartScore: 14,
+  level9StartScore: 17,
+  level10StartScore: 20,
+  level11StartScore: 24,
+  level12StartScore: 27,
+  level13StartScore: 30,
+  level14StartScore: 36,
   level14ReceiverTrackLength: 160,
-  level15StartScore: 63,
-  level16StartScore: 71,
-  level17StartScore: 79,
-  level18StartScore: 87,
+  level15StartScore: 39,
+  level16StartScore: 42,
+  level17StartScore: 48,
+  level18StartScore: 53,
+  level19StartScore: 58,
   sideEntryHeightRatio: 0.58,
   sideEntryHorizontalImpulse: 460,
   sideEntryUpwardImpulse: -920,
@@ -45,15 +71,14 @@ const GAME_CONFIG = {
   movingBottomSpawnSafetyMargin: 14,
   movingBottomSpawnHorizontalImpulse: 110,
   movingBottomSpawnCenterZoneWidth: 90,
-  level11IntroDurationMs: 1400,
-  level12IntroDurationMs: 1400,
-  level13IntroDurationMs: 1600,
+  level11IntroDurationMs: 2000,
+  level12IntroDurationMs: 2000,
   shapeRotationIntervalMs: 1000,
   shapeRotationDurationMs: 180,
   level10WallRotationIntervalMs: 1000,
   level10WallRotationDurationMs: 180,
-  level10GravityMultiplier: 0.55,
-  level10SpawnImpulseMultiplier: 0.78
+  blinkVisibleDurationMs: 800,
+  blinkNeutralDurationMs: 800
 };
 
 const WALL_LAYOUT_A_RECEIVER_COLORS_BY_POSITION_ID = {
@@ -130,28 +155,44 @@ const GAME_PHASES = [
   { level: 1, ruleName: "COLOR", startScore: 0, receiverColorsByPositionId: WALL_LAYOUT_A_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: DEFAULT_RECEIVER_SHAPES_BY_POSITION_ID },
   { level: 2, ruleName: "SHAPE", startScore: 2, receiverColorsByPositionId: WALL_LAYOUT_A_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: DEFAULT_RECEIVER_SHAPES_BY_POSITION_ID },
   { level: 3, ruleName: "COLOR", startScore: 4, receiverColorsByPositionId: WALL_LAYOUT_A_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: DEFAULT_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 2, dynamicRuleMaxAnswers: 3 },
-  { level: 4, ruleName: "COLOR", startScore: 7, receiverColorsByPositionId: WALL_LAYOUT_B_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: DEFAULT_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 2, dynamicRuleMaxAnswers: 3 },
-  { level: 5, ruleName: "COLOR", startScore: 9, receiverColorsByPositionId: WALL_LAYOUT_B_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_5_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 2, dynamicRuleMaxAnswers: 3 },
-  { level: 6, ruleName: "COLOR", startScore: 11, receiverColorsByPositionId: WALL_LAYOUT_C_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: LEVEL_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 3 },
-  { level: 7, ruleName: "COLOR", startScore: 14, receiverColorsByPositionId: WALL_LAYOUT_D_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: LEVEL_7_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 3 },
+  { level: 4, ruleName: "COLOR", startScore: 6, receiverColorsByPositionId: WALL_LAYOUT_B_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: DEFAULT_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 2, dynamicRuleMaxAnswers: 3 },
+  { level: 5, ruleName: "COLOR", startScore: 8, receiverColorsByPositionId: WALL_LAYOUT_B_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_5_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 2, dynamicRuleMaxAnswers: 3 },
+  { level: 6, ruleName: "COLOR", startScore: 10, receiverColorsByPositionId: WALL_LAYOUT_C_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: LEVEL_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 3 },
+  { level: 7, ruleName: "COLOR", startScore: 12, receiverColorsByPositionId: WALL_LAYOUT_D_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: LEVEL_7_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 3 },
   { level: 8, ruleName: "COLOR", startScore: GAME_CONFIG.level8StartScore, receiverColorsByPositionId: LEVEL_8_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: LEVEL_7_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 3, permutesReceiverColorsAfterSuccess: true },
   { level: 9, ruleName: "COLOR", startScore: GAME_CONFIG.level9StartScore, receiverColorsByPositionId: LEVEL_9_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: LEVEL_7_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 3, permutesReceiverShapesAfterSuccess: true },
   { level: 10, ruleName: "COLOR", startScore: GAME_CONFIG.level10StartScore, receiverColorsByPositionId: LEVEL_10_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: LEVEL_7_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 3, permutesReceiverColorsAfterSuccess: true, permutesReceiverShapesAfterSuccess: true },
-  { level: 11, ruleName: "COLOR", startScore: GAME_CONFIG.level11StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicWallColors: true, usesMobileReceiverPhysics: true },
-  { level: 12, ruleName: "SHAPE", startScore: GAME_CONFIG.level12StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicReceiverShapes: true, usesMobileReceiverPhysics: true },
-  { level: 13, ruleName: "COLOR", startScore: GAME_CONFIG.level13StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2, usesRuleControlledReceiverRotation: true, usesMobileReceiverPhysics: true },
+  { level: 11, ruleName: "COLOR", startScore: GAME_CONFIG.level11StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicWallColors: true },
+  { level: 12, ruleName: "SHAPE", startScore: GAME_CONFIG.level12StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicReceiverShapes: true },
+  { level: 13, ruleName: "COLOR", startScore: GAME_CONFIG.level13StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2, usesRuleControlledReceiverRotation: true },
   { level: 14, ruleName: "COLOR", startScore: GAME_CONFIG.level14StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2, permutesReceiverColorsAfterSuccess: true, permutesReceiverShapesAfterSuccess: true, usesShortReceiverTracks: true },
   { level: 15, ruleName: "COLOR", startScore: GAME_CONFIG.level15StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2, permutesReceiverColorsAfterSuccess: true, permutesReceiverShapesAfterSuccess: true, usesShortReceiverTracks: true, projectileEntry: "top" },
   { level: 16, ruleName: "COLOR", startScore: GAME_CONFIG.level16StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2, permutesReceiverColorsAfterSuccess: true, permutesReceiverShapesAfterSuccess: true, usesShortReceiverTracks: true, projectileEntry: "side" },
   { level: 17, ruleName: "COLOR", startScore: GAME_CONFIG.level17StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2, permutesReceiverColorsAfterSuccess: true, permutesReceiverShapesAfterSuccess: true, usesShortReceiverTracks: true, projectileEntry: "random" },
-  { level: 18, ruleName: "COLOR", startScore: GAME_CONFIG.level18StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2, usesShortReceiverTracks: true, usesMovingReceiverTracks: true, projectileEntry: "movingGap" }
+  { level: 18, ruleName: "COLOR", startScore: GAME_CONFIG.level18StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2, usesShortReceiverTracks: true, usesMovingReceiverTracks: true, projectileEntry: "movingGap" },
+  { level: 19, ruleName: "COLOR", startScore: GAME_CONFIG.level19StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2, usesShortReceiverTracks: true, usesMovingReceiverTracks: true, usesPreciseDuoSelection: true, projectileEntry: "movingGapDuo" }
 ];
 
+// const NEON_COLORS = {
+//   green: "#39ff72",
+//   red: "#ff3048",
+//   blue: "#3192ff",
+//   yellow: "#e2ff05"
+// };
+
 const NEON_COLORS = {
-  green: "#39ff72",
-  red: "#ff3048",
-  blue: "#3192ff",
-  yellow: "#e2ff05"
+  green: "#4dff88",
+  red: "#ff4560",
+  blue: "#4da6ff",
+  yellow: "#efff2e"
+};
+
+const NEUTRAL_RECEIVER_VISUALS = {
+  railColor: "rgba(190, 204, 220, 0.72)",
+  iconColor: "rgba(205, 216, 230, 0.78)",
+  railOpacityMultiplier: 0.55,
+  iconOpacityMultiplier: 0.62,
+  glowMultiplier: 0.34
 };
 
 const RECEIVER_DEFINITIONS = [
@@ -272,6 +313,8 @@ class FallingShape {
     this.state = state;
     this.hasBeenThrown = false;
     this.createdAt = performance.now();
+    this.spawnAnimationStartedAt = null;
+    this.swipeAnimationStartedAt = null;
   }
 
   update(deltaSeconds, gravity) {
@@ -286,6 +329,7 @@ class FallingShape {
     this.velocityX = (direction.x / length) * force;
     this.velocityY = (direction.y / length) * force;
     this.hasBeenThrown = true;
+    this.swipeAnimationStartedAt = performance.now();
 
     if (shouldLockAfterThrow) {
       this.state = "launched";
@@ -295,6 +339,205 @@ class FallingShape {
   isBelowScreen(canvasHeight, extraMargin) {
     const hasBeenVisibleLongEnough = performance.now() - this.createdAt > 500;
     return hasBeenVisibleLongEnough && this.y - this.radius > canvasHeight + extraMargin;
+  }
+
+  getSpawnRenderScale(currentTime) {
+    if (this.spawnAnimationStartedAt === null) {
+      return {
+        scaleX: 1,
+        scaleY: 1
+      };
+    }
+    const elapsedMs = currentTime - this.spawnAnimationStartedAt;
+
+    if (elapsedMs >= GAME_CONFIG.spawnSquashStretchDurationMs) {
+      return {
+        scaleX: 1,
+        scaleY: 1
+      };
+    }
+
+    const scaleKeyframes = [
+      { timeMs: 0, scaleX: 1.85, scaleY: 0.30 },
+      { timeMs: 100, scaleX: 0.52, scaleY: 1.90 },
+      { timeMs: 230, scaleX: 1.22, scaleY: 0.82 },
+      { timeMs: GAME_CONFIG.spawnSquashStretchDurationMs, scaleX: 1, scaleY: 1 }
+    ];
+
+    const nextKeyframeIndex = scaleKeyframes.findIndex((keyframe) => elapsedMs <= keyframe.timeMs);
+    const nextKeyframe = scaleKeyframes[nextKeyframeIndex];
+    const previousKeyframe = scaleKeyframes[Math.max(nextKeyframeIndex - 1, 0)];
+    const segmentDurationMs = nextKeyframe.timeMs - previousKeyframe.timeMs || 1;
+    const segmentProgress = clamp((elapsedMs - previousKeyframe.timeMs) / segmentDurationMs, 0, 1);
+
+    let easedProgress;
+
+    if (previousKeyframe.timeMs === 0) {
+      // Squash -> Stretch : départ rapide, arrivée plus douce
+      easedProgress = 1 - Math.pow(1 - segmentProgress, 3);
+    } else if (nextKeyframe.timeMs === GAME_CONFIG.spawnSquashStretchDurationMs) {
+      // Dernier rebond -> normal : stabilisation douce
+      easedProgress =
+        segmentProgress < 0.5
+          ? 2 * segmentProgress * segmentProgress
+          : 1 - Math.pow(-2 * segmentProgress + 2, 2) / 2;
+    } else {
+      // Stretch -> rebond inverse : ralentit en arrivant
+      easedProgress = 1 - Math.pow(1 - segmentProgress, 2);
+    }
+
+    return {
+      scaleX: previousKeyframe.scaleX + (nextKeyframe.scaleX - previousKeyframe.scaleX) * easedProgress,
+      scaleY: previousKeyframe.scaleY + (nextKeyframe.scaleY - previousKeyframe.scaleY) * easedProgress
+    };
+  }
+
+  getSpawnHaloMultiplier(currentTime) {
+    if (this.spawnAnimationStartedAt === null) {
+      return 1;
+    }
+
+    const elapsedMs = currentTime - this.spawnAnimationStartedAt;
+
+    if (elapsedMs >= GAME_CONFIG.spawnHaloAnimationDurationMs) {
+      return 1;
+    }
+
+    // Le halo monte très vite pendant le stretch.
+    if (elapsedMs <= 100) {
+      const progress = elapsedMs / 100;
+
+      return 1 + (GAME_CONFIG.spawnHaloMaxMultiplier - 1) * progress;
+    }
+
+    // Puis il redescend plus lentement et continue légèrement
+    // après la fin du squash & stretch.
+    const returnProgress = clamp(
+      (elapsedMs - 100) /
+      (GAME_CONFIG.spawnHaloAnimationDurationMs - 100),
+      0,
+      1
+    );
+
+    return (
+      GAME_CONFIG.spawnHaloMaxMultiplier -
+      (GAME_CONFIG.spawnHaloMaxMultiplier - 1) * returnProgress
+    );
+  }
+
+  getSpawnTrailStrength(currentTime) {
+    if (
+      this.spawnAnimationStartedAt === null ||
+      this.hasBeenThrown
+    ) {
+      return 0;
+    }
+
+    const elapsedMs = currentTime - this.spawnAnimationStartedAt;
+
+    if (elapsedMs >= GAME_CONFIG.spawnTrailDurationMs) {
+      return 0;
+    }
+
+    const progress = clamp(
+      elapsedMs / GAME_CONFIG.spawnTrailDurationMs,
+      0,
+      1
+    );
+
+    // Forte au début puis disparaît progressivement.
+    return 1 - progress;
+  }
+
+  getSwipeRenderScale(currentTime) {
+    if (this.swipeAnimationStartedAt === null) {
+      return {
+        scaleAlongMovement: 1,
+        scalePerpendicular: 1
+      };
+    }
+
+    const elapsedMs =
+      currentTime - this.swipeAnimationStartedAt;
+
+    if (elapsedMs >= GAME_CONFIG.swipeStretchDurationMs) {
+      return {
+        scaleAlongMovement: 1,
+        scalePerpendicular: 1
+      };
+    }
+
+    const progress = clamp(
+      elapsedMs / GAME_CONFIG.swipeStretchDurationMs,
+      0,
+      1
+    );
+
+    const easedProgress =
+      1 - Math.pow(1 - progress, 3);
+
+    return {
+      scaleAlongMovement:
+        GAME_CONFIG.swipeStretchAmount -
+        (GAME_CONFIG.swipeStretchAmount - 1) *
+        easedProgress,
+
+      scalePerpendicular:
+        1 / (
+          GAME_CONFIG.swipeStretchAmount -
+          (GAME_CONFIG.swipeStretchAmount - 1) *
+          easedProgress
+        )
+    };
+  }
+
+  getSwipeHaloMultiplier(currentTime) {
+    if (this.swipeAnimationStartedAt === null) {
+      return 1;
+    }
+
+    const elapsedMs =
+      currentTime - this.swipeAnimationStartedAt;
+
+    if (elapsedMs >= GAME_CONFIG.swipeHaloDurationMs) {
+      return 1;
+    }
+
+    const progress = clamp(
+      elapsedMs / GAME_CONFIG.swipeHaloDurationMs,
+      0,
+      1
+    );
+
+    return (
+      GAME_CONFIG.swipeHaloMaxMultiplier -
+      (GAME_CONFIG.swipeHaloMaxMultiplier - 1) *
+      progress
+    );
+  }
+
+  getSwipeTrailStrength(currentTime) {
+    if (
+      this.swipeAnimationStartedAt === null ||
+      !this.hasBeenThrown
+    ) {
+      return 0;
+    }
+
+    const elapsedMs =
+      currentTime - this.swipeAnimationStartedAt;
+
+    if (elapsedMs >= GAME_CONFIG.swipeTrailDurationMs) {
+      return 0;
+    }
+
+    const progress = clamp(
+      elapsedMs / GAME_CONFIG.swipeTrailDurationMs,
+      0,
+      1
+    );
+
+    return 1 - progress;
   }
 
   get canReceiveSwipe() {
@@ -334,14 +577,42 @@ class Particle {
   }
 }
 
+class ImpactRing {
+  constructor(x, y, color, startedAt) {
+    this.x = x;
+    this.y = y;
+    this.color = color;
+    this.startedAt = startedAt;
+  }
+
+  getProgress(currentTime) {
+    return clamp(
+      (currentTime - this.startedAt) /
+      GAME_CONFIG.impactRingDurationMs,
+      0,
+      1
+    );
+  }
+
+  get isAlive() {
+    return (
+      performance.now() - this.startedAt <
+      GAME_CONFIG.impactRingDurationMs
+    );
+  }
+}
+
+
 class ParticleSystem {
   constructor(scaler) {
     this.scaler = scaler;
     this.particles = [];
+    this.impactRings = [];
   }
 
   clear() {
     this.particles = [];
+    this.impactRings = [];
   }
 
   createBurst(x, y, color, isSuccess) {
@@ -363,12 +634,75 @@ class ParticleSystem {
     }
   }
 
+  createImpactRing(x, y, color) {
+    this.impactRings.push(
+      new ImpactRing(
+        x,
+        y,
+        color,
+        performance.now()
+      )
+    );
+  }
+
   update(deltaSeconds) {
     this.particles.forEach((particle) => particle.update(deltaSeconds));
     this.particles = this.particles.filter((particle) => particle.isAlive);
+    this.impactRings = this.impactRings.filter((ring) => ring.isAlive);
   }
 
   draw(context) {
+
+    const currentTime = performance.now();
+
+    this.impactRings.forEach((ring) => {
+      const progress =
+        ring.getProgress(currentTime);
+
+      const easedProgress =
+        1 - Math.pow(1 - progress, 3);
+
+      const radius =
+        this.scaler.x(
+          GAME_CONFIG.impactRingStartRadius +
+          (
+            GAME_CONFIG.impactRingEndRadius -
+            GAME_CONFIG.impactRingStartRadius
+          ) *
+          easedProgress
+        );
+
+      const opacity =
+        GAME_CONFIG.impactRingMaxOpacity *
+        (1 - progress);
+
+      context.save();
+
+      context.globalAlpha = opacity;
+      context.strokeStyle = ring.color;
+      context.shadowColor = ring.color;
+      context.shadowBlur = this.scaler.x(18);
+
+      context.lineWidth =
+        this.scaler.x(
+          GAME_CONFIG.impactRingLineWidth
+        ) *
+        (1 - progress * 0.55);
+
+      context.beginPath();
+
+      context.arc(
+        ring.x,
+        ring.y,
+        radius,
+        0,
+        Math.PI * 2
+      );
+
+      context.stroke();
+      context.restore();
+    });
+
     this.particles.forEach((particle) => {
       context.save();
       context.globalAlpha = particle.alpha;
@@ -383,6 +717,8 @@ class ParticleSystem {
   }
 }
 
+
+
 class Arena {
   constructor(scaler, receiverDefinitions) {
     this.scaler = scaler;
@@ -390,16 +726,16 @@ class Arena {
 
     // Les valeurs sont exprimees dans la taille de reference 540x960.
     this.layout = {
-      outerX: 18,
-      outerY: 78,
-      outerWidth: 504,
-      outerHeight: 874,
+      outerX: 2,
+      outerY: 52,
+      outerWidth: 536,
+      outerHeight: 906,
       innerX: 66,
       innerY: 152,
       innerWidth: 408,
       innerHeight: 730,
       railSize: 48,
-      cornerRadius: 28
+      cornerRadius: 150
     };
   }
 
@@ -830,12 +1166,60 @@ class Arena {
   getShortReceiverTrackHitAreas(receiver) {
     const geometry = this.getShortReceiverTrackGeometry(receiver);
     const layout = this.getScaledLayout();
-    const horizontalHitArea = this.getSegmentHitArea(geometry.horizontalStart, geometry.horizontalEnd, layout.railSize);
-    const verticalHitArea = this.getSegmentHitArea(geometry.verticalStart, geometry.verticalEnd, layout.railSize);
 
-    return [horizontalHitArea, verticalHitArea];
+    const hitAreas = [];
+
+    // Partie horizontale
+    hitAreas.push(
+      this.getSegmentHitArea(
+        geometry.horizontalStart,
+        geometry.horizontalEnd,
+        layout.railSize
+      )
+    );
+
+    // Partie arrondie du récepteur
+    const curveSteps = 10;
+    let previousPoint = geometry.horizontalStart;
+
+    for (let step = 1; step <= curveSteps; step += 1) {
+      const t = step / curveSteps;
+      const inverseT = 1 - t;
+
+      const curvePoint = {
+        x:
+          inverseT * inverseT * geometry.horizontalStart.x +
+          2 * inverseT * t * geometry.curveControl.x +
+          t * t * geometry.curveEnd.x,
+
+        y:
+          inverseT * inverseT * geometry.horizontalStart.y +
+          2 * inverseT * t * geometry.curveControl.y +
+          t * t * geometry.curveEnd.y
+      };
+
+      hitAreas.push(
+        this.getSegmentHitArea(
+          previousPoint,
+          curvePoint,
+          layout.railSize
+        )
+      );
+
+      previousPoint = curvePoint;
+    }
+
+    // Partie verticale
+    hitAreas.push(
+      this.getSegmentHitArea(
+        geometry.verticalStart,
+        geometry.verticalEnd,
+        layout.railSize
+      )
+    );
+
+    return hitAreas;
   }
-
   getSegmentHitArea(startPoint, endPoint, thickness) {
     const halfThickness = thickness / 2;
 
@@ -856,46 +1240,163 @@ class Arena {
     );
   }
 
-  draw(context, currentPhase, wallColorAnimation = null) {
+  draw(
+    context,
+    currentPhase,
+    wallColorAnimation = null,
+    hitFeedbackByReceiverId = {},
+    introVisualState = null,
+    modifierVisualState = null
+  ) {
+    const railOpacity = introVisualState?.railOpacity ?? 1;
+    const iconOpacity = introVisualState?.iconOpacity ?? 1;
+
     if (currentPhase.usesMovingReceiverTracks) {
-      this.receivers.forEach((receiver) => this.drawMovingReceiverTrack(context, receiver, currentPhase));
-      this.drawReceiverIcons(context, currentPhase);
+      this.receivers.forEach((receiver) =>
+        this.drawMovingReceiverTrack(
+          context,
+          receiver,
+          currentPhase,
+          hitFeedbackByReceiverId[receiver.id] || 0,
+          modifierVisualState
+        )
+      );
+
+      this.drawReceiverIcons(
+        context,
+        currentPhase,
+        iconOpacity,
+        hitFeedbackByReceiverId,
+        modifierVisualState
+      );
+
       this.drawInnerGuide(context);
       return;
     }
 
     if (wallColorAnimation && wallColorAnimation.progress < 1) {
-      this.drawReceiverTracksWithWallColorAnimation(context, currentPhase, wallColorAnimation);
-      this.drawReceiverIconsWithWallColorAnimation(context, currentPhase, wallColorAnimation);
+      this.drawReceiverTracksWithWallColorAnimation(
+        context,
+        currentPhase,
+        wallColorAnimation,
+        hitFeedbackByReceiverId,
+        railOpacity,
+        modifierVisualState
+      );
+
+      this.drawReceiverIconsWithWallColorAnimation(
+        context,
+        currentPhase,
+        wallColorAnimation,
+        hitFeedbackByReceiverId,
+        iconOpacity,
+        modifierVisualState
+      );
+
       this.drawInnerGuide(context);
       return;
     }
 
-    this.receivers.forEach((receiver) => this.drawReceiverTrack(context, receiver, currentPhase));
-    this.drawReceiverIcons(context, currentPhase);
+    this.receivers.forEach((receiver) =>
+      this.drawReceiverTrack(
+        context,
+        receiver,
+        currentPhase,
+        null,
+        railOpacity,
+        hitFeedbackByReceiverId[receiver.id] || 0,
+        modifierVisualState
+      )
+    );
+
+    this.drawReceiverIcons(
+      context,
+      currentPhase,
+      iconOpacity,
+      hitFeedbackByReceiverId,
+      modifierVisualState
+    );
+
     this.drawInnerGuide(context);
   }
 
-  drawReceiverTracksWithWallColorAnimation(context, currentPhase, wallColorAnimation) {
+  drawReceiverTracksWithWallColorAnimation(
+    context,
+    currentPhase,
+    wallColorAnimation,
+    hitFeedbackByReceiverId = {},
+    opacity = 1,
+    modifierVisualState = null
+  ) {
     this.receivers.forEach((receiver) => {
       const previousColor = wallColorAnimation.previousColorsByPositionId
-        ? NEON_COLORS[wallColorAnimation.previousColorsByPositionId[receiver.id]]
+        ? NEON_COLORS[
+        wallColorAnimation.previousColorsByPositionId[receiver.id]
+        ]
         : this.getReceiverNeonColor(receiver, currentPhase);
-      const currentColor = this.getReceiverNeonColor(receiver, currentPhase);
-      this.drawReceiverTrack(context, receiver, currentPhase, previousColor, 1 - wallColorAnimation.progress);
-      this.drawReceiverTrack(context, receiver, currentPhase, currentColor, wallColorAnimation.progress);
+
+      const currentColor =
+        this.getReceiverNeonColor(receiver, currentPhase);
+
+      const hitStrength =
+        hitFeedbackByReceiverId[receiver.id] || 0;
+
+      this.drawReceiverTrack(
+        context,
+        receiver,
+        currentPhase,
+        previousColor,
+        (1 - wallColorAnimation.progress) * opacity,
+        hitStrength,
+        modifierVisualState
+      );
+
+      this.drawReceiverTrack(
+        context,
+        receiver,
+        currentPhase,
+        currentColor,
+        wallColorAnimation.progress * opacity,
+        hitStrength,
+        modifierVisualState
+      );
     });
   }
 
-  drawReceiverIconsWithWallColorAnimation(context, currentPhase, wallColorAnimation) {
+  drawReceiverIconsWithWallColorAnimation(
+    context,
+    currentPhase,
+    wallColorAnimation,
+    hitFeedbackByReceiverId = {},
+    opacity = 1,
+    modifierVisualState = null
+  ) {
     const previousIconPhase = {
       ...currentPhase,
-      receiverColorsByPositionId: wallColorAnimation.previousColorsByPositionId || currentPhase.receiverColorsByPositionId,
-      receiverShapesByPositionId: wallColorAnimation.previousShapesByPositionId || currentPhase.receiverShapesByPositionId
+      receiverColorsByPositionId:
+        wallColorAnimation.previousColorsByPositionId ||
+        currentPhase.receiverColorsByPositionId,
+
+      receiverShapesByPositionId:
+        wallColorAnimation.previousShapesByPositionId ||
+        currentPhase.receiverShapesByPositionId
     };
 
-    this.drawReceiverIcons(context, previousIconPhase, 1 - wallColorAnimation.progress);
-    this.drawReceiverIcons(context, currentPhase, wallColorAnimation.progress);
+    this.drawReceiverIcons(
+      context,
+      previousIconPhase,
+      (1 - wallColorAnimation.progress) * opacity,
+      hitFeedbackByReceiverId,
+      modifierVisualState
+    );
+
+    this.drawReceiverIcons(
+      context,
+      currentPhase,
+      wallColorAnimation.progress * opacity,
+      hitFeedbackByReceiverId,
+      modifierVisualState
+    );
   }
 
   drawShortReceiverTrackPath(context, receiver) {
@@ -907,12 +1408,28 @@ class Arena {
     context.lineTo(geometry.verticalEnd.x, geometry.verticalEnd.y);
   }
 
-  drawMovingReceiverTrack(context, receiver, currentPhase) {
-    const receiverNeonColor = this.getReceiverNeonColor(receiver, currentPhase);
+  drawMovingReceiverTrack(context, receiver, currentPhase, hitStrength = 0, modifierVisualState = null) {
+    const receiverVisual = this.getReceiverVisualStyle(
+      receiver,
+      currentPhase,
+      1,
+      modifierVisualState
+    );
+    const receiverNeonColor = receiverVisual.color;
+
+    const thicknessMultiplier =
+      1 +
+      hitStrength *
+      (GAME_CONFIG.receiverHitThicknessMultiplier - 1);
+
+    const haloMultiplier =
+      1 +
+      hitStrength *
+      (GAME_CONFIG.receiverHitHaloMultiplier - 1);
 
     context.save();
     context.shadowColor = receiverNeonColor;
-    context.shadowBlur = this.scaler.x(18);
+    context.shadowBlur = this.scaler.x(48) * haloMultiplier * receiverVisual.glowMultiplier;
     context.strokeStyle = receiverNeonColor;
     context.lineCap = "round";
     context.lineJoin = "round";
@@ -923,27 +1440,41 @@ class Arena {
       context.lineTo(segment.end.x, segment.end.y);
     });
 
-    context.globalAlpha = 0.45;
-    context.lineWidth = this.scaler.x(15);
-    context.stroke();
-    context.globalAlpha = 1;
-    context.lineWidth = this.scaler.x(4);
+    context.globalAlpha = receiverVisual.opacity;
+    context.lineWidth = this.scaler.x(7) * thicknessMultiplier;
     context.stroke();
     context.restore();
   }
 
-  drawReceiverTrack(context, receiver, currentPhase, colorOverride = null, opacity = 1) {
+  drawReceiverTrack(context, receiver, currentPhase, colorOverride = null, opacity = 1, hitStrength = 0, modifierVisualState = null) {
     const layout = this.getScaledLayout();
     const middleX = layout.outerX + layout.outerWidth / 2;
     const middleY = layout.outerY + layout.outerHeight / 2;
     const rightX = layout.outerX + layout.outerWidth;
     const bottomY = layout.outerY + layout.outerHeight;
 
-    const receiverNeonColor = colorOverride || this.getReceiverNeonColor(receiver, currentPhase);
+    const receiverVisual = this.getReceiverVisualStyle(
+      receiver,
+      currentPhase,
+      opacity,
+      modifierVisualState,
+      colorOverride
+    );
+    const receiverNeonColor = receiverVisual.color;
+
+    const thicknessMultiplier =
+      1 +
+      hitStrength *
+      (GAME_CONFIG.receiverHitThicknessMultiplier - 1);
+
+    const haloMultiplier =
+      1 +
+      hitStrength *
+      (GAME_CONFIG.receiverHitHaloMultiplier - 1);
 
     context.save();
     context.shadowColor = receiverNeonColor;
-    context.shadowBlur = this.scaler.x(18);
+    context.shadowBlur = this.scaler.x(48) * haloMultiplier * receiverVisual.glowMultiplier;
     context.strokeStyle = receiverNeonColor;
     context.lineCap = "round";
     context.lineJoin = "round";
@@ -975,17 +1506,15 @@ class Arena {
       context.lineTo(middleX, bottomY - layout.railSize / 2);
     }
 
-    // Double stroke : un trait large flou pour le halo, puis un trait fin lumineux.
-    context.globalAlpha = 0.45 * opacity;
-    context.lineWidth = this.scaler.x(15);
-    context.stroke();
-    context.globalAlpha = opacity;
-    context.lineWidth = this.scaler.x(4);
+
+    context.globalAlpha = receiverVisual.opacity;
+    context.lineWidth = this.scaler.x(7) * thicknessMultiplier;
+    context.globalCompositeOperation = "lighter";
     context.stroke();
     context.restore();
   }
 
-  drawReceiverIcons(context, currentPhase, opacity = 1) {
+  drawReceiverIcons(context, currentPhase, opacity = 1, hitFeedbackByReceiverId = {}, modifierVisualState = null) {
     const layout = this.layout;
     const iconMargin = 64;
     const receiverIconRadius = this.scaler.x(GAME_CONFIG.shapeRadius);
@@ -1004,15 +1533,69 @@ class Arena {
     // Les symboles de reference sont dans les coins du carre interieur,
     // separes des rails neon pour ne pas donner l'impression qu'ils sont sur le mur.
     this.receivers.forEach((receiver) => {
+      const hitStrength =
+        hitFeedbackByReceiverId[receiver.id] || 0;
+
+      const strokeMultiplier =
+        1 +
+        hitStrength *
+        (GAME_CONFIG.receiverIconHitThicknessMultiplier - 1);
+
+      const glowMultiplier =
+        1 +
+        hitStrength *
+        (GAME_CONFIG.receiverIconHitHaloMultiplier - 1);
+
+      const iconVisual = this.getReceiverIconVisualStyle(
+        receiver,
+        currentPhase,
+        opacity,
+        modifierVisualState
+      );
+
       ShapeRenderer.draw(
         context,
         iconPositionsByReceiverId[receiver.id],
         this.getReceiverShapeName(receiver, currentPhase),
-        this.getReceiverNeonColor(receiver, currentPhase),
+        iconVisual.color,
         receiverIconRadius,
-        opacity
+        iconVisual.opacity,
+        glowMultiplier * iconVisual.glowMultiplier,
+        strokeMultiplier
       );
     });
+  }
+
+  getReceiverVisualStyle(receiver, currentPhase, opacity, modifierVisualState, colorOverride = null) {
+    if (modifierVisualState?.blink?.isNeutral) {
+      return {
+        color: modifierVisualState.blink.railColor,
+        opacity: opacity * modifierVisualState.blink.railOpacityMultiplier,
+        glowMultiplier: modifierVisualState.blink.glowMultiplier
+      };
+    }
+
+    return {
+      color: colorOverride || this.getReceiverNeonColor(receiver, currentPhase),
+      opacity,
+      glowMultiplier: 1
+    };
+  }
+
+  getReceiverIconVisualStyle(receiver, currentPhase, opacity, modifierVisualState) {
+    if (modifierVisualState?.blink?.isNeutral) {
+      return {
+        color: modifierVisualState.blink.iconColor,
+        opacity: 0,
+        glowMultiplier: 0
+      };
+    }
+
+    return {
+      color: this.getReceiverNeonColor(receiver, currentPhase),
+      opacity,
+      glowMultiplier: 1
+    };
   }
 
   drawInnerGuide(context) {
@@ -1028,22 +1611,20 @@ class Arena {
 }
 
 class ShapeRenderer {
-  static draw(context, center, shapeName, color, radius, opacity = 1) {
+  static draw(context, center, shapeName, color, radius, opacity = 1, glowMultiplier = 1, strokeMultiplier = 1) {
     context.save();
     context.strokeStyle = color;
     context.lineWidth = Math.max(radius * 0.06, 1.8);
     context.shadowColor = color;
-    context.shadowBlur = radius * 0.38;
+    context.shadowBlur = radius * 0.75 * glowMultiplier;
     context.lineJoin = "round";
     context.lineCap = "round";
 
     ShapeRenderer.createPath(context, center, shapeName, radius);
 
-    context.globalAlpha = 0.28 * opacity;
-    context.lineWidth = Math.max(radius * 0.19, 4);
-    context.stroke();
     context.globalAlpha = opacity;
-    context.lineWidth = Math.max(radius * 0.06, 1.8);
+    context.lineWidth = Math.max(radius * 0.09, 2.6) * strokeMultiplier;
+    context.globalCompositeOperation = "lighter";
     context.stroke();
     context.restore();
   }
@@ -1428,20 +2009,674 @@ class ReceiverRotationController {
 
 class ChallengePhysics {
   static getSpawnImpulse(challengePhase) {
-    if (challengePhase.usesMobileReceiverPhysics || challengePhase.usesDynamicWallColors) {
-      return GAME_CONFIG.spawnImpulse * GAME_CONFIG.level10SpawnImpulseMultiplier;
+    if (challengePhase.usesPreciseDuoSelection) {
+      return GAME_CONFIG.spawnImpulse * GAME_CONFIG.level19SpawnImpulseMultiplier;
     }
 
     return GAME_CONFIG.spawnImpulse;
   }
 
   static getGravity(challengePhase) {
-    if (challengePhase.usesMobileReceiverPhysics || challengePhase.usesDynamicWallColors) {
-      return GAME_CONFIG.gravity * GAME_CONFIG.level10GravityMultiplier;
+    if (challengePhase.usesPreciseDuoSelection) {
+      return GAME_CONFIG.gravity * GAME_CONFIG.level19GravityMultiplier;
+    }
+    return GAME_CONFIG.gravity;
+  }
+}
+
+class GameStateController {
+  constructor(initialState = "ready") {
+    this.currentState = initialState;
+  }
+
+  set(stateName) {
+    this.currentState = stateName;
+  }
+
+  is(stateName) {
+    return this.currentState === stateName;
+  }
+
+  get value() {
+    return this.currentState;
+  }
+
+  get canReceiveInput() {
+    return this.is("playing");
+  }
+
+  get isWaitingToStart() {
+    return this.is("waiting");
+  }
+
+  get isShowingLevelIntro() {
+    return this.is("level11Intro") || this.is("level12Intro")
+  }
+}
+
+class BlinkController {
+  constructor({ visibleDurationMs, neutralDurationMs }) {
+    this.visibleDurationMs = visibleDurationMs;
+    this.neutralDurationMs = neutralDurationMs;
+    this.reset();
+  }
+
+  reset() {
+    this.startedAt = performance.now();
+  }
+
+  getVisualState(currentTime, isEnabled) {
+    if (!isEnabled) return null;
+
+    const cycleDurationMs = this.visibleDurationMs + this.neutralDurationMs;
+    const elapsedCycleMs = (currentTime - this.startedAt) % cycleDurationMs;
+
+    if (elapsedCycleMs < this.visibleDurationMs) {
+      return { isNeutral: false };
     }
 
-    const gravityMultiplier = challengePhase.usesDuoShapes ? GAME_CONFIG.level7GravityMultiplier : 1;
-    return GAME_CONFIG.gravity * gravityMultiplier;
+    return {
+      isNeutral: true,
+      ...NEUTRAL_RECEIVER_VISUALS
+    };
+  }
+}
+
+class SpawnController {
+  constructor(game) {
+    this.game = game;
+    this.strategies = {
+      bottom: (phase) => this.getBottomSpawn(phase),
+      top: () => this.getTopSpawn(),
+      left: () => this.getLeftSpawn(),
+      right: () => this.getRightSpawn(),
+      side: () => this.getSideSpawn(),
+      random: (phase) => this.getRandomEntrySpawn(phase),
+      movingGap: (phase) => this.getMovingGapSpawn(phase),
+      movingGapDuo: (phase) => this.getMovingGapSpawn(phase)
+    };
+  }
+
+  getSingleShapeSpawn(phase) {
+    const projectileEntry = phase.projectileEntry || "bottom";
+    const spawnStrategy = this.strategies[projectileEntry] || this.strategies.bottom;
+    return spawnStrategy(phase);
+  }
+
+  getBottomSpawn() {
+    const { scaler } = this.game;
+
+    return {
+      x: scaler.x(GAME_CONFIG.designWidth / 2),
+      y: scaler.y(GAME_CONFIG.designHeight + 38),
+      velocityX: 0,
+      velocityY: scaler.y(this.game.currentChallengeSpawnImpulse)
+    };
+  }
+
+  getTopSpawn() {
+    const { scaler } = this.game;
+
+    return {
+      x: scaler.x(GAME_CONFIG.designWidth / 2),
+      y: scaler.y(40),
+      velocityX: 0,
+      velocityY: 0
+    };
+  }
+
+  getSideSpawn() {
+    return Math.random() < 0.5 ? this.getLeftSpawn() : this.getRightSpawn();
+  }
+
+  getLeftSpawn() {
+    const { scaler } = this.game;
+    const spawnY = scaler.y(GAME_CONFIG.designHeight * GAME_CONFIG.sideEntryHeightRatio);
+
+    return {
+      x: scaler.x(-GAME_CONFIG.shapeRadius - 8),
+      y: spawnY,
+      velocityX: scaler.x(GAME_CONFIG.sideEntryHorizontalImpulse),
+      velocityY: scaler.y(GAME_CONFIG.sideEntryUpwardImpulse)
+    };
+  }
+
+  getRightSpawn() {
+    const { scaler } = this.game;
+    const spawnY = scaler.y(GAME_CONFIG.designHeight * GAME_CONFIG.sideEntryHeightRatio);
+
+    return {
+      x: scaler.x(GAME_CONFIG.designWidth + GAME_CONFIG.shapeRadius + 8),
+      y: spawnY,
+      velocityX: scaler.x(-GAME_CONFIG.sideEntryHorizontalImpulse),
+      velocityY: scaler.y(GAME_CONFIG.sideEntryUpwardImpulse)
+    };
+  }
+
+  getRandomEntrySpawn(phase) {
+    const randomEntry = getRandomItem(["bottom", "top", "left", "right"]);
+    return this.getSingleShapeSpawn({
+      ...phase,
+      projectileEntry: randomEntry
+    });
+  }
+
+  getMovingGapSpawn(phase) {
+    const movingPhase = {
+      ...phase,
+      movingReceiverOffset: this.game.movingReceiverOffset
+    };
+    const spawnOptions = this.game.arena.getMovingBottomGapSpawnOptions(movingPhase);
+    const { spawnX } = getRandomItem(spawnOptions);
+
+    return {
+      x: spawnX,
+      y: this.game.scaler.y(GAME_CONFIG.designHeight + 38),
+      velocityX: this.getMovingBottomSpawnVelocityX(spawnX),
+      velocityY: this.game.scaler.y(this.game.currentChallengeSpawnImpulse)
+    };
+  }
+
+  getMovingBottomSpawnVelocityX(spawnX) {
+    const { scaler } = this.game;
+    const arenaCenterX = scaler.x(GAME_CONFIG.designWidth / 2);
+    const centerZoneHalfWidth = scaler.x(GAME_CONFIG.movingBottomSpawnCenterZoneWidth / 2);
+
+    if (spawnX < arenaCenterX - centerZoneHalfWidth) {
+      return scaler.x(GAME_CONFIG.movingBottomSpawnHorizontalImpulse);
+    }
+
+    if (spawnX > arenaCenterX + centerZoneHalfWidth) {
+      return -scaler.x(GAME_CONFIG.movingBottomSpawnHorizontalImpulse);
+    }
+
+    return 0;
+  }
+}
+
+class ChallengeManager {
+  constructor() {
+    this.clear();
+    this.secondDuoShapeTimeoutId = null;
+    this.nextSingleShapeTimeoutId = null;
+  }
+
+  clear() {
+    this.activeShape = null;
+    this.currentShapes = [];
+    this.activeShapeIndex = null;
+    this.currentChallengePhase = null;
+    this.selectedShape = null;
+  }
+
+  setSingleShape(fallingShape, challengePhase = null) {
+    this.currentShapes = this.currentShapes.filter((shape) => shape.state !== "resolved");
+    this.activeShape = fallingShape;
+    this.currentShapes.push(fallingShape);
+    this.activeShapeIndex = this.currentShapes.indexOf(fallingShape);
+    this.currentChallengePhase = challengePhase;
+    this.selectedShape = null;
+  }
+
+  setFirstDuoShape(fallingShape, challengePhase) {
+    this.currentChallengePhase = challengePhase;
+    this.currentShapes = [fallingShape];
+    this.activeShape = fallingShape;
+    this.activeShapeIndex = 0;
+    this.selectedShape = null;
+  }
+
+  appendSecondDuoShape(fallingShape) {
+    this.currentShapes.push(fallingShape);
+  }
+
+  moveActiveShapeToLaunchedShapes() {
+    const launchedShape = this.activeShape;
+    if (!launchedShape) return null;
+
+    this.activeShape = null;
+    this.activeShapeIndex = null;
+    this.selectedShape = null;
+    return launchedShape;
+  }
+
+  selectShapeForSwipe(fallingShape) {
+    this.selectedShape = fallingShape;
+    this.activeShape = fallingShape;
+    this.activeShapeIndex = this.currentShapes.indexOf(fallingShape);
+  }
+
+  clearSelectedShape() {
+    this.selectedShape = null;
+  }
+
+  findSelectableShapeAtPoint(point) {
+    return this.currentShapes.find((fallingShape) => {
+      if (!fallingShape.canReceiveSwipe || fallingShape.hasBeenThrown) return false;
+
+      const distanceFromShapeCenter = Math.hypot(point.x - fallingShape.x, point.y - fallingShape.y);
+      return distanceFromShapeCenter <= fallingShape.radius * GAME_CONFIG.level19SelectionHitboxMultiplier;
+    }) || null;
+  }
+
+  areAllShapesResolved() {
+    return this.currentShapes.length > 0 && this.currentShapes.every((fallingShape) => fallingShape.state === "resolved");
+  }
+
+  clearActiveDuoShape() {
+    this.activeShapeIndex = null;
+    this.activeShape = null;
+  }
+
+  setSecondShapeTimeout(timeoutId) {
+    this.secondDuoShapeTimeoutId = timeoutId;
+  }
+
+  clearSecondShapeTimeout() {
+    if (this.secondDuoShapeTimeoutId === null) return;
+
+    window.clearTimeout(this.secondDuoShapeTimeoutId);
+    this.secondDuoShapeTimeoutId = null;
+  }
+
+  setNextSingleShapeTimeout(timeoutId) {
+    this.nextSingleShapeTimeoutId = timeoutId;
+  }
+
+  clearNextSingleShapeTimeout() {
+    if (this.nextSingleShapeTimeoutId === null) return;
+
+    window.clearTimeout(this.nextSingleShapeTimeoutId);
+    this.nextSingleShapeTimeoutId = null;
+  }
+
+  hasPendingNextSingleShape() {
+    return this.nextSingleShapeTimeoutId !== null;
+  }
+
+  hasUnresolvedShapes() {
+    return this.currentShapes.some((fallingShape) => fallingShape.state !== "resolved");
+  }
+
+  getVisibleShapes(usesDuoShapes) {
+    return usesDuoShapes ? this.currentShapes : this.currentShapes;
+  }
+}
+
+class ThrowController {
+  constructor({ scaler, arena, getActiveShape, usesDuoShapes, activateNextDuoShape }) {
+    this.scaler = scaler;
+    this.arena = arena;
+    this.getActiveShape = getActiveShape;
+    this.usesDuoShapes = usesDuoShapes;
+    this.activateNextDuoShape = activateNextDuoShape;
+  }
+
+  throwFromSwipe(swipeGesture) {
+    const activeShape = this.getActiveShape();
+    if (!activeShape || !activeShape.canReceiveSwipe || swipeGesture.distance < this.scaler.x(GAME_CONFIG.minSwipeDistance)) return;
+
+    const direction = {
+      x: swipeGesture.deltaX,
+      y: swipeGesture.deltaY
+    };
+    const throwForce = this.calculateSwipeThrowForce(swipeGesture.distance, swipeGesture.durationMs);
+
+    activeShape.throwToward(direction, throwForce, this.usesDuoShapes());
+    this.activateNextDuoShape();
+    return activeShape;
+  }
+
+  throwAtTarget(target, gestureDistance = this.scaler.x(120), gestureDurationMs = 110) {
+    const activeShape = this.getActiveShape();
+    if (!activeShape || !activeShape.canReceiveSwipe) return;
+
+    const direction = this.resolveThrowDirection(target);
+    if (!direction) return;
+
+    const throwForce = this.calculateThrowForce(direction, gestureDistance, gestureDurationMs);
+    activeShape.throwToward(direction, throwForce, this.usesDuoShapes());
+    this.activateNextDuoShape();
+    return activeShape;
+  }
+
+  resolveThrowDirection(target) {
+    const basicDirections = {
+      up: { x: 0, y: -1 },
+      down: { x: 0, y: 1 },
+      left: { x: -1, y: 0 },
+      right: { x: 1, y: 0 }
+    };
+
+    if (basicDirections[target]) return basicDirections[target];
+
+    const activeShape = this.getActiveShape();
+    const receiver = this.arena.findReceiverById(target);
+    if (!receiver || !activeShape) return null;
+
+    const aimPoint = this.arena.getReceiverAimPoint(receiver);
+    return {
+      x: aimPoint.x - activeShape.x,
+      y: aimPoint.y - activeShape.y
+    };
+  }
+
+  calculateSwipeThrowForce(gestureDistance, gestureDurationMs) {
+    const gestureForce = (gestureDistance / Math.max(gestureDurationMs, 1)) * this.scaler.x(760);
+
+    return clamp(
+      gestureForce,
+      this.scaler.x(GAME_CONFIG.minThrowForce),
+      this.scaler.x(GAME_CONFIG.maxThrowForce)
+    );
+  }
+
+  calculateThrowForce(direction, gestureDistance, gestureDurationMs) {
+    const directionLength = Math.hypot(direction.x, direction.y) || 1;
+    const normalizedY = direction.y / directionLength;
+    const gestureForce = (gestureDistance / Math.max(gestureDurationMs, 1)) * this.scaler.x(760);
+    const upwardBoost = normalizedY < -0.2 ? this.scaler.x(GAME_CONFIG.upwardThrowBoost) : 0;
+
+    return clamp(
+      gestureForce + upwardBoost,
+      this.scaler.x(GAME_CONFIG.minThrowForce),
+      this.scaler.x(GAME_CONFIG.maxThrowForce)
+    );
+  }
+}
+
+class ReceiverEffectsController {
+  constructor() {
+    this.permutation = new ReceiverPermutationController({
+      initialReceiverColorsByPositionId: LEVEL_8_INITIAL_RECEIVER_COLORS_BY_POSITION_ID,
+      initialReceiverShapesByPositionId: LEVEL_7_RECEIVER_SHAPES_BY_POSITION_ID
+    });
+    this.colorRotation = new ReceiverRotationController({
+      initialValuesByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID,
+      intervalMs: GAME_CONFIG.level10WallRotationIntervalMs,
+      durationMs: GAME_CONFIG.level10WallRotationDurationMs
+    });
+    this.shapeRotation = new ReceiverRotationController({
+      initialValuesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID,
+      intervalMs: GAME_CONFIG.shapeRotationIntervalMs,
+      durationMs: GAME_CONFIG.shapeRotationDurationMs
+    });
+    this.hitFeedbacks = [];
+  }
+
+  reset() {
+    this.permutation.reset();
+    this.colorRotation.reset();
+    this.shapeRotation.reset();
+    this.hitFeedbacks = [];
+  }
+
+  stopAll() {
+    this.reset();
+  }
+
+  stopRotations() {
+    this.colorRotation.stop();
+    this.shapeRotation.stop();
+  }
+
+  syncPermutationToPhase(phase) {
+    this.permutation.syncToPhase(phase);
+  }
+
+  startPermutation(currentTime, phase) {
+    this.permutation.startPermutation(currentTime, phase);
+  }
+
+  updatePermutation(currentTime) {
+    return this.permutation.update(currentTime);
+  }
+
+  updateRotations(currentTime, phase, gameState) {
+    this.colorRotation.update(currentTime, gameState === "playing" && this.phaseUsesColorRotation(phase));
+    this.shapeRotation.update(currentTime, gameState === "playing" && this.phaseUsesShapeRotation(phase));
+  }
+
+  startColorRotation(currentTime) {
+    this.colorRotation.start(currentTime);
+    this.colorRotation.rotateClockwise(currentTime);
+  }
+
+  startShapeRotation(currentTime) {
+    this.shapeRotation.start(currentTime);
+    this.shapeRotation.rotateClockwise(currentTime);
+  }
+
+  updateColorRotation(currentTime, shouldRunRotation) {
+    this.colorRotation.update(currentTime, shouldRunRotation);
+  }
+
+  updateShapeRotation(currentTime, shouldRunRotation) {
+    this.shapeRotation.update(currentTime, shouldRunRotation);
+  }
+
+  stopColorRotation() {
+    this.colorRotation.stop();
+  }
+
+  stopShapeRotation() {
+    this.shapeRotation.stop();
+  }
+
+  getPhaseWithCurrentReceiverState(phase) {
+    const receiverPermutationPhase = this.permutation.getPhaseWithCurrentPermutation(phase);
+
+    return {
+      ...receiverPermutationPhase,
+      receiverColorsByPositionId: this.phaseUsesColorRotationLayout(receiverPermutationPhase)
+        ? this.colorRotation.currentValuesByPositionId
+        : receiverPermutationPhase.receiverColorsByPositionId,
+      receiverShapesByPositionId: this.phaseUsesShapeRotationLayout(receiverPermutationPhase)
+        ? this.shapeRotation.currentValuesByPositionId
+        : receiverPermutationPhase.receiverShapesByPositionId
+    };
+  }
+
+  get animationState() {
+    return this.permutation.animationState || this.rotationAnimationState;
+  }
+
+  get rotationAnimationState() {
+    const previousColorsByPositionId = this.colorRotation.previousValues;
+    const previousShapesByPositionId = this.shapeRotation.previousValues;
+
+    if (!previousColorsByPositionId && !previousShapesByPositionId) return null;
+
+    return {
+      previousColorsByPositionId,
+      previousShapesByPositionId,
+      progress: previousColorsByPositionId
+        ? this.colorRotation.animationProgress
+        : this.shapeRotation.animationProgress
+    };
+  }
+
+  phaseUsesColorRotation(phase) {
+    return Boolean(phase.usesDynamicWallColors || (phase.usesRuleControlledReceiverRotation && phase.ruleName === "COLOR"));
+  }
+
+  phaseUsesShapeRotation(phase) {
+    return Boolean(phase.usesDynamicReceiverShapes || (phase.usesRuleControlledReceiverRotation && phase.ruleName === "SHAPE"));
+  }
+
+  phaseUsesColorRotationLayout(phase) {
+    return Boolean(phase.usesDynamicWallColors || phase.usesDynamicReceiverShapes || phase.usesRuleControlledReceiverRotation);
+  }
+
+  phaseUsesShapeRotationLayout(phase) {
+    return Boolean(phase.usesDynamicReceiverShapes || phase.usesRuleControlledReceiverRotation);
+  }
+
+  phaseUsesReceiverRotation(phase) {
+    return this.phaseUsesColorRotation(phase) || this.phaseUsesShapeRotation(phase);
+  }
+
+  startHitFeedback(receiverId, currentTime) {
+    this.hitFeedbacks.push({
+      receiverId,
+      startedAt: currentTime
+    });
+  }
+
+  getHitFeedbackByReceiverId(currentTime) {
+    this.hitFeedbacks = this.hitFeedbacks.filter(
+      (feedback) =>
+        currentTime - feedback.startedAt <
+        GAME_CONFIG.receiverHitFeedbackDurationMs
+    );
+
+    return this.hitFeedbacks.reduce(
+      (feedbackByReceiverId, feedback) => {
+        const elapsedMs =
+          currentTime - feedback.startedAt;
+
+        const progress = clamp(
+          elapsedMs / GAME_CONFIG.receiverHitFeedbackDurationMs,
+          0,
+          1
+        );
+
+        // Monte très vite, puis redescend doucement.
+        let strength;
+
+        if (progress < 0.3) {
+          strength = progress / 0.3;
+        } else {
+          strength = 1 - (progress - 0.3) / 0.7;
+        }
+
+        feedbackByReceiverId[feedback.receiverId] =
+          Math.max(
+            feedbackByReceiverId[feedback.receiverId] || 0,
+            strength
+          );
+
+        return feedbackByReceiverId;
+      },
+      {}
+    );
+  }
+
+}
+
+class LevelIntroController {
+  constructor(receiverEffects, dynamicRuleSequence) {
+    this.receiverEffects = receiverEffects;
+    this.dynamicRuleSequence = dynamicRuleSequence;
+    this.reset();
+  }
+
+  reset() {
+    this.playedIntroByLevel = {
+      11: false,
+      12: false
+    };
+
+    this.startedAt = 0;
+    this.endsAt = 0;
+
+    this.hasStartedColorRotation = false;
+    this.hasStartedShapeRotation = false;
+  }
+
+  shouldStart(resolvedChallengePhase, nextPhase) {
+    const nextLevel = nextPhase.level;
+    const previousLevel = resolvedChallengePhase?.level;
+
+    if (previousLevel === nextLevel) return false;
+
+    return Boolean(
+      this.playedIntroByLevel[nextLevel] === false
+    );
+  }
+
+  start(currentTime, introPhase) {
+    this.startedAt = currentTime;
+
+    this.hasStartedColorRotation = false;
+    this.hasStartedShapeRotation = false;
+
+    if (introPhase.level === 11) {
+      this.playedIntroByLevel[11] = true;
+
+      this.endsAt =
+        currentTime +
+        GAME_CONFIG.level11IntroDurationMs;
+
+      return "level11Intro";
+    }
+
+    if (introPhase.level === 12) {
+      this.playedIntroByLevel[12] = true;
+
+      this.endsAt =
+        currentTime +
+        GAME_CONFIG.level12IntroDurationMs;
+
+      return "level12Intro";
+    }
+
+    return null;
+  }
+
+  update(currentTime, state) {
+    const elapsedMs =
+      currentTime - this.startedAt;
+
+    if (state === "level11Intro") {
+      if (
+        elapsedMs >= 200 &&
+        !this.hasStartedColorRotation
+      ) {
+        this.receiverEffects.startColorRotation(
+          currentTime
+        );
+
+        this.hasStartedColorRotation = true;
+      }
+
+      if (this.hasStartedColorRotation) {
+        this.receiverEffects.updateColorRotation(
+          currentTime,
+          true
+        );
+      }
+    }
+
+    if (state === "level12Intro") {
+      if (
+        elapsedMs >= 200 &&
+        !this.hasStartedShapeRotation
+      ) {
+        this.receiverEffects.startShapeRotation(
+          currentTime
+        );
+
+        this.hasStartedShapeRotation = true;
+      }
+
+      if (this.hasStartedShapeRotation) {
+        this.receiverEffects.updateShapeRotation(
+          currentTime,
+          true
+        );
+      }
+    }
+
+    return currentTime >= this.endsAt;
+  }
+
+  getLines(state) {
+    if (state === "level12Intro") {
+      return ["SHAPE ROTATION"];
+    }
+
+    return ["COLOR ROTATION"];
   }
 }
 
@@ -1461,14 +2696,20 @@ class InputController {
   handlePointerDown(event) {
     event.preventDefault();
 
-    if (this.game.isWaitingToStart()) {
+    if (
+      this.game.isWaitingToStart() ||
+      this.game.state === "ended"
+    ) {
       this.game.reset();
       return;
     }
 
     if (!this.game.canReceiveInput()) return;
 
-    this.activeSwipeGesture = new SwipeGesture(event.pointerId, this.getCanvasPoint(event));
+    const startPoint = this.getCanvasPoint(event);
+    if (!this.game.prepareSwipeFromPoint(startPoint)) return;
+
+    this.activeSwipeGesture = new SwipeGesture(event.pointerId, startPoint);
     this.canvas.setPointerCapture(event.pointerId);
   }
 
@@ -1530,40 +2771,38 @@ class NeonSwipeGame {
     this.arena = new Arena(this.scaler, RECEIVER_DEFINITIONS);
     this.rules = new GameRules(this.arena);
     this.dynamicRuleSequence = new DynamicRuleSequenceController();
-    this.receiverPermutation = new ReceiverPermutationController({
-      initialReceiverColorsByPositionId: LEVEL_8_INITIAL_RECEIVER_COLORS_BY_POSITION_ID,
-      initialReceiverShapesByPositionId: LEVEL_7_RECEIVER_SHAPES_BY_POSITION_ID
+    this.receiverEffects = new ReceiverEffectsController();
+    this.levelIntro = new LevelIntroController(this.receiverEffects, this.dynamicRuleSequence);
+    this.blinkController = new BlinkController({
+      visibleDurationMs: GAME_CONFIG.blinkVisibleDurationMs,
+      neutralDurationMs: GAME_CONFIG.blinkNeutralDurationMs
     });
-    this.receiverColorRotation = new ReceiverRotationController({
-      initialValuesByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID,
-      intervalMs: GAME_CONFIG.level10WallRotationIntervalMs,
-      durationMs: GAME_CONFIG.level10WallRotationDurationMs
-    });
-    this.receiverShapeRotation = new ReceiverRotationController({
-      initialValuesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID,
-      intervalMs: GAME_CONFIG.shapeRotationIntervalMs,
-      durationMs: GAME_CONFIG.shapeRotationDurationMs
+    this.spawnController = new SpawnController(this);
+    this.challengeManager = new ChallengeManager();
+    this.throwController = new ThrowController({
+      scaler: this.scaler,
+      arena: this.arena,
+      getActiveShape: () => this.activeShape,
+      usesDuoShapes: () => this.activeChallengeUsesDuoShapes,
+      activateNextDuoShape: () => this.activateNextDuoShape()
     });
     this.particleSystem = new ParticleSystem(this.scaler);
+    this.stateController = new GameStateController("ready");
     this.inputController = new InputController(this.canvas, this);
 
     this.score = 0;
-    this.state = "ready";
-    this.activeShape = null;
-    this.currentShapes = [];
-    this.activeShapeIndex = null;
-    this.secondDuoShapeTimeoutId = null;
-    this.currentChallengePhase = null;
+    this.activeModifiers = {
+      blink: true,
+      pulse: false,
+      burst: false,
+      void: false
+    };
     this.lastAnimationTime = 0;
     this.centerMessage = "SWIPE";
     this.centerMessageUntil = 0;
-    this.hasPlayedLevel11Intro = false;
-    this.hasPlayedLevel12Intro = false;
-    this.hasPlayedLevel13Intro = false;
+    this.activeShapeRuleName = null;
+    this.pendingLevelIntroPhase = null;
     this.movingReceiverOffset = 0;
-    this.levelIntroEndsAt = 0;
-    this.level13IntroStartedAt = 0;
-    this.hasStartedLevel13ShapeIntroRotation = false;
   }
 
   start() {
@@ -1582,40 +2821,40 @@ class NeonSwipeGame {
 
   reset() {
     this.clearPendingDuoSpawn();
-    this.resetWallColorMechanics();
+    this.receiverEffects.reset();
     this.dynamicRuleSequence.reset();
-    // TEMP TEST LEVEL 18 - restore to 0 after validation
-    this.score = 90;
+    this.blinkController.reset();
+    // TEMP TEST BLINK LEVEL 14 - restore to 0 after validation
+    this.score = 36;
     this.state = "playing";
-    this.resetLevelIntroFlags();
+    this.resetLevelRuntime();
     this.movingReceiverOffset = 0;
-    this.receiverPermutation.syncToPhase(this.currentPhase);
-    this.activeShape = null;
-    this.currentShapes = [];
-    this.activeShapeIndex = null;
-    this.currentChallengePhase = null;
+    this.receiverEffects.syncPermutationToPhase(this.currentPhase);
+    this.clearCurrentChallenge();
+    this.activeShapeRuleName = null;
+    this.pendingLevelIntroPhase = null;
     this.particleSystem.clear();
     this.showCenterMessage("COLOR", 1100);
-    this.restartButton.classList.remove("is-visible");
+
     this.spawnNextChallenge();
   }
 
   showWaitingScreen() {
     this.clearPendingDuoSpawn();
-    this.resetWallColorMechanics();
+    this.receiverEffects.reset();
     this.dynamicRuleSequence.reset();
+    this.blinkController.reset();
     this.score = 0;
     this.state = "waiting";
-    this.resetLevelIntroFlags();
+    this.resetLevelRuntime();
     this.movingReceiverOffset = 0;
-    this.activeShape = null;
-    this.currentShapes = [];
-    this.activeShapeIndex = null;
-    this.currentChallengePhase = null;
+    this.clearCurrentChallenge();
+    this.activeShapeRuleName = null;
+    this.pendingLevelIntroPhase = null;
     this.particleSystem.clear();
     this.centerMessage = "PRESS TO START";
     this.centerMessageUntil = Infinity;
-    this.restartButton.classList.remove("is-visible");
+
   }
 
   gameLoop(currentTime) {
@@ -1624,6 +2863,7 @@ class NeonSwipeGame {
 
     if (this.state === "playing") {
       this.updateReceiverRotations(currentTime);
+      this.updateReceiverPermutation(currentTime);
       this.updateMovingReceiverTracks(deltaSeconds);
       this.updateActiveShape(deltaSeconds);
     } else if (this.state === "receiverPermutation") {
@@ -1645,22 +2885,36 @@ class NeonSwipeGame {
       return;
     }
 
-    if (!this.activeShape) return;
+    if (this.currentShapes.length === 0) return;
 
-    this.activeShape.update(deltaSeconds, this.currentGravity);
+    this.currentShapes.forEach((shape) => {
+      if (shape.state !== "resolved") {
+        shape.update(deltaSeconds, shape.gravity || this.currentGravity);
+      }
+    });
 
-    const touchedReceiver = this.arena.findReceiverHitByShape(this.activeShape, this.visiblePhase);
-    if (touchedReceiver) {
-      this.resolveReceiverTouch(this.activeShape, touchedReceiver);
-      return;
-    }
+    for (const shape of this.currentShapes) {
+      if (shape.state === "resolved") continue;
 
-    if (this.activeShape.isBelowScreen(this.scaler.canvasHeight, this.scaler.y(28))) {
-      this.endGame("GAME OVER");
+      const touchedReceiver = this.arena.findReceiverHitByShape(shape, this.getCollisionPhaseForShape(shape));
+      if (touchedReceiver) {
+        this.resolveReceiverTouch(shape, touchedReceiver);
+        return;
+      }
+
+      if (shape.isBelowScreen(this.scaler.canvasHeight, this.scaler.y(28))) {
+        this.endGame("GAME OVER");
+        return;
+      }
     }
   }
 
   spawnNextChallenge() {
+    if (this.currentPhase.usesPreciseDuoSelection) {
+      this.spawnPreciseDuoShapes();
+      return;
+    }
+
     if (this.currentPhase.usesDuoShapes) {
       this.spawnDuoShapes();
       return;
@@ -1677,108 +2931,78 @@ class NeonSwipeGame {
   }
 
   createSingleShapeFromSpawn(spawn) {
-    this.activeShape = new FallingShape({
+    const challengePhaseSnapshot = this.createPhaseSnapshot(this.currentChallengePhase);
+    const validationPhaseSnapshot = this.createPhaseSnapshot(
+      this.getPhaseWithCurrentWallColors(this.currentChallengePhase)
+    );
+    const fallingShape = this.createShapeFromSpawn(spawn);
+    const previousActiveShapeRuleName = this.activeShapeRuleName;
+
+    fallingShape.challengePhase = challengePhaseSnapshot;
+    fallingShape.validationPhase = validationPhaseSnapshot;
+    fallingShape.gravity = this.scaler.x(ChallengePhysics.getGravity(challengePhaseSnapshot));
+    fallingShape.advancedSpawnState = "none";
+
+    this.challengeManager.setSingleShape(fallingShape, challengePhaseSnapshot);
+    this.updateVisibleRuleForActiveShape(
+      challengePhaseSnapshot.ruleName,
+      previousActiveShapeRuleName
+    );
+  }
+
+  updateVisibleRuleForActiveShape(nextRuleName, previousRuleName = this.activeShapeRuleName) {
+    this.activeShapeRuleName = nextRuleName;
+
+    if (previousRuleName && previousRuleName !== nextRuleName) {
+      this.showRuleTransitionFeedback(nextRuleName);
+    }
+  }
+
+  getSingleShapeSpawn(phase) {
+    return this.spawnController.getSingleShapeSpawn(phase);
+  }
+
+  createPhaseSnapshot(phase) {
+    if (!phase) return null;
+
+    return {
+      ...phase,
+      receiverColorsByPositionId: { ...phase.receiverColorsByPositionId },
+      receiverShapesByPositionId: { ...phase.receiverShapesByPositionId }
+    };
+  }
+
+  spawnPreciseDuoShapes() {
+    this.clearPendingDuoSpawn();
+    this.currentChallengePhase = this.currentPhase;
+
+    const firstShape = this.createShapeFromSpawn(this.getSingleShapeSpawn(this.currentChallengePhase));
+    this.challengeManager.setFirstDuoShape(firstShape, this.currentChallengePhase);
+
+    const secondShapeTimeoutId = window.setTimeout(() => {
+      if (this.state !== "playing" || this.currentChallengePhase !== this.challengeManager.currentChallengePhase) return;
+      if (!this.currentChallengePhase?.usesPreciseDuoSelection) return;
+
+      const secondShape = this.createShapeFromSpawn(this.getSingleShapeSpawn(this.currentChallengePhase));
+      this.challengeManager.appendSecondDuoShape(secondShape);
+      this.secondDuoShapeTimeoutId = null;
+    }, GAME_CONFIG.level19SecondShapeDelayMs);
+
+    this.challengeManager.setSecondShapeTimeout(secondShapeTimeoutId);
+  }
+
+  createShapeFromSpawn(spawn, state = "active") {
+    return new FallingShape({
       x: spawn.x,
       y: spawn.y,
       radius: this.scaler.x(GAME_CONFIG.shapeRadius),
       colorId: getRandomItem(AVAILABLE_COLOR_IDS),
       shapeName: getRandomItem(AVAILABLE_SHAPES),
       velocityX: spawn.velocityX,
-      velocityY: spawn.velocityY
+      velocityY: spawn.velocityY,
+      state
     });
-    this.currentShapes = [this.activeShape];
-    this.activeShapeIndex = 0;
   }
-
-  getSingleShapeSpawn(phase) {
-    if (phase.projectileEntry === "random") {
-      const randomEntry = getRandomItem([
-        "bottom",
-        "top",
-        "left",
-        "right"
-      ]);
-      return this.getSingleShapeSpawn({
-        ...phase,
-        projectileEntry: randomEntry
-      });
-    }
-
-    if (phase.projectileEntry === "movingGap") {
-      return this.getMovingGapShapeSpawn(phase);
-    }
-
-    if (phase.projectileEntry === "top") {
-      return {
-        x: this.scaler.x(GAME_CONFIG.designWidth / 2),
-        y: this.scaler.y(40),
-        velocityX: 0,
-        velocityY: 0
-      };
-    }
-
-    if (phase.projectileEntry === "side" || phase.projectileEntry === "left" || phase.projectileEntry === "right") {
-      const sideEntry = phase.projectileEntry === "side"
-        ? (Math.random() < 0.5 ? "left" : "right")
-        : phase.projectileEntry;
-      const spawnY = this.scaler.y(GAME_CONFIG.designHeight * GAME_CONFIG.sideEntryHeightRatio);
-
-      if (sideEntry === "left") {
-        return {
-          x: this.scaler.x(-GAME_CONFIG.shapeRadius - 8),
-          y: spawnY,
-          velocityX: this.scaler.x(GAME_CONFIG.sideEntryHorizontalImpulse),
-          velocityY: this.scaler.y(GAME_CONFIG.sideEntryUpwardImpulse)
-        };
-      }
-
-      return {
-        x: this.scaler.x(GAME_CONFIG.designWidth + GAME_CONFIG.shapeRadius + 8),
-        y: spawnY,
-        velocityX: this.scaler.x(-GAME_CONFIG.sideEntryHorizontalImpulse),
-        velocityY: this.scaler.y(GAME_CONFIG.sideEntryUpwardImpulse)
-      };
-    }
-
-    return {
-      x: this.scaler.x(GAME_CONFIG.designWidth / 2),
-      y: this.scaler.y(GAME_CONFIG.designHeight + 38),
-      velocityX: 0,
-      velocityY: this.scaler.y(this.currentChallengeSpawnImpulse)
-    };
-  }
-
-  getMovingGapShapeSpawn(phase) {
-    const movingPhase = {
-      ...phase,
-      movingReceiverOffset: this.movingReceiverOffset
-    };
-    const spawnOptions = this.arena.getMovingBottomGapSpawnOptions(movingPhase);
-    const { spawnX } = getRandomItem(spawnOptions);
-
-    return {
-      x: spawnX,
-      y: this.scaler.y(GAME_CONFIG.designHeight + 38),
-      velocityX: this.getMovingBottomSpawnVelocityX(spawnX),
-      velocityY: this.scaler.y(this.currentChallengeSpawnImpulse)
-    };
-  }
-
-  getMovingBottomSpawnVelocityX(spawnX) {
-    const arenaCenterX = this.scaler.x(GAME_CONFIG.designWidth / 2);
-    const centerZoneHalfWidth = this.scaler.x(GAME_CONFIG.movingBottomSpawnCenterZoneWidth / 2);
-
-    if (spawnX < arenaCenterX - centerZoneHalfWidth) {
-      return this.scaler.x(GAME_CONFIG.movingBottomSpawnHorizontalImpulse);
-    }
-
-    if (spawnX > arenaCenterX + centerZoneHalfWidth) {
-      return -this.scaler.x(GAME_CONFIG.movingBottomSpawnHorizontalImpulse);
-    }
-
-    return 0;
-  }
-
 
   spawnDuoShapes() {
     this.clearPendingDuoSpawn();
@@ -1791,9 +3015,7 @@ class NeonSwipeGame {
       state: "active"
     });
 
-    this.currentShapes = [firstShape];
-    this.activeShape = firstShape;
-    this.activeShapeIndex = 0;
+    this.challengeManager.setFirstDuoShape(firstShape, this.currentChallengePhase);
 
     this.secondDuoShapeTimeoutId = window.setTimeout(() => {
       if (this.state !== "playing" || !this.activeChallengeUsesDuoShapes) return;
@@ -1806,7 +3028,7 @@ class NeonSwipeGame {
         state: "inactive"
       });
 
-      this.currentShapes.push(secondShape);
+      this.challengeManager.appendSecondDuoShape(secondShape);
       if (this.activeShapeIndex === 0 && this.currentShapes[0].hasBeenThrown) {
         secondShape.state = "active";
         this.activeShapeIndex = 1;
@@ -1828,9 +3050,43 @@ class NeonSwipeGame {
     });
   }
 
+  getCollisionPhaseForShape(shape) {
+    const shapeChallengePhase = shape.challengePhase || this.currentChallengePhase || this.currentPhase;
+
+    if (!shapeChallengePhase.usesMovingReceiverTracks) return shapeChallengePhase;
+
+    return {
+      ...shapeChallengePhase,
+      movingReceiverOffset: this.movingReceiverOffset
+    };
+  }
+
+  getValidationPhaseForShape(shape) {
+    const shapeChallengePhase = shape.challengePhase || this.currentChallengePhase || this.currentPhase;
+
+    if (this.phaseUsesLiveReceiverStateForValidation(shapeChallengePhase)) {
+      const liveReceiverPhase = this.getPhaseWithCurrentWallColors(shapeChallengePhase);
+      return this.createPhaseSnapshot({
+        ...liveReceiverPhase,
+        ruleName: shapeChallengePhase.ruleName
+      });
+    }
+
+    return shape.validationPhase || this.getPhaseWithCurrentWallColors(shapeChallengePhase);
+  }
+
+  phaseUsesLiveReceiverStateForValidation(phase) {
+    return Boolean(
+      phase?.usesDynamicWallColors ||
+      phase?.usesDynamicReceiverShapes ||
+      phase?.usesRuleControlledReceiverRotation ||
+      this.phasePermutesReceiversAfterSuccess(phase)
+    );
+  }
+
   resolveReceiverTouch(resolvedShape, touchedReceiver) {
-    const challengePhase = this.currentChallengePhase || this.currentPhase;
-    const validationPhase = this.getPhaseWithCurrentWallColors(challengePhase);
+    const challengePhase = resolvedShape.challengePhase || this.currentChallengePhase || this.currentPhase;
+    const validationPhase = this.getValidationPhaseForShape(resolvedShape);
     const expectedReceiver = this.rules.getExpectedReceiver(resolvedShape, validationPhase);
     const isCorrectReceiver = touchedReceiver.id === expectedReceiver.id;
 
@@ -1841,13 +3097,34 @@ class NeonSwipeGame {
       isCorrectReceiver
     );
 
+    if (isCorrectReceiver) {
+      this.particleSystem.createImpactRing(
+        resolvedShape.x,
+        resolvedShape.y,
+        this.arena.getReceiverNeonColor(
+          touchedReceiver,
+          validationPhase
+        )
+      );
+    }
+
     if (!isCorrectReceiver) {
       this.endGame("GAME OVER");
       return;
     }
 
+    this.receiverEffects.startHitFeedback(
+      touchedReceiver.id,
+      performance.now()
+    );
+
     resolvedShape.state = "resolved";
     this.score += 1;
+
+    if (challengePhase.usesPreciseDuoSelection) {
+      this.finishPreciseDuoIfResolved(challengePhase);
+      return;
+    }
 
     this.dynamicRuleSequence.consumeSuccessfulAnswer(challengePhase, this.currentPhase);
     const didRuleChange = this.currentRuleName !== challengePhase.ruleName;
@@ -1857,7 +3134,10 @@ class NeonSwipeGame {
       return;
     }
 
-    this.continueAfterResolvedChallenge(didRuleChange, challengePhase);
+    const didAlreadyAdvanceSpawn = resolvedShape.advancedSpawnState === "scheduled" || resolvedShape.advancedSpawnState === "created";
+    this.continueAfterResolvedChallenge(didRuleChange, challengePhase, {
+      skipSpawn: didAlreadyAdvanceSpawn
+    });
   }
 
   updateDuoShapes(deltaSeconds) {
@@ -1892,28 +3172,42 @@ class NeonSwipeGame {
     }
   }
 
-  continueAfterResolvedChallenge(shouldStartRuleTransition, resolvedChallengePhase = this.currentChallengePhase || this.currentPhase) {
+  finishPreciseDuoIfResolved(resolvedChallengePhase) {
+    const hasBothShapesSpawned = this.currentShapes.length === 2;
+    if (!hasBothShapesSpawned || !this.challengeManager.areAllShapesResolved()) return;
+
+    this.clearPendingDuoSpawn();
+    this.dynamicRuleSequence.consumeSuccessfulAnswer(resolvedChallengePhase, this.currentPhase);
+    const didRuleChange = this.currentRuleName !== resolvedChallengePhase.ruleName;
+    this.continueAfterResolvedChallenge(didRuleChange, resolvedChallengePhase);
+  }
+
+  continueAfterResolvedChallenge(shouldStartRuleTransition, resolvedChallengePhase = this.currentChallengePhase || this.currentPhase, options = {}) {
+    if (this.tryStartPendingLevelIntro()) return;
+
     if (!this.currentPhaseUsesReceiverRotation) {
-      this.stopReceiverRotations();
+      this.receiverEffects.stopRotations();
     }
 
-    if (shouldStartRuleTransition) {
+    if (shouldStartRuleTransition && !options.skipSpawn) {
       this.showRuleTransitionFeedback(this.currentRuleName);
     }
 
     if (this.shouldStartLevelIntro(resolvedChallengePhase)) {
-      this.startLevelIntro();
+      this.startLevelIntroWhenReady();
       return;
     }
 
     if (resolvedChallengePhase?.level !== this.currentPhase.level && this.currentPhase.usesShortReceiverTracks) {
-      this.receiverPermutation.syncToPhase(this.currentPhase);
+      this.receiverEffects.syncPermutationToPhase(this.currentPhase);
     }
 
     if (resolvedChallengePhase?.level !== this.currentPhase.level && this.currentPhase.usesMovingReceiverTracks) {
-      this.receiverPermutation.syncToPhase(this.currentPhase);
+      this.receiverEffects.syncPermutationToPhase(this.currentPhase);
       this.movingReceiverOffset = 0;
-      this.spawnNextChallenge();
+      if (!options.skipSpawn) {
+        this.spawnNextChallenge();
+      }
       return;
     }
 
@@ -1922,12 +3216,9 @@ class NeonSwipeGame {
       return;
     }
 
-    this.spawnNextChallenge();
-  }
-
-  startRuleTransition(nextRuleName) {
-    this.showRuleTransitionFeedback(nextRuleName);
-    this.spawnNextChallenge();
+    if (!options.skipSpawn) {
+      this.spawnNextChallenge();
+    }
   }
 
   showRuleTransitionFeedback(nextRuleName) {
@@ -1936,41 +3227,17 @@ class NeonSwipeGame {
   }
 
   clearPendingDuoSpawn() {
-    if (this.secondDuoShapeTimeoutId === null) return;
-
-    window.clearTimeout(this.secondDuoShapeTimeoutId);
-    this.secondDuoShapeTimeoutId = null;
+    this.challengeManager.clearSecondShapeTimeout();
+    this.challengeManager.clearNextSingleShapeTimeout();
   }
 
-  resetWallColorMechanics() {
-    this.receiverPermutation.reset();
-    this.receiverColorRotation.reset();
-    this.receiverShapeRotation.reset();
-  }
-
-  stopWallColorMechanics() {
-    this.receiverPermutation.reset();
-    this.receiverColorRotation.reset();
-    this.receiverShapeRotation.reset();
-  }
-
-  stopReceiverRotations() {
-    this.receiverColorRotation.stop();
-    this.receiverShapeRotation.stop();
-  }
-
-  resetLevelIntroFlags() {
-    this.hasPlayedLevel11Intro = false;
-    this.hasPlayedLevel12Intro = false;
-    this.hasPlayedLevel13Intro = false;
+  resetLevelRuntime() {
+    this.levelIntro.reset();
     this.movingReceiverOffset = 0;
-    this.levelIntroEndsAt = 0;
-    this.level13IntroStartedAt = 0;
-    this.hasStartedLevel13ShapeIntroRotation = false;
   }
 
   updateReceiverPermutation(currentTime) {
-    const didFinishPermutation = this.receiverPermutation.update(currentTime);
+    const didFinishPermutation = this.receiverEffects.updatePermutation(currentTime);
     if (!didFinishPermutation || this.state !== "receiverPermutation") return;
 
     this.state = "playing";
@@ -1978,96 +3245,53 @@ class NeonSwipeGame {
   }
 
   startReceiverPermutation(permutationPhase) {
+    if (this.hasEngagedSingleShapes()) {
+      this.receiverEffects.startPermutation(performance.now(), permutationPhase);
+      return;
+    }
+
     this.clearPendingDuoSpawn();
     this.state = "receiverPermutation";
-    this.activeShape = null;
-    this.currentShapes = [];
-    this.activeShapeIndex = null;
-    this.currentChallengePhase = null;
-    this.receiverPermutation.startPermutation(performance.now(), permutationPhase);
+    this.clearCurrentChallenge();
+    this.receiverEffects.startPermutation(performance.now(), permutationPhase);
   }
 
   updateLevelIntro(currentTime) {
-    if (this.state === "level11Intro") {
-      this.receiverColorRotation.update(currentTime, true);
-    } else if (this.state === "level12Intro") {
-      this.receiverShapeRotation.update(currentTime, true);
-    } else if (this.state === "level13Intro") {
-      this.updateLevel13IntroDemo(currentTime);
-    }
-
-    if (currentTime < this.levelIntroEndsAt) return;
-
-    if (this.state === "level13Intro") {
-      this.dynamicRuleSequence.forceNewSequence(this.currentPhase);
-    }
+    const didFinishIntro = this.levelIntro.update(currentTime, this.state, this.currentPhase);
+    if (!didFinishIntro) return;
 
     this.state = "playing";
     this.spawnNextChallenge();
   }
 
-  updateLevel13IntroDemo(currentTime) {
-    const elapsedIntroMs = currentTime - this.level13IntroStartedAt;
-    const shapeDemoStartsAt = GAME_CONFIG.level13IntroDurationMs / 2;
+  startLevelIntroWhenReady() {
+    this.pendingLevelIntroPhase = this.currentPhase;
 
-    if (elapsedIntroMs < shapeDemoStartsAt) {
-      this.receiverColorRotation.update(currentTime, true);
-      this.receiverShapeRotation.stop();
-      return;
-    }
+    if (this.hasEngagedSingleShapes()) return;
 
-    this.receiverColorRotation.stop();
+    this.startLevelIntro();
+  }
 
-    if (!this.hasStartedLevel13ShapeIntroRotation) {
-      this.receiverShapeRotation.start(currentTime);
-      this.receiverShapeRotation.rotateClockwise(currentTime);
-      this.hasStartedLevel13ShapeIntroRotation = true;
-    }
+  tryStartPendingLevelIntro() {
+    if (!this.pendingLevelIntroPhase || this.hasEngagedSingleShapes()) return false;
 
-    this.receiverShapeRotation.update(currentTime, true);
+    this.startLevelIntro();
+    return true;
   }
 
   startLevelIntro() {
     const introStartedAt = performance.now();
-    const introPhase = this.currentPhase;
+    const introPhase = this.pendingLevelIntroPhase || this.currentPhase;
 
+    this.pendingLevelIntroPhase = null;
     this.clearPendingDuoSpawn();
-    this.stopReceiverRotations();
-    this.activeShape = null;
-    this.currentShapes = [];
-    this.activeShapeIndex = null;
-    this.currentChallengePhase = null;
-
-    if (introPhase.level === 11) {
-      this.receiverColorRotation.start(introStartedAt);
-      this.receiverColorRotation.rotateClockwise(introStartedAt);
-      this.hasPlayedLevel11Intro = true;
-      this.levelIntroEndsAt = introStartedAt + GAME_CONFIG.level11IntroDurationMs;
-      this.state = "level11Intro";
-      return;
-    }
-
-    if (introPhase.level === 12) {
-      this.receiverShapeRotation.start(introStartedAt);
-      this.receiverShapeRotation.rotateClockwise(introStartedAt);
-      this.hasPlayedLevel12Intro = true;
-      this.levelIntroEndsAt = introStartedAt + GAME_CONFIG.level12IntroDurationMs;
-      this.state = "level12Intro";
-      return;
-    }
-
-    this.receiverColorRotation.start(introStartedAt);
-    this.receiverColorRotation.rotateClockwise(introStartedAt);
-    this.hasPlayedLevel13Intro = true;
-    this.hasStartedLevel13ShapeIntroRotation = false;
-    this.level13IntroStartedAt = introStartedAt;
-    this.levelIntroEndsAt = introStartedAt + GAME_CONFIG.level13IntroDurationMs;
-    this.state = "level13Intro";
+    this.receiverEffects.stopRotations();
+    this.clearCurrentChallenge();
+    this.state = this.levelIntro.start(introStartedAt, introPhase);
   }
 
   updateReceiverRotations(currentTime) {
-    this.receiverColorRotation.update(currentTime, this.shouldRunReceiverColorRotation);
-    this.receiverShapeRotation.update(currentTime, this.shouldRunReceiverShapeRotation);
+    this.receiverEffects.updateRotations(currentTime, this.visiblePhase, this.state);
   }
 
   updateMovingReceiverTracks(deltaSeconds) {
@@ -2077,32 +3301,60 @@ class NeonSwipeGame {
     this.movingReceiverOffset = (this.movingReceiverOffset + GAME_CONFIG.movingReceiverSpeed * deltaSeconds) % perimeterLength;
   }
 
+  prepareSwipeFromPoint(startPoint) {
+    if (!this.currentChallengePhase?.usesPreciseDuoSelection) return true;
+
+    const selectedShape = this.challengeManager.findSelectableShapeAtPoint(startPoint);
+    if (!selectedShape) return false;
+
+    this.challengeManager.selectShapeForSwipe(selectedShape);
+    return true;
+  }
+
   throwActiveShapeFromSwipe(swipeGesture) {
-    if (!this.activeShape || !this.activeShape.canReceiveSwipe || swipeGesture.distance < this.scaler.x(GAME_CONFIG.minSwipeDistance)) return;
-
-    const direction = {
-      x: swipeGesture.deltaX,
-      y: swipeGesture.deltaY
-    };
-    const throwForce = this.calculateSwipeThrowForce(swipeGesture.distance, swipeGesture.durationMs);
-
-    this.activeShape.throwToward(direction, throwForce, this.activeChallengeUsesDuoShapes);
-    this.activateNextDuoShape();
+    const thrownShape = this.throwController.throwFromSwipe(swipeGesture);
+    this.handleShapeThrown(thrownShape);
+    this.challengeManager.clearSelectedShape();
   }
 
   throwActiveShapeAtTarget(target, gestureDistance = this.scaler.x(120), gestureDurationMs = 110) {
-    if (!this.canReceiveInput() || !this.activeShape || !this.activeShape.canReceiveSwipe) return;
+    if (!this.canReceiveInput()) return;
 
-    const direction = this.resolveThrowDirection(target);
-    if (!direction) return;
+    const thrownShape = this.throwController.throwAtTarget(target, gestureDistance, gestureDurationMs);
+    this.handleShapeThrown(thrownShape);
+  }
 
-    const throwForce = this.calculateThrowForce(direction, gestureDistance, gestureDurationMs);
-    this.activeShape.throwToward(direction, throwForce, this.activeChallengeUsesDuoShapes);
-    this.activateNextDuoShape();
+  handleShapeThrown(thrownShape) {
+    if (!thrownShape || this.activeChallengeUsesDuoShapes) return;
+    if (this.pendingLevelIntroPhase) return;
+
+    const nextSpawnDelayMs = getNextSpawnDelayMs(this.score);
+    if (nextSpawnDelayMs === null) return;
+
+    this.challengeManager.moveActiveShapeToLaunchedShapes();
+    this.scheduleNextSingleShapeAfterThrow(thrownShape, nextSpawnDelayMs);
+  }
+
+  scheduleNextSingleShapeAfterThrow(thrownShape, nextSpawnDelayMs) {
+    if (thrownShape.advancedSpawnState !== "none") return;
+
+    thrownShape.advancedSpawnState = "scheduled";
+    const nextSingleShapeTimeoutId = window.setTimeout(() => {
+      this.challengeManager.nextSingleShapeTimeoutId = null;
+
+      if (this.state !== "playing") return;
+      if (this.currentPhase.usesPreciseDuoSelection || this.currentPhase.usesDuoShapes) return;
+
+      thrownShape.advancedSpawnState = "created";
+      this.spawnNextChallenge();
+    }, nextSpawnDelayMs);
+
+    this.challengeManager.setNextSingleShapeTimeout(nextSingleShapeTimeoutId);
   }
 
   activateNextDuoShape() {
     if (!this.activeChallengeUsesDuoShapes) return;
+    if (this.currentChallengePhase?.usesPreciseDuoSelection) return;
 
     if (this.activeShapeIndex === 0 && this.currentShapes[1]) {
       this.currentShapes[1].state = "active";
@@ -2112,60 +3364,28 @@ class NeonSwipeGame {
     }
 
     if (this.activeShapeIndex === 1) {
-      this.activeShapeIndex = null;
-      this.activeShape = null;
+      this.challengeManager.clearActiveDuoShape();
     }
   }
 
   resolveThrowDirection(target) {
-    const basicDirections = {
-      up: { x: 0, y: -1 },
-      down: { x: 0, y: 1 },
-      left: { x: -1, y: 0 },
-      right: { x: 1, y: 0 }
-    };
-
-    if (basicDirections[target]) return basicDirections[target];
-
-    const receiver = this.arena.findReceiverById(target);
-    if (!receiver || !this.activeShape) return null;
-
-    const aimPoint = this.arena.getReceiverAimPoint(receiver);
-    return {
-      x: aimPoint.x - this.activeShape.x,
-      y: aimPoint.y - this.activeShape.y
-    };
+    return this.throwController.resolveThrowDirection(target);
   }
 
   calculateSwipeThrowForce(gestureDistance, gestureDurationMs) {
-    const gestureForce = (gestureDistance / Math.max(gestureDurationMs, 1)) * this.scaler.x(760);
-
-    return clamp(
-      gestureForce,
-      this.scaler.x(GAME_CONFIG.minThrowForce),
-      this.scaler.x(GAME_CONFIG.maxThrowForce)
-    );
+    return this.throwController.calculateSwipeThrowForce(gestureDistance, gestureDurationMs);
   }
 
   calculateThrowForce(direction, gestureDistance, gestureDurationMs) {
-    const directionLength = Math.hypot(direction.x, direction.y) || 1;
-    const normalizedY = direction.y / directionLength;
-    const gestureForce = (gestureDistance / Math.max(gestureDurationMs, 1)) * this.scaler.x(760);
-    const upwardBoost = normalizedY < -0.2 ? this.scaler.x(GAME_CONFIG.upwardThrowBoost) : 0;
-
-    return clamp(
-      gestureForce + upwardBoost,
-      this.scaler.x(GAME_CONFIG.minThrowForce),
-      this.scaler.x(GAME_CONFIG.maxThrowForce)
-    );
+    return this.throwController.calculateThrowForce(direction, gestureDistance, gestureDurationMs);
   }
 
   canReceiveInput() {
-    return this.state === "playing";
+    return this.stateController.canReceiveInput;
   }
 
   isWaitingToStart() {
-    return this.state === "waiting";
+    return this.stateController.isWaitingToStart;
   }
 
   startOrRestartFromKeyboard() {
@@ -2176,15 +3396,17 @@ class NeonSwipeGame {
 
   endGame(message) {
     this.clearPendingDuoSpawn();
-    this.stopWallColorMechanics();
+    this.receiverEffects.stopAll();
     this.state = "ended";
     this.centerMessage = message;
     this.centerMessageUntil = Infinity;
-    this.activeShape = null;
-    this.currentShapes = [];
-    this.activeShapeIndex = null;
-    this.currentChallengePhase = null;
-    this.restartButton.classList.add("is-visible");
+    this.activeShapeRuleName = null;
+    this.pendingLevelIntroPhase = null;
+    this.clearCurrentChallenge();
+  }
+
+  clearCurrentChallenge() {
+    this.challengeManager.clear();
   }
 
   showCenterMessage(message, durationMs) {
@@ -2195,11 +3417,17 @@ class NeonSwipeGame {
   draw(currentTime) {
     this.context.clearRect(0, 0, this.scaler.canvasWidth, this.scaler.canvasHeight);
     this.drawBackground();
-    this.arena.draw(this.context, this.visiblePhase, this.wallColorAnimationState);
+    this.arena.draw(
+      this.context,
+      this.visiblePhase,
+      this.wallColorAnimationState,
+      this.receiverEffects.getHitFeedbackByReceiverId(currentTime),
+      this.introVisualState,
+      this.getModifierVisualState(currentTime)
+    );
 
     this.drawHud();
-    this.drawActiveShape();
-    this.drawSwipeGuide();
+    this.drawActiveShape(currentTime);
     this.particleSystem.draw(this.context);
     this.drawCenterLabel(currentTime);
   }
@@ -2228,51 +3456,190 @@ class NeonSwipeGame {
     this.context.shadowBlur = this.scaler.x(9);
     this.context.textAlign = "center";
     this.context.textBaseline = "middle";
-    this.context.font = `900 ${this.scaler.x(52)}px ui-sans-serif, system-ui`;
+    this.context.font = `400 ${this.scaler.x(56)}px Orbitron`;
     this.context.fillText(String(this.score).padStart(2, "0"), this.scaler.canvasWidth / 2, this.scaler.y(42));
 
-    this.context.shadowBlur = this.scaler.x(3);
-    this.context.font = `800 ${this.scaler.x(15)}px ui-sans-serif, system-ui`;
-    this.context.textAlign = "right";
-    this.context.fillText(`LEVEL ${this.currentLevel}`, this.scaler.x(512), this.scaler.y(38));
     this.context.restore();
   }
 
-  drawActiveShape() {
-    const visibleShapes = this.activeChallengeUsesDuoShapes ? this.currentShapes : [this.activeShape].filter(Boolean);
+  drawSpawnTrail(shape, currentTime, spawnRenderScale) {
+    const trailStrength = shape.getSpawnTrailStrength(currentTime);
+
+    if (trailStrength <= 0) return;
+
+    const velocityLength = Math.hypot(
+      shape.velocityX,
+      shape.velocityY
+    );
+
+    if (velocityLength < 1) return;
+
+    const directionX = shape.velocityX / velocityLength;
+    const directionY = shape.velocityY / velocityLength;
+
+    for (
+      let index = GAME_CONFIG.spawnTrailCopies;
+      index >= 1;
+      index -= 1
+    ) {
+      const distance = this.scaler.x(
+        GAME_CONFIG.spawnTrailSpacing * index
+      );
+
+      const trailX =
+        shape.x - directionX * distance;
+
+      const trailY =
+        shape.y - directionY * distance;
+
+      const copyProgress =
+        index / GAME_CONFIG.spawnTrailCopies;
+
+      const opacity =
+        GAME_CONFIG.spawnTrailMaxOpacity *
+        trailStrength *
+        (1 - copyProgress * 0.65);
+
+      this.context.save();
+
+      this.context.translate(trailX, trailY);
+
+      this.context.scale(
+        spawnRenderScale.scaleX,
+        spawnRenderScale.scaleY
+      );
+
+      ShapeRenderer.draw(
+        this.context,
+        { x: 0, y: 0 },
+        shape.shapeName,
+        NEON_COLORS[shape.colorId],
+        this.scaler.x(
+          shape.state === "active"
+            ? GAME_CONFIG.shapeRadius * 1.08
+            : GAME_CONFIG.shapeRadius
+        ),
+        opacity,
+        0.8
+      );
+
+      this.context.restore();
+    }
+  }
+
+  drawActiveShape(currentTime) {
+    const visibleShapes = this.challengeManager.getVisibleShapes(this.activeChallengeUsesDuoShapes);
 
     visibleShapes
       .filter((shape) => shape.state !== "resolved")
       .forEach((shape) => {
+
+        if (
+          shape.spawnAnimationStartedAt === null &&
+          shape.y <= this.scaler.canvasHeight
+        ) {
+          shape.spawnAnimationStartedAt = currentTime;
+        }
+
+        const spawnRenderScale = shape.getSpawnRenderScale(currentTime);
+        const spawnGlowMultiplier = shape.getSpawnHaloMultiplier(currentTime);
+
+        const swipeRenderScale = shape.getSwipeRenderScale(currentTime);
+        const swipeGlowMultiplier = shape.getSwipeHaloMultiplier(currentTime);
+
+        this.drawSpawnTrail(
+          shape,
+          currentTime,
+          spawnRenderScale
+        );
+
+        this.drawSwipeTrail(shape, currentTime);
+
         this.context.save();
         this.context.globalAlpha = shape.state === "inactive" ? 0.7 : 1;
+        this.context.translate(shape.x, shape.y);
+        const velocityAngle =
+          Math.atan2(shape.velocityY, shape.velocityX);
+
+        if (shape.hasBeenThrown) {
+          this.context.rotate(velocityAngle);
+
+          this.context.scale(
+            swipeRenderScale.scaleAlongMovement,
+            swipeRenderScale.scalePerpendicular
+          );
+
+          this.context.rotate(-velocityAngle);
+        } else {
+          this.context.scale(spawnRenderScale.scaleX, spawnRenderScale.scaleY);
+        }
         ShapeRenderer.draw(
           this.context,
-          { x: shape.x, y: shape.y },
+          { x: 0, y: 0 },
           shape.shapeName,
           NEON_COLORS[shape.colorId],
-          this.scaler.x(shape.state === "active" ? GAME_CONFIG.shapeRadius * 1.08 : GAME_CONFIG.shapeRadius)
+          this.scaler.x(shape.state === "active" ? GAME_CONFIG.shapeRadius * 1.08 : GAME_CONFIG.shapeRadius),
+          1,
+          shape.hasBeenThrown
+            ? swipeGlowMultiplier
+            : spawnGlowMultiplier
         );
         this.context.restore();
       });
   }
 
-  drawSwipeGuide() {
-    const swipeGesture = this.inputController.activeSwipeGesture;
-    if (!swipeGesture || !this.activeShape || this.state !== "playing") return;
-    if (swipeGesture.distance < this.scaler.x(12)) return;
+  drawSwipeTrail(shape, currentTime) {
+    const trailStrength =
+      shape.getSwipeTrailStrength(currentTime);
 
-    this.context.save();
-    this.context.strokeStyle = "rgba(238, 244, 255, 0.72)";
-    this.context.shadowColor = NEON_COLORS[this.activeShape.colorId];
-    this.context.shadowBlur = this.scaler.x(12);
-    this.context.lineWidth = this.scaler.x(2);
-    this.context.setLineDash([this.scaler.x(8), this.scaler.x(8)]);
-    this.context.beginPath();
-    this.context.moveTo(swipeGesture.startX, swipeGesture.startY);
-    this.context.lineTo(swipeGesture.currentX, swipeGesture.currentY);
-    this.context.stroke();
-    this.context.restore();
+    if (trailStrength <= 0) return;
+
+    const velocityLength = Math.hypot(
+      shape.velocityX,
+      shape.velocityY
+    );
+
+    if (velocityLength < 1) return;
+
+    const directionX =
+      shape.velocityX / velocityLength;
+
+    const directionY =
+      shape.velocityY / velocityLength;
+
+    for (
+      let index = GAME_CONFIG.swipeTrailCopies;
+      index >= 1;
+      index -= 1
+    ) {
+      const distance = this.scaler.x(
+        GAME_CONFIG.swipeTrailSpacing * index
+      );
+
+      const opacity =
+        GAME_CONFIG.swipeTrailMaxOpacity *
+        trailStrength *
+        (1 - index / GAME_CONFIG.swipeTrailCopies * 0.55);
+
+      this.context.save();
+
+      this.context.translate(
+        shape.x - directionX * distance,
+        shape.y - directionY * distance
+      );
+
+      ShapeRenderer.draw(
+        this.context,
+        { x: 0, y: 0 },
+        shape.shapeName,
+        NEON_COLORS[shape.colorId],
+        this.scaler.x(GAME_CONFIG.shapeRadius),
+        opacity,
+        1.5
+      );
+
+      this.context.restore();
+    }
   }
 
   drawCenterLabel(currentTime) {
@@ -2286,50 +3653,86 @@ class NeonSwipeGame {
     const isRuleLabel = label === "COLOR" || label === "SHAPE";
     const isStartLabel = this.state === "waiting";
     const isTemporaryRuleFeedback = isRuleLabel && shouldShowTemporaryMessage && !isStartLabel;
-    const labelSize = isStartLabel ? 21 : (isRuleLabel ? 50 : 35);
-    const shadowBlur = isTemporaryRuleFeedback ? 22 : (isStartLabel ? 24 : (isRuleLabel ? 0 : 18));
+    const isGameOver = this.state === "ended";
+    const labelSize = isGameOver ? 48 : isStartLabel ? 21 : isRuleLabel ? 42 : 35;
+    const shadowBlur = isGameOver ? 12 : isTemporaryRuleFeedback ? 26 : isStartLabel ? 24 : 0;
 
     this.context.save();
     this.context.globalAlpha = isStartLabel ? 0.82 : 1;
-    this.context.fillStyle = isTemporaryRuleFeedback ? "#f8fbff" : (isRuleLabel ? "#8f98a8" : "#eef4ff");
+    this.context.fillStyle = isTemporaryRuleFeedback ? "#ffffff" : (isRuleLabel ? "#7f8da3" : "#eef4ff");
     this.context.shadowColor = isTemporaryRuleFeedback ? "rgba(255, 255, 255, 0.95)" : (isRuleLabel ? "transparent" : "rgba(255, 255, 255, 0.95)");
     this.context.shadowBlur = this.scaler.x(shadowBlur);
     this.context.textAlign = "center";
     this.context.textBaseline = "middle";
-    this.context.font = `900 ${this.scaler.x(labelSize)}px ui-sans-serif, system-ui`;
-    this.context.letterSpacing = `${this.scaler.x(isRuleLabel ? 13 : (isStartLabel ? 10 : 4))}px`;
-    this.context.fillText(label, this.scaler.canvasWidth / 2, this.getCenterLabelY(isRuleLabel));
+    if (isRuleLabel) {
+      this.context.font = `600 ${this.scaler.x(50)}px Oxanium`;
+    } else {
+      this.context.font = `600 ${this.scaler.x(labelSize)}px Oxanium`;
+    }
+    this.context.letterSpacing = `${this.scaler.x(isRuleLabel ? 20 : (isStartLabel ? 10 : 4))}px`;
+
+    this.context.fillText(
+      label,
+      this.scaler.canvasWidth / 2,
+      this.getCenterLabelY(isRuleLabel)
+    );
+
+    if (isGameOver) {
+      this.context.font = `400 ${this.scaler.x(20)}px Oxanium`;
+      this.context.letterSpacing = `${this.scaler.x(4)}px`;
+      this.context.fillStyle = "#7f8da3";
+      this.context.shadowColor = "transparent";
+      this.context.shadowBlur = 0;
+
+      this.context.fillText(
+        "TAP TO RESTART",
+        this.scaler.canvasWidth / 2,
+        this.getCenterLabelY(false) + this.scaler.y(70)
+      );
+    }
+
+    //this.context.fillText(label, this.scaler.canvasWidth / 2, this.getCenterLabelY(isRuleLabel));
     this.context.restore();
   }
 
   drawLevelIntroLabel() {
-    const lines = this.levelIntroLines;
-    const centerY = this.scaler.canvasHeight / 2 - this.scaler.y(28);
-    const lineGap = this.scaler.y(52);
+    const [firstWord, secondWord] = this.levelIntroLines[0].split(" ");
+    const centerY = this.scaler.canvasHeight / 2;
 
     this.context.save();
-    this.context.fillStyle = "#f8fbff";
-    this.context.shadowColor = "rgba(255, 255, 255, 0.92)";
-    this.context.shadowBlur = this.scaler.x(18);
+
+    this.context.fillStyle = "#ffffff";
+    this.context.shadowColor = "rgba(255, 255, 255, 0.95)";
+    this.context.shadowBlur = this.scaler.x(26);
+
     this.context.textAlign = "center";
     this.context.textBaseline = "middle";
 
-    lines.forEach((line, index) => {
-      const isTitle = index === 0;
-      this.context.font = `900 ${this.scaler.x(isTitle ? 38 : 28)}px ui-sans-serif, system-ui`;
-      this.context.letterSpacing = `${this.scaler.x(isTitle ? 5 : 3)}px`;
-      this.context.fillText(line, this.scaler.canvasWidth / 2, centerY + (index - 1) * lineGap);
-    });
+    this.context.font = `600 ${this.scaler.x(44)}px Oxanium`;
+    this.context.letterSpacing = `${this.scaler.x(10)}px`;
 
-    if (this.state === "level13Intro") {
-      const elapsedIntroMs = performance.now() - this.level13IntroStartedAt;
-      const activeRuleLabel = elapsedIntroMs < GAME_CONFIG.level13IntroDurationMs / 2 ? "COLOR" : "SHAPE";
-      this.context.font = `900 ${this.scaler.x(24)}px ui-sans-serif, system-ui`;
-      this.context.letterSpacing = `${this.scaler.x(8)}px`;
-      this.context.fillText(activeRuleLabel, this.scaler.canvasWidth / 2, centerY + lineGap * 1.9);
-    }
+    this.context.fillText(
+      firstWord,
+      this.scaler.canvasWidth / 2,
+      centerY - this.scaler.y(30)
+    );
+
+    this.context.fillText(
+      secondWord,
+      this.scaler.canvasWidth / 2,
+      centerY + this.scaler.y(30)
+    );
 
     this.context.restore();
+  }
+
+  getModifierVisualState(currentTime) {
+    return {
+      blink: this.blinkController.getVisualState(
+        currentTime,
+        this.activeModifiers.blink
+      )
+    };
   }
 
   getCenterLabelY(isRuleLabel) {
@@ -2352,44 +3755,20 @@ class NeonSwipeGame {
   }
 
   get visibleRuleName() {
-    return this.visiblePhase.ruleName;
+    return this.activeShape?.challengePhase?.ruleName || this.activeShapeRuleName || this.visiblePhase.ruleName;
   }
 
   get wallColorAnimationState() {
-    return this.receiverPermutation.animationState || this.receiverRotationAnimationState;
-  }
-
-  get receiverRotationAnimationState() {
-    const previousColorsByPositionId = this.receiverColorRotation.previousValues;
-    const previousShapesByPositionId = this.receiverShapeRotation.previousValues;
-
-    if (!previousColorsByPositionId && !previousShapesByPositionId) return null;
-
-    return {
-      previousColorsByPositionId,
-      previousShapesByPositionId,
-      progress: previousColorsByPositionId
-        ? this.receiverColorRotation.animationProgress
-        : this.receiverShapeRotation.animationProgress
-    };
+    return this.receiverEffects.animationState;
   }
 
   getPhaseWithCurrentWallColors(phase) {
-    const receiverPermutationPhase = this.receiverPermutation.getPhaseWithCurrentPermutation(phase);
-
-    return {
-      ...receiverPermutationPhase,
-      receiverColorsByPositionId: this.phaseUsesReceiverColorRotationLayout(receiverPermutationPhase)
-        ? this.receiverColorRotation.currentValuesByPositionId
-        : receiverPermutationPhase.receiverColorsByPositionId,
-      receiverShapesByPositionId: this.phaseUsesReceiverShapeRotationLayout(receiverPermutationPhase)
-        ? this.receiverShapeRotation.currentValuesByPositionId
-        : receiverPermutationPhase.receiverShapesByPositionId
-    };
+    return this.receiverEffects.getPhaseWithCurrentReceiverState(phase);
   }
 
   get activeChallengeUsesDuoShapes() {
-    return Boolean((this.currentChallengePhase || this.currentPhase).usesDuoShapes);
+    const challengePhase = this.currentChallengePhase || this.currentPhase;
+    return Boolean(challengePhase.usesDuoShapes || challengePhase.usesPreciseDuoSelection);
   }
 
   get currentChallengeSpawnImpulse() {
@@ -2400,54 +3779,74 @@ class NeonSwipeGame {
     return Boolean(phase?.permutesReceiverColorsAfterSuccess || phase?.permutesReceiverShapesAfterSuccess);
   }
 
+  hasEngagedSingleShapes() {
+    if (this.activeChallengeUsesDuoShapes) return false;
+
+    return this.challengeManager.hasUnresolvedShapes() || this.challengeManager.hasPendingNextSingleShape();
+  }
+
   shouldStartLevelIntro(resolvedChallengePhase) {
-    const nextLevel = this.currentPhase.level;
-    const previousLevel = resolvedChallengePhase?.level;
-
-    if (previousLevel === nextLevel) return false;
-    if (nextLevel === 11) return !this.hasPlayedLevel11Intro;
-    if (nextLevel === 12) return !this.hasPlayedLevel12Intro;
-    if (nextLevel === 13) return !this.hasPlayedLevel13Intro;
-    return false;
-  }
-
-  phaseUsesReceiverColorRotation(phase) {
-    return Boolean(phase.usesDynamicWallColors || (phase.usesRuleControlledReceiverRotation && phase.ruleName === "COLOR"));
-  }
-
-  phaseUsesReceiverShapeRotation(phase) {
-    return Boolean(phase.usesDynamicReceiverShapes || (phase.usesRuleControlledReceiverRotation && phase.ruleName === "SHAPE"));
-  }
-
-  phaseUsesReceiverColorRotationLayout(phase) {
-    return Boolean(phase.usesDynamicWallColors || phase.usesDynamicReceiverShapes || phase.usesRuleControlledReceiverRotation);
-  }
-
-  phaseUsesReceiverShapeRotationLayout(phase) {
-    return Boolean(phase.usesDynamicReceiverShapes || phase.usesRuleControlledReceiverRotation);
+    return this.levelIntro.shouldStart(resolvedChallengePhase, this.currentPhase);
   }
 
   get currentPhaseUsesReceiverRotation() {
-    return this.phaseUsesReceiverColorRotation(this.currentPhase) || this.phaseUsesReceiverShapeRotation(this.currentPhase);
-  }
-
-  get shouldRunReceiverColorRotation() {
-    return this.state === "playing" && this.phaseUsesReceiverColorRotation(this.visiblePhase);
-  }
-
-  get shouldRunReceiverShapeRotation() {
-    return this.state === "playing" && this.phaseUsesReceiverShapeRotation(this.visiblePhase);
+    return this.receiverEffects.phaseUsesReceiverRotation(this.currentPhase);
   }
 
   get isShowingLevelIntro() {
-    return this.state === "level11Intro" || this.state === "level12Intro" || this.state === "level13Intro";
+    return this.stateController.isShowingLevelIntro;
   }
 
   get levelIntroLines() {
-    if (this.state === "level12Intro") return ["LEVEL 12", "SHAPES ROTATE", "↻ CLOCKWISE"];
-    if (this.state === "level13Intro") return ["LEVEL 13", "RULE CONTROLS", "THE ROTATION"];
+    return this.levelIntro.getLines(this.state);
+  }
 
-    return ["LEVEL 11", "COLORS ROTATE", "↻ CLOCKWISE"];
+  get activeShape() {
+    return this.challengeManager.activeShape;
+  }
+
+  set activeShape(nextShape) {
+    this.challengeManager.activeShape = nextShape;
+  }
+
+  get currentShapes() {
+    return this.challengeManager.currentShapes;
+  }
+
+  set currentShapes(nextShapes) {
+    this.challengeManager.currentShapes = nextShapes;
+  }
+
+  get activeShapeIndex() {
+    return this.challengeManager.activeShapeIndex;
+  }
+
+  set activeShapeIndex(nextShapeIndex) {
+    this.challengeManager.activeShapeIndex = nextShapeIndex;
+  }
+
+  get currentChallengePhase() {
+    return this.challengeManager.currentChallengePhase;
+  }
+
+  set currentChallengePhase(nextChallengePhase) {
+    this.challengeManager.currentChallengePhase = nextChallengePhase;
+  }
+
+  get secondDuoShapeTimeoutId() {
+    return this.challengeManager.secondDuoShapeTimeoutId;
+  }
+
+  set secondDuoShapeTimeoutId(nextTimeoutId) {
+    this.challengeManager.secondDuoShapeTimeoutId = nextTimeoutId;
+  }
+
+  get state() {
+    return this.stateController.value;
+  }
+
+  set state(nextState) {
+    this.stateController.set(nextState);
   }
 
   get currentRuleName() {
@@ -2466,10 +3865,38 @@ class NeonSwipeGame {
   get currentGravity() {
     return this.scaler.x(ChallengePhysics.getGravity(this.currentChallengePhase || this.currentPhase));
   }
+
+  get introVisualState() {
+    if (!this.isShowingLevelIntro) {
+      return null;
+    }
+
+    if (
+      this.state === "level11Intro" ||
+      this.state === "level12Intro"
+    ) {
+      return {
+        railOpacity: 0.18,
+        iconOpacity: 0.18
+      };
+    }
+
+    return null;
+  }
+
 }
 
 function getRandomItem(items) {
   return items[Math.floor(Math.random() * items.length)];
+}
+
+function getNextSpawnDelayMs(score) {
+  if (score < 4) return null;
+
+  return Math.max(
+    200 - (score - 4) * 3,
+    50
+  );
 }
 
 function clamp(value, minValue, maxValue) {
