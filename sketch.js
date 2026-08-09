@@ -23,6 +23,12 @@ const GAME_CONFIG = {
   level19SpawnImpulseMultiplier: 0.75,
   level19GravityMultiplier: 0.4,
   level19SelectionHitboxMultiplier: 1.75,
+  burstShapeCount: 3,
+  burstSecondShapeDelayMs: 400,
+  burstThirdShapeDelayMs: 800,
+  burstWaitingOpacity: 0.20,
+  twinHorizontalOffset: 105,
+  twinWaitingOpacity: 0.20,
   spawnSquashStretchDurationMs: 350,
   spawnHaloAnimationDurationMs: 430,
   spawnHaloMaxMultiplier: 3.0,
@@ -1585,7 +1591,8 @@ class Arena {
   drawReceiverIcons(context, currentPhase, opacity = 1, hitFeedbackByReceiverId = {}, modifierVisualState = null) {
     const layout = this.getScaledLayout();
 
-    const iconInset = this.scaler.x(140);
+    const iconInsetX = this.scaler.x(120);
+    const iconInsetY = this.scaler.y(180);
 
     const receiverIconRadius =
       this.scaler.x(GAME_CONFIG.shapeRadius);
@@ -1600,23 +1607,23 @@ class Arena {
         }, {})
         : {
           topLeft: {
-            x: layout.outerX + iconInset,
-            y: layout.outerY + iconInset
+            x: layout.outerX + iconInsetX,
+            y: layout.outerY + iconInsetY
           },
 
           topRight: {
-            x: layout.outerX + layout.outerWidth - iconInset,
-            y: layout.outerY + iconInset
+            x: layout.outerX + layout.outerWidth - iconInsetX,
+            y: layout.outerY + iconInsetY
           },
 
           bottomLeft: {
-            x: layout.outerX + iconInset,
-            y: layout.outerY + layout.outerHeight - iconInset
+            x: layout.outerX + iconInsetX,
+            y: layout.outerY + layout.outerHeight - iconInsetY
           },
 
           bottomRight: {
-            x: layout.outerX + layout.outerWidth - iconInset,
-            y: layout.outerY + layout.outerHeight - iconInset
+            x: layout.outerX + layout.outerWidth - iconInsetX,
+            y: layout.outerY + layout.outerHeight - iconInsetY
           }
         };
 
@@ -2333,20 +2340,34 @@ class SpawnController {
 
 class ChallengeManager {
   constructor() {
-    this.clear();
     this.secondDuoShapeTimeoutId = null;
     this.nextSingleShapeTimeoutId = null;
+    this.burstShapeTimeoutIds = [];
+    this.clear();
   }
 
   clear() {
+    this.clearBurstShapeTimeouts();
     this.activeShape = null;
     this.currentShapes = [];
     this.activeShapeIndex = null;
     this.currentChallengePhase = null;
     this.selectedShape = null;
+    this.burstShapes = [];
+    this.burstActiveIndex = null;
+    this.burstShapeCount = 0;
+    this.twinShapes = [];
+    this.twinActiveIndex = null;
+    this.twinShapeCount = 0;
   }
 
   setSingleShape(fallingShape, challengePhase = null) {
+    this.burstShapes = [];
+    this.burstActiveIndex = null;
+    this.burstShapeCount = 0;
+    this.twinShapes = [];
+    this.twinActiveIndex = null;
+    this.twinShapeCount = 0;
     this.currentShapes = this.currentShapes.filter((shape) => shape.state !== "resolved");
     this.activeShape = fallingShape;
     this.currentShapes.push(fallingShape);
@@ -2355,7 +2376,154 @@ class ChallengeManager {
     this.selectedShape = null;
   }
 
+  startBurstChallenge(firstShape, challengePhase, shapeCount) {
+    this.twinShapes = [];
+    this.twinActiveIndex = null;
+    this.twinShapeCount = 0;
+    this.currentShapes = this.currentShapes.filter((shape) => shape.state !== "resolved");
+    this.currentChallengePhase = challengePhase;
+    this.burstShapes = [firstShape];
+    this.burstActiveIndex = 0;
+    this.burstShapeCount = shapeCount;
+    this.currentShapes.push(firstShape);
+    this.activeShape = firstShape;
+    this.activeShapeIndex = this.currentShapes.indexOf(firstShape);
+    this.selectedShape = null;
+  }
+
+  appendBurstShape(fallingShape, burstShapeIndex) {
+    this.burstShapes[burstShapeIndex] = fallingShape;
+    this.currentShapes.push(fallingShape);
+
+    if (this.burstActiveIndex === burstShapeIndex && !this.activeShape) {
+      this.activateBurstShapeAtIndex(burstShapeIndex);
+    }
+  }
+
+  activateBurstShapeAtIndex(burstShapeIndex) {
+    const nextShape = this.burstShapes[burstShapeIndex];
+
+    if (!nextShape || nextShape.state === "resolved" || nextShape.hasBeenThrown) {
+      this.activeShape = null;
+      this.activeShapeIndex = null;
+      return false;
+    }
+
+    nextShape.state = "active";
+    this.activeShape = nextShape;
+    this.activeShapeIndex = this.currentShapes.indexOf(nextShape);
+    this.selectedShape = null;
+    return true;
+  }
+
+  advanceBurstAfterActiveShape(fallingShape) {
+    if (!this.isActiveBurstShape(fallingShape)) return false;
+
+    this.activeShape = null;
+    this.activeShapeIndex = null;
+    this.selectedShape = null;
+    this.burstActiveIndex += 1;
+
+    while (
+      this.burstActiveIndex < this.burstShapeCount &&
+      this.burstShapes[this.burstActiveIndex]?.state === "resolved"
+    ) {
+      this.burstActiveIndex += 1;
+    }
+
+    if (this.burstActiveIndex >= this.burstShapeCount) {
+      return true;
+    }
+
+    this.activateBurstShapeAtIndex(this.burstActiveIndex);
+    return false;
+  }
+
+  isBurstChallengeActive() {
+    return this.burstShapeCount > 0;
+  }
+
+  isBurstShape(fallingShape) {
+    return Boolean(fallingShape?.isBurstShape) || this.burstShapes.includes(fallingShape);
+  }
+
+  isActiveBurstShape(fallingShape) {
+    return this.isBurstChallengeActive() && this.burstShapes[this.burstActiveIndex] === fallingShape;
+  }
+
+  startTwinChallenge(firstShape, secondShape, challengePhase) {
+    this.burstShapes = [];
+    this.burstActiveIndex = null;
+    this.burstShapeCount = 0;
+    this.currentShapes = this.currentShapes.filter((shape) => shape.state !== "resolved");
+    this.currentChallengePhase = challengePhase;
+    this.twinShapes = [firstShape, secondShape];
+    this.twinActiveIndex = 0;
+    this.twinShapeCount = 2;
+    this.currentShapes.push(firstShape, secondShape);
+    this.activeShape = firstShape;
+    this.activeShapeIndex = this.currentShapes.indexOf(firstShape);
+    this.selectedShape = null;
+  }
+
+  activateTwinShapeAtIndex(twinShapeIndex) {
+    const nextShape = this.twinShapes[twinShapeIndex];
+
+    if (!nextShape || nextShape.state === "resolved" || nextShape.hasBeenThrown) {
+      this.activeShape = null;
+      this.activeShapeIndex = null;
+      return false;
+    }
+
+    nextShape.state = "active";
+    this.activeShape = nextShape;
+    this.activeShapeIndex = this.currentShapes.indexOf(nextShape);
+    this.selectedShape = null;
+    return true;
+  }
+
+  advanceTwinAfterActiveShape(fallingShape) {
+    if (!this.isActiveTwinShape(fallingShape)) return false;
+
+    this.activeShape = null;
+    this.activeShapeIndex = null;
+    this.selectedShape = null;
+    this.twinActiveIndex += 1;
+
+    while (
+      this.twinActiveIndex < this.twinShapeCount &&
+      this.twinShapes[this.twinActiveIndex]?.state === "resolved"
+    ) {
+      this.twinActiveIndex += 1;
+    }
+
+    if (this.twinActiveIndex >= this.twinShapeCount) {
+      return true;
+    }
+
+    this.activateTwinShapeAtIndex(this.twinActiveIndex);
+    return false;
+  }
+
+  isTwinChallengeActive() {
+    return this.twinShapeCount > 0;
+  }
+
+  isTwinShape(fallingShape) {
+    return Boolean(fallingShape?.isTwinShape) || this.twinShapes.includes(fallingShape);
+  }
+
+  isActiveTwinShape(fallingShape) {
+    return this.isTwinChallengeActive() && this.twinShapes[this.twinActiveIndex] === fallingShape;
+  }
+
   setFirstDuoShape(fallingShape, challengePhase) {
+    this.burstShapes = [];
+    this.burstActiveIndex = null;
+    this.burstShapeCount = 0;
+    this.twinShapes = [];
+    this.twinActiveIndex = null;
+    this.twinShapeCount = 0;
     this.currentChallengePhase = challengePhase;
     this.currentShapes = [fallingShape];
     this.activeShape = fallingShape;
@@ -2425,6 +2593,21 @@ class ChallengeManager {
 
     window.clearTimeout(this.nextSingleShapeTimeoutId);
     this.nextSingleShapeTimeoutId = null;
+  }
+
+  setBurstShapeTimeout(timeoutId) {
+    this.burstShapeTimeoutIds.push(timeoutId);
+  }
+
+  clearBurstShapeTimeouts() {
+    this.burstShapeTimeoutIds.forEach((timeoutId) => window.clearTimeout(timeoutId));
+    this.burstShapeTimeoutIds = [];
+  }
+
+  removeBurstShapeTimeout(timeoutIdToRemove) {
+    this.burstShapeTimeoutIds = this.burstShapeTimeoutIds.filter(
+      (timeoutId) => timeoutId !== timeoutIdToRemove
+    );
   }
 
   hasPendingNextSingleShape() {
@@ -4351,6 +4534,7 @@ class NeonSwipeGame {
       blink: false,
       pulse: false,
       burst: false,
+      twin: true,
       void: false
     };
     this.lastAnimationTime = 0;
@@ -4508,6 +4692,16 @@ class NeonSwipeGame {
       return;
     }
 
+    if (this.shouldUseBurstModifierForCurrentChallenge()) {
+      this.spawnBurstShapes();
+      return;
+    }
+
+    if (this.shouldUseTwinModifierForCurrentChallenge()) {
+      this.spawnTwinShapes();
+      return;
+    }
+
     this.spawnSingleShape();
   }
 
@@ -4519,12 +4713,25 @@ class NeonSwipeGame {
   }
 
   createSingleShapeFromSpawn(spawn) {
-    const challengePhaseSnapshot = this.createPhaseSnapshot(this.currentChallengePhase);
+    const fallingShape = this.createConfiguredShapeFromSpawn(
+      spawn,
+      this.currentChallengePhase
+    );
+    const previousActiveShapeRuleName = this.activeShapeRuleName;
+
+    this.challengeManager.setSingleShape(fallingShape, fallingShape.challengePhase);
+    this.updateVisibleRuleForActiveShape(
+      fallingShape.challengePhase.ruleName,
+      previousActiveShapeRuleName
+    );
+  }
+
+  createConfiguredShapeFromSpawn(spawn, challengePhase) {
+    const challengePhaseSnapshot = this.createPhaseSnapshot(challengePhase);
     const validationPhaseSnapshot = this.createPhaseSnapshot(
-      this.getPhaseWithCurrentWallColors(this.currentChallengePhase)
+      this.getPhaseWithCurrentWallColors(challengePhase)
     );
     const fallingShape = this.createShapeFromSpawn(spawn);
-    const previousActiveShapeRuleName = this.activeShapeRuleName;
 
     this.applyVoidModifierToShape(fallingShape, challengePhaseSnapshot);
 
@@ -4533,11 +4740,111 @@ class NeonSwipeGame {
     fallingShape.gravity = this.scaler.x(ChallengePhysics.getGravity(challengePhaseSnapshot));
     fallingShape.advancedSpawnState = "none";
 
-    this.challengeManager.setSingleShape(fallingShape, challengePhaseSnapshot);
+    return fallingShape;
+  }
+
+  shouldUseBurstModifierForCurrentChallenge() {
+    return Boolean(
+      this.activeModifiers.burst &&
+      !this.currentPhase.usesPreciseDuoSelection &&
+      !this.currentPhase.usesDuoShapes
+    );
+  }
+
+  shouldUseTwinModifierForCurrentChallenge() {
+    const projectileEntry = this.currentPhase.projectileEntry || "bottom";
+
+    return Boolean(
+      this.activeModifiers.twin &&
+      !this.activeModifiers.burst &&
+      !this.currentPhase.usesPreciseDuoSelection &&
+      !this.currentPhase.usesDuoShapes &&
+      projectileEntry === "bottom"
+    );
+  }
+
+  spawnBurstShapes() {
+    this.currentChallengePhase = this.currentPhase;
+    const previousActiveShapeRuleName = this.activeShapeRuleName;
+    const firstShape = this.createConfiguredShapeFromSpawn(
+      this.getSingleShapeSpawn(this.currentChallengePhase),
+      this.currentChallengePhase
+    );
+    firstShape.isBurstShape = true;
+
+    this.challengeManager.startBurstChallenge(
+      firstShape,
+      firstShape.challengePhase,
+      GAME_CONFIG.burstShapeCount
+    );
     this.updateVisibleRuleForActiveShape(
-      challengePhaseSnapshot.ruleName,
+      firstShape.challengePhase.ruleName,
       previousActiveShapeRuleName
     );
+
+    this.scheduleBurstShapeSpawn(1, GAME_CONFIG.burstSecondShapeDelayMs);
+    this.scheduleBurstShapeSpawn(2, GAME_CONFIG.burstThirdShapeDelayMs);
+  }
+
+  spawnTwinShapes() {
+    this.currentChallengePhase = this.currentPhase;
+    const previousActiveShapeRuleName = this.activeShapeRuleName;
+    const leftShape = this.createConfiguredShapeFromSpawn(
+      this.getTwinShapeSpawn("left"),
+      this.currentChallengePhase
+    );
+    const rightShape = this.createConfiguredShapeFromSpawn(
+      this.getTwinShapeSpawn("right"),
+      this.currentChallengePhase
+    );
+
+    leftShape.isTwinShape = true;
+    rightShape.isTwinShape = true;
+    rightShape.state = "inactive";
+
+    this.challengeManager.startTwinChallenge(
+      leftShape,
+      rightShape,
+      leftShape.challengePhase
+    );
+    this.updateVisibleRuleForActiveShape(
+      leftShape.challengePhase.ruleName,
+      previousActiveShapeRuleName
+    );
+  }
+
+  getTwinShapeSpawn(side) {
+    const spawn = this.getSingleShapeSpawn(this.currentChallengePhase);
+    const centerX = this.scaler.x(GAME_CONFIG.designWidth / 2);
+    const horizontalOffset = this.scaler.x(GAME_CONFIG.twinHorizontalOffset);
+
+    return {
+      ...spawn,
+      x: side === "left"
+        ? centerX - horizontalOffset
+        : centerX + horizontalOffset
+    };
+  }
+
+  scheduleBurstShapeSpawn(burstShapeIndex, delayMs) {
+    const burstChallengePhase = this.currentChallengePhase;
+    const timeoutId = window.setTimeout(() => {
+      this.challengeManager.removeBurstShapeTimeout(timeoutId);
+
+      if (this.state !== "playing") return;
+      if (!this.challengeManager.isBurstChallengeActive()) return;
+      if (this.currentChallengePhase !== burstChallengePhase) return;
+
+      const fallingShape = this.createConfiguredShapeFromSpawn(
+        this.getSingleShapeSpawn(burstChallengePhase),
+        burstChallengePhase
+      );
+      fallingShape.isBurstShape = true;
+      fallingShape.state = "inactive";
+      this.challengeManager.appendBurstShape(fallingShape, burstShapeIndex);
+    }, delayMs);
+
+    this.challengeManager.setBurstShapeTimeout(timeoutId);
   }
 
   applyVoidModifierToShape(fallingShape, challengePhase) {
@@ -4695,6 +5002,20 @@ class NeonSwipeGame {
   resolveIgnoredVoidShape(resolvedShape) {
     resolvedShape.state = "resolved";
 
+    if (this.challengeManager.isActiveBurstShape(resolvedShape)) {
+      this.advanceBurstSequenceAfterResolvedActiveShape(resolvedShape, true);
+      return;
+    }
+
+    if (this.challengeManager.isActiveTwinShape(resolvedShape)) {
+      this.advanceTwinSequenceAfterResolvedActiveShape(resolvedShape, true);
+      return;
+    }
+
+    if (this.challengeManager.isTwinShape(resolvedShape)) {
+      return;
+    }
+
     if (this.tryStartPendingLevelIntro()) return;
 
     this.spawnNextChallenge();
@@ -4742,6 +5063,16 @@ class NeonSwipeGame {
     resolvedShape.state = "resolved";
     this.score += 1;
 
+    if (this.challengeManager.isBurstShape(resolvedShape)) {
+      this.finishBurstShapeIfResolved(challengePhase);
+      return;
+    }
+
+    if (this.challengeManager.isTwinShape(resolvedShape)) {
+      this.finishTwinShapeIfResolved(challengePhase);
+      return;
+    }
+
     if (challengePhase.usesPreciseDuoSelection) {
       this.finishPreciseDuoIfResolved(challengePhase);
       return;
@@ -4759,6 +5090,40 @@ class NeonSwipeGame {
     this.continueAfterResolvedChallenge(didRuleChange, challengePhase, {
       skipSpawn: didAlreadyAdvanceSpawn
     });
+  }
+
+  finishBurstShapeIfResolved(resolvedChallengePhase) {
+    this.dynamicRuleSequence.consumeSuccessfulAnswer(resolvedChallengePhase, this.currentPhase);
+  }
+
+  finishTwinShapeIfResolved(resolvedChallengePhase) {
+    this.dynamicRuleSequence.consumeSuccessfulAnswer(resolvedChallengePhase, this.currentPhase);
+  }
+
+  advanceBurstSequenceAfterResolvedActiveShape(resolvedShape, shouldScheduleNextChallenge) {
+    const didCompleteBurst = this.challengeManager.advanceBurstAfterActiveShape(resolvedShape);
+
+    if (!didCompleteBurst || !shouldScheduleNextChallenge) return;
+
+    this.scheduleNextBurstChallengeAfterThrow(resolvedShape);
+  }
+
+  scheduleNextBurstChallengeAfterThrow(thrownShape) {
+    const nextSpawnDelayMs = getNextSpawnDelayMs(this.score) ?? 0;
+    this.scheduleNextSingleShapeAfterThrow(thrownShape, nextSpawnDelayMs);
+  }
+
+  advanceTwinSequenceAfterResolvedActiveShape(resolvedShape, shouldScheduleNextChallenge) {
+    const didCompleteTwin = this.challengeManager.advanceTwinAfterActiveShape(resolvedShape);
+
+    if (!didCompleteTwin || !shouldScheduleNextChallenge) return;
+
+    this.scheduleNextTwinChallengeAfterThrow(resolvedShape);
+  }
+
+  scheduleNextTwinChallengeAfterThrow(thrownShape) {
+    const nextSpawnDelayMs = getNextSpawnDelayMs(this.score) ?? 0;
+    this.scheduleNextSingleShapeAfterThrow(thrownShape, nextSpawnDelayMs);
   }
 
   updateDuoShapes(deltaSeconds) {
@@ -4850,6 +5215,7 @@ class NeonSwipeGame {
   clearPendingDuoSpawn() {
     this.challengeManager.clearSecondShapeTimeout();
     this.challengeManager.clearNextSingleShapeTimeout();
+    this.challengeManager.clearBurstShapeTimeouts();
   }
 
   resetLevelRuntime() {
@@ -4954,6 +5320,16 @@ class NeonSwipeGame {
     }
 
     if (this.pendingLevelIntroPhase) return;
+
+    if (this.challengeManager.isActiveBurstShape(thrownShape)) {
+      this.advanceBurstSequenceAfterResolvedActiveShape(thrownShape, true);
+      return;
+    }
+
+    if (this.challengeManager.isActiveTwinShape(thrownShape)) {
+      this.advanceTwinSequenceAfterResolvedActiveShape(thrownShape, true);
+      return;
+    }
 
     const nextSpawnDelayMs = getNextSpawnDelayMs(this.score);
     if (nextSpawnDelayMs === null) return;
@@ -5276,7 +5652,6 @@ class NeonSwipeGame {
         this.drawSwipeTrail(shape, currentTime);
 
         this.context.save();
-        this.context.globalAlpha = shape.state === "inactive" ? 0.7 : 1;
         this.context.translate(shape.x, shape.y);
         const velocityAngle =
           Math.atan2(shape.velocityY, shape.velocityX);
@@ -5299,13 +5674,27 @@ class NeonSwipeGame {
           shape.shapeName,
           NEON_COLORS[shape.colorId],
           this.scaler.x(shape.state === "active" ? GAME_CONFIG.shapeRadius * 1.08 : GAME_CONFIG.shapeRadius),
-          1,
+          this.getShapeRenderOpacity(shape),
           shape.hasBeenThrown
             ? swipeGlowMultiplier
             : spawnGlowMultiplier
         );
         this.context.restore();
       });
+  }
+
+  getShapeRenderOpacity(shape) {
+    if (shape.state === "inactive" && !shape.hasBeenThrown) {
+      if (this.challengeManager.isBurstShape(shape)) {
+        return GAME_CONFIG.burstWaitingOpacity;
+      }
+
+      if (this.challengeManager.isTwinShape(shape)) {
+        return GAME_CONFIG.twinWaitingOpacity;
+      }
+    }
+
+    return shape.state === "inactive" ? 0.7 : 1;
   }
 
   drawSwipeTrail(shape, currentTime) {
@@ -5617,7 +6006,7 @@ function getNextSpawnDelayMs(score) {
   if (score < 4) return null;
 
   return Math.max(
-    200 - (score - 4) * 3,
+    200 - (score - 4) * 4,
     50
   );
 }
