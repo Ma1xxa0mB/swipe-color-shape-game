@@ -29,6 +29,10 @@ const GAME_CONFIG = {
   burstWaitingOpacity: 0.20,
   twinHorizontalOffset: 105,
   twinWaitingOpacity: 0.20,
+  revealShuffleIntervalMs: 80,
+  revealApexVelocityThreshold: 0,
+  revealLockFlashDurationMs: 120,
+  revealLockGlowMultiplier: 1.5,
   spawnSquashStretchDurationMs: 350,
   spawnHaloAnimationDurationMs: 430,
   spawnHaloMaxMultiplier: 3.0,
@@ -383,13 +387,22 @@ class FallingShape {
     this.createdAt = performance.now();
     this.spawnAnimationStartedAt = null;
     this.swipeAnimationStartedAt = null;
+    this.isRevealShape = false;
+    this.isRevealLocked = false;
+    this.revealDisplayShapeName = null;
+    this.revealDisplayColorId = null;
+    this.revealLastShuffleAt = 0;
+    this.revealLockedAt = null;
   }
 
   update(deltaSeconds, gravity) {
+    const previousVelocityY = this.velocityY;
+
     this.velocityY += gravity * deltaSeconds;
     this.velocityX *= 0.996;
     this.x += this.velocityX * deltaSeconds;
     this.y += this.velocityY * deltaSeconds;
+    this.updateRevealState(previousVelocityY, performance.now());
   }
 
   throwToward(direction, force, shouldLockAfterThrow) {
@@ -608,7 +621,97 @@ class FallingShape {
     return 1 - progress;
   }
 
+  enableReveal(currentTime) {
+    this.isRevealShape = true;
+    this.isRevealLocked = false;
+    this.revealDisplayShapeName = getRandomItemExcept(
+      AVAILABLE_SHAPES,
+      this.shapeName
+    );
+
+    this.revealDisplayColorId = getRandomItemExcept(
+      AVAILABLE_COLOR_IDS,
+      this.colorId
+    );
+    this.revealLastShuffleAt = currentTime;
+    this.revealLockedAt = null;
+  }
+
+  updateRevealState(previousVelocityY, currentTime) {
+    if (!this.isRevealShape || this.isRevealLocked) return;
+
+    if (
+      previousVelocityY < GAME_CONFIG.revealApexVelocityThreshold &&
+      this.velocityY >= GAME_CONFIG.revealApexVelocityThreshold
+    ) {
+      this.lockReveal(currentTime);
+      return;
+    }
+
+    if (currentTime - this.revealLastShuffleAt < GAME_CONFIG.revealShuffleIntervalMs) return;
+
+    this.revealDisplayShapeName = getRandomItemExcept(
+      AVAILABLE_SHAPES,
+      this.revealDisplayShapeName
+    );
+
+    this.revealDisplayColorId = getRandomItemExcept(
+      AVAILABLE_COLOR_IDS,
+      this.revealDisplayColorId
+    );
+
+    this.revealLastShuffleAt = currentTime;
+  }
+
+  lockReveal(currentTime) {
+    this.isRevealLocked = true;
+    this.revealDisplayShapeName = this.shapeName;
+    this.revealDisplayColorId = this.colorId;
+    this.revealLockedAt = currentTime;
+  }
+
+  getRenderIdentity() {
+    if (this.isRevealShape && !this.isRevealLocked) {
+      return {
+        shapeName: this.revealDisplayShapeName || this.shapeName,
+        colorId: this.revealDisplayColorId || this.colorId
+      };
+    }
+
+    return {
+      shapeName: this.shapeName,
+      colorId: this.colorId
+    };
+  }
+
+  getRevealGlowMultiplier(currentTime) {
+    if (!this.isRevealShape || !this.isRevealLocked || this.revealLockedAt === null) {
+      return 1;
+    }
+
+    const elapsedMs = currentTime - this.revealLockedAt;
+
+    if (elapsedMs >= GAME_CONFIG.revealLockFlashDurationMs) {
+      return 1;
+    }
+
+    const progress = clamp(
+      elapsedMs / GAME_CONFIG.revealLockFlashDurationMs,
+      0,
+      1
+    );
+
+    return (
+      GAME_CONFIG.revealLockGlowMultiplier -
+      (GAME_CONFIG.revealLockGlowMultiplier - 1) * progress
+    );
+  }
+
   get canReceiveSwipe() {
+    if (this.isRevealShape && !this.isRevealLocked) {
+      return false;
+    }
+
     return this.state === "active";
   }
 
@@ -4534,7 +4637,8 @@ class NeonSwipeGame {
       blink: false,
       pulse: false,
       burst: false,
-      twin: true,
+      twin: false,
+      reveal: true,
       void: false
     };
     this.lastAnimationTime = 0;
@@ -4734,6 +4838,7 @@ class NeonSwipeGame {
     const fallingShape = this.createShapeFromSpawn(spawn);
 
     this.applyVoidModifierToShape(fallingShape, challengePhaseSnapshot);
+    this.applyRevealModifierToShape(fallingShape, challengePhaseSnapshot);
 
     fallingShape.challengePhase = challengePhaseSnapshot;
     fallingShape.validationPhase = validationPhaseSnapshot;
@@ -4760,6 +4865,17 @@ class NeonSwipeGame {
       !this.currentPhase.usesPreciseDuoSelection &&
       !this.currentPhase.usesDuoShapes &&
       projectileEntry === "bottom"
+    );
+  }
+
+  shouldApplyRevealModifierToShape(challengePhase, fallingShape) {
+    const projectileEntry = challengePhase.projectileEntry || "bottom";
+
+    return Boolean(
+      this.activeModifiers.reveal &&
+      !challengePhase.usesPreciseDuoSelection &&
+      projectileEntry === "bottom" &&
+      fallingShape.velocityY < GAME_CONFIG.revealApexVelocityThreshold
     );
   }
 
@@ -4863,6 +4979,12 @@ class NeonSwipeGame {
 
     fallingShape.shapeName = getRandomItem(AVAILABLE_SHAPES);
     fallingShape.colorId = getRandomItem(VOID_COLOR_IDS);
+  }
+
+  applyRevealModifierToShape(fallingShape, challengePhase) {
+    if (!this.shouldApplyRevealModifierToShape(challengePhase, fallingShape)) return;
+
+    fallingShape.enableReveal(performance.now());
   }
 
   updateVisibleRuleForActiveShape(nextRuleName, previousRuleName = this.activeShapeRuleName) {
@@ -5289,7 +5411,9 @@ class NeonSwipeGame {
   }
 
   prepareSwipeFromPoint(startPoint) {
-    if (!this.currentChallengePhase?.usesPreciseDuoSelection) return true;
+    if (!this.currentChallengePhase?.usesPreciseDuoSelection) {
+      return Boolean(this.activeShape?.canReceiveSwipe);
+    }
 
     const selectedShape = this.challengeManager.findSelectableShapeAtPoint(startPoint);
     if (!selectedShape) return false;
@@ -5605,11 +5729,13 @@ class NeonSwipeGame {
         spawnRenderScale.scaleY
       );
 
+      const renderIdentity = shape.getRenderIdentity();
+
       ShapeRenderer.draw(
         this.context,
         { x: 0, y: 0 },
-        shape.shapeName,
-        NEON_COLORS[shape.colorId],
+        renderIdentity.shapeName,
+        NEON_COLORS[renderIdentity.colorId],
         this.scaler.x(
           shape.state === "active"
             ? GAME_CONFIG.shapeRadius * 1.08
@@ -5668,16 +5794,19 @@ class NeonSwipeGame {
         } else {
           this.context.scale(spawnRenderScale.scaleX, spawnRenderScale.scaleY);
         }
+        const renderIdentity = shape.getRenderIdentity();
+        const revealGlowMultiplier = shape.getRevealGlowMultiplier(currentTime);
+
         ShapeRenderer.draw(
           this.context,
           { x: 0, y: 0 },
-          shape.shapeName,
-          NEON_COLORS[shape.colorId],
+          renderIdentity.shapeName,
+          NEON_COLORS[renderIdentity.colorId],
           this.scaler.x(shape.state === "active" ? GAME_CONFIG.shapeRadius * 1.08 : GAME_CONFIG.shapeRadius),
           this.getShapeRenderOpacity(shape),
-          shape.hasBeenThrown
+          (shape.hasBeenThrown
             ? swipeGlowMultiplier
-            : spawnGlowMultiplier
+            : spawnGlowMultiplier) * revealGlowMultiplier
         );
         this.context.restore();
       });
@@ -6000,6 +6129,14 @@ class NeonSwipeGame {
 
 function getRandomItem(items) {
   return items[Math.floor(Math.random() * items.length)];
+}
+
+function getRandomItemExcept(items, excludedItem) {
+  const availableItems = items.filter(
+    (item) => item !== excludedItem
+  );
+
+  return getRandomItem(availableItems);
 }
 
 function getNextSpawnDelayMs(score) {
