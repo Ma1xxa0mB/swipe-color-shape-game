@@ -12,9 +12,9 @@ const GAME_CONFIG = {
   designHeight: 960,
   gravity: 1450, // 1450
   spawnImpulse: -1300, // -1120
-  minSwipeDistance: 32,
-  minThrowForce: 880,
-  maxThrowForce: 1560,
+  minSwipeDistance: 15,
+  minThrowForce: 1800,
+  maxThrowForce: 2400,
   upwardThrowBoost: 330,
   shapeRadius: 34,
   level19SecondShapeDelayMs: 500,
