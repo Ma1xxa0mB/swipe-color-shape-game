@@ -10,6 +10,8 @@ const drawingContext = canvasElement.getContext("2d");
 const GAME_CONFIG = {
   designWidth: 540,
   designHeight: 960,
+  maxResponsiveDesignHeight: 1080,
+  maxCanvasCssWidth: 540,
   gravity: 1450, // 1450
   spawnImpulse: -1300, // -1120
   minSwipeDistance: 32,
@@ -81,10 +83,12 @@ const GAME_CONFIG = {
   blinkNeutralDurationMs: 800,
   voidSpawnChance: 0.25,
   topSpawnGravityMultiplier: 0.65,
+  gameOverHoldDurationMs: 250,
+  gameOverTransitionDurationMs: 700,
 };
 
 const HOME_UI_DATA = {
-  bestScore: 76,
+  bestScore: 0,
   dailyAttemptsLeft: 4,
   dailyMaxAttempts: 4
 };
@@ -242,12 +246,54 @@ const KEYBOARD_TARGETS = {
 };
 
 class GeometryScaler {
-  constructor(designWidth, designHeight) {
+  constructor(designWidth, designHeight, maxDesignHeight = designHeight) {
     this.designWidth = designWidth;
+    this.baseDesignHeight = designHeight;
+    this.maxDesignHeight = maxDesignHeight;
     this.designHeight = designHeight;
     this.canvasWidth = designWidth;
     this.canvasHeight = designHeight;
     this.scale = 1;
+  }
+
+  get minDesignHeight() {
+    return this.baseDesignHeight;
+  }
+
+  get maxLogicalHeight() {
+    return this.maxDesignHeight;
+  }
+
+  getLogicalHeightForCssSize(cssWidth, cssHeight) {
+    if (!cssWidth || !cssHeight) return this.baseDesignHeight;
+
+    return clamp(
+      cssHeight / (cssWidth / this.designWidth),
+      this.minDesignHeight,
+      this.maxLogicalHeight
+    );
+  }
+
+  getCssSizeForViewport(viewportWidth, viewportHeight, maxCssWidth) {
+    const safeViewportWidth = Math.max(viewportWidth || this.designWidth, 1);
+    const safeViewportHeight = Math.max(viewportHeight || this.baseDesignHeight, 1);
+    const maxWidth = maxCssWidth || this.designWidth;
+
+    let cssWidth = Math.min(safeViewportWidth, maxWidth);
+    let logicalHeight = this.getLogicalHeightForCssSize(cssWidth, safeViewportHeight);
+    let cssHeight = cssWidth * (logicalHeight / this.designWidth);
+
+    if (cssHeight > safeViewportHeight) {
+      cssHeight = safeViewportHeight;
+      cssWidth = cssHeight * (this.designWidth / logicalHeight);
+      logicalHeight = this.getLogicalHeightForCssSize(cssWidth, cssHeight);
+    }
+
+    return {
+      width: cssWidth,
+      height: cssHeight,
+      logicalHeight
+    };
   }
 
   updateFromCanvas(canvas) {
@@ -259,9 +305,10 @@ class GeometryScaler {
 
     this.canvasWidth = canvasBounds.width;
     this.canvasHeight = canvasBounds.height;
-    this.scale = Math.min(
-      canvasBounds.width / this.designWidth,
-      canvasBounds.height / this.designHeight
+    this.scale = canvasBounds.width / this.designWidth;
+    this.designHeight = this.getLogicalHeightForCssSize(
+      canvasBounds.width,
+      canvasBounds.height
     );
 
     return pixelRatio;
@@ -803,15 +850,24 @@ class Arena {
 
   getScaledLayout() {
     const layout = this.layout;
+
     return {
       outerX: this.scaler.x(layout.outerX),
       outerY: this.scaler.y(layout.outerY),
       outerWidth: this.scaler.x(layout.outerWidth),
-      outerHeight: this.scaler.y(layout.outerHeight),
+
+      outerHeight: this.scaler.y(
+        this.scaler.designHeight - 54
+      ),
+
       innerX: this.scaler.x(layout.innerX),
       innerY: this.scaler.y(layout.innerY),
       innerWidth: this.scaler.x(layout.innerWidth),
-      innerHeight: this.scaler.y(layout.innerHeight),
+
+      innerHeight: this.scaler.y(
+        this.scaler.designHeight - 230
+      ),
+
       railSize: this.scaler.x(layout.railSize),
       cornerRadius: this.scaler.x(layout.cornerRadius)
     };
@@ -1285,7 +1341,6 @@ class Arena {
         modifierVisualState
       );
 
-      this.drawInnerGuide(context);
       return;
     }
 
@@ -1308,7 +1363,6 @@ class Arena {
         modifierVisualState
       );
 
-      this.drawInnerGuide(context);
       return;
     }
 
@@ -1332,7 +1386,6 @@ class Arena {
       modifierVisualState
     );
 
-    this.drawInnerGuide(context);
   }
 
   drawReceiverTracksWithWallColorAnimation(
@@ -1530,23 +1583,45 @@ class Arena {
   }
 
   drawReceiverIcons(context, currentPhase, opacity = 1, hitFeedbackByReceiverId = {}, modifierVisualState = null) {
-    const layout = this.layout;
-    const iconMargin = 64;
-    const receiverIconRadius = this.scaler.x(GAME_CONFIG.shapeRadius);
-    const iconPositionsByReceiverId = currentPhase.usesMovingReceiverTracks
-      ? this.receivers.reduce((positionsByReceiverId, receiver) => {
-        positionsByReceiverId[receiver.id] = this.getMovingReceiverIconPoint(receiver, currentPhase);
-        return positionsByReceiverId;
-      }, {})
-      : {
-        topLeft: this.scaler.point(layout.innerX + iconMargin, layout.innerY + iconMargin),
-        topRight: this.scaler.point(layout.innerX + layout.innerWidth - iconMargin, layout.innerY + iconMargin),
-        bottomLeft: this.scaler.point(layout.innerX + iconMargin, layout.innerY + layout.innerHeight - iconMargin),
-        bottomRight: this.scaler.point(layout.innerX + layout.innerWidth - iconMargin, layout.innerY + layout.innerHeight - iconMargin)
-      };
+    const layout = this.getScaledLayout();
 
-    // Les symboles de reference sont dans les coins du carre interieur,
-    // separes des rails neon pour ne pas donner l'impression qu'ils sont sur le mur.
+    const iconInset = this.scaler.x(140);
+
+    const receiverIconRadius =
+      this.scaler.x(GAME_CONFIG.shapeRadius);
+
+    const iconPositionsByReceiverId =
+      currentPhase.usesMovingReceiverTracks
+        ? this.receivers.reduce((positionsByReceiverId, receiver) => {
+          positionsByReceiverId[receiver.id] =
+            this.getMovingReceiverIconPoint(receiver, currentPhase);
+
+          return positionsByReceiverId;
+        }, {})
+        : {
+          topLeft: {
+            x: layout.outerX + iconInset,
+            y: layout.outerY + iconInset
+          },
+
+          topRight: {
+            x: layout.outerX + layout.outerWidth - iconInset,
+            y: layout.outerY + iconInset
+          },
+
+          bottomLeft: {
+            x: layout.outerX + iconInset,
+            y: layout.outerY + layout.outerHeight - iconInset
+          },
+
+          bottomRight: {
+            x: layout.outerX + layout.outerWidth - iconInset,
+            y: layout.outerY + layout.outerHeight - iconInset
+          }
+        };
+
+    // Les symboles restent à distance constante
+    // des coins de l'arène, quel que soit le ratio de l'écran.
     this.receivers.forEach((receiver) => {
       const hitStrength =
         hitFeedbackByReceiverId[receiver.id] || 0;
@@ -1613,16 +1688,6 @@ class Arena {
     };
   }
 
-  drawInnerGuide(context) {
-    const layout = this.getScaledLayout();
-
-    context.save();
-    context.strokeStyle = "rgba(255,255,255,0.07)";
-    context.lineWidth = this.scaler.x(1);
-    ShapeRenderer.roundRect(context, layout.innerX, layout.innerY, layout.innerWidth, layout.innerHeight, layout.cornerRadius);
-    context.stroke();
-    context.restore();
-  }
 }
 
 class ShapeRenderer {
@@ -2172,7 +2237,7 @@ class SpawnController {
 
     return {
       x: scaler.x(GAME_CONFIG.designWidth / 2),
-      y: scaler.y(GAME_CONFIG.designHeight + 38),
+      y: scaler.y(scaler.designHeight + 38),
       velocityX: 0,
       velocityY: scaler.y(this.game.currentChallengeSpawnImpulse)
     };
@@ -2195,7 +2260,11 @@ class SpawnController {
 
   getLeftSpawn() {
     const { scaler } = this.game;
-    const spawnY = scaler.y(GAME_CONFIG.designHeight * GAME_CONFIG.sideEntryHeightRatio);
+    const spawnY =
+      scaler.y(
+        scaler.designHeight *
+        GAME_CONFIG.sideEntryHeightRatio
+      );
 
     return {
       x: scaler.x(-GAME_CONFIG.shapeRadius - 8),
@@ -2207,7 +2276,11 @@ class SpawnController {
 
   getRightSpawn() {
     const { scaler } = this.game;
-    const spawnY = scaler.y(GAME_CONFIG.designHeight * GAME_CONFIG.sideEntryHeightRatio);
+    const spawnY =
+      scaler.y(
+        scaler.designHeight *
+        GAME_CONFIG.sideEntryHeightRatio
+      );
 
     return {
       x: scaler.x(GAME_CONFIG.designWidth + GAME_CONFIG.shapeRadius + 8),
@@ -2235,7 +2308,7 @@ class SpawnController {
 
     return {
       x: spawnX,
-      y: this.game.scaler.y(GAME_CONFIG.designHeight + 38),
+      y: this.game.scaler.y(this.game.scaler.designHeight + 38),
       velocityX: this.getMovingBottomSpawnVelocityX(spawnX),
       velocityY: this.game.scaler.y(this.game.currentChallengeSpawnImpulse)
     };
@@ -2756,21 +2829,33 @@ class HomeScreen {
     this.drawBorder(context);
     this.drawCornerShapes(context, currentTime);
     this.drawSettingsButton(context);
-    this.drawLogo(context, currentTime);
+    this.drawLogo(context, currentTime, this.hitTargets);
     this.drawPlayButton(context, currentTime);
-    this.drawBestScore(context, data.bestScore);
+    this.drawBestScore(context, data.bestScore, this.hitTargets);
     this.drawDailyCard(context, data, currentTime);
 
   }
 
   getLayout() {
     const centerX = this.scaler.canvasWidth / 2;
+    const extraHeight = this.getResponsiveExtraHeight();
+    const logoY = 235 + extraHeight * 0.2;
+    const playY = 420 + extraHeight * 0.45;
+    const bestOffsetY = extraHeight * 0.45;
+    const dailyY = this.scaler.designHeight - 230;
 
     return {
       settings: this.rectFromCenter(this.scaler.x(42), this.scaler.y(38), this.scaler.x(46), this.scaler.y(46)),
-      play: this.rectFromCenter(centerX, this.scaler.y(390), this.scaler.x(294), this.scaler.y(76)),
-      daily: this.rectFromCenter(centerX, this.scaler.y(700), this.scaler.x(390), this.scaler.y(170)),
+      logoY: this.scaler.y(logoY),
+      play: this.rectFromCenter(centerX, this.scaler.y(playY), this.scaler.x(294), this.scaler.y(76)),
+      bestLabelY: this.scaler.y(530 + bestOffsetY),
+      bestScoreY: this.scaler.y(580 + bestOffsetY),
+      daily: this.rectFromCenter(centerX, this.scaler.y(dailyY), this.scaler.x(300), this.scaler.y(80))
     };
+  }
+
+  getResponsiveExtraHeight() {
+    return Math.max(this.scaler.designHeight - this.scaler.baseDesignHeight, 0);
   }
 
   rectFromCenter(centerX, centerY, width, height) {
@@ -2838,7 +2923,7 @@ class HomeScreen {
       outerX: this.scaler.x(2),
       outerY: this.scaler.y(52),
       outerWidth: this.scaler.x(536),
-      outerHeight: this.scaler.y(906),
+      outerHeight: this.scaler.y(this.scaler.designHeight - 54),
       railSize: this.scaler.x(48),
       cornerRadius: this.scaler.x(150)
     };
@@ -2990,21 +3075,9 @@ class HomeScreen {
     context.restore();
   }
 
-  drawLogo(context, currentTime) {
+  drawLogo(context, currentTime, layout) {
     const centerX = this.scaler.canvasWidth / 2;
-    const topY = this.scaler.y(235);
-
-    const glowPulse =
-      (Math.sin(currentTime / 850) + 1) / 2;
-
-    const largeGlow =
-      this.scaler.x(18 + glowPulse * 12);
-
-    const bodyGlow =
-      this.scaler.x(8 + glowPulse * 7);
-
-    const haloOpacity =
-      0.42 + glowPulse * 0.18;
+    const topY = layout.logoY;
 
     const neonLetters = [
       { letter: "N", color: NEON_COLORS.red },
@@ -3017,52 +3090,76 @@ class HomeScreen {
     const neonTracking = this.scaler.x(8);
 
     context.save();
-    context.font = `400 ${neonFontSize}px Orbitron`;
+
+    context.font =
+      `400 ${neonFontSize}px Orbitron`;
+
     context.textBaseline = "middle";
     context.textAlign = "left";
 
-    const widths = neonLetters.map(item => context.measureText(item.letter).width);
+    const widths =
+      neonLetters.map(
+        item =>
+          context.measureText(item.letter).width
+      );
+
     const totalWidth =
-      widths.reduce((sum, width) => sum + width, 0) +
-      neonTracking * (neonLetters.length - 1);
+      widths.reduce(
+        (sum, width) => sum + width,
+        0
+      ) +
+      neonTracking *
+      (neonLetters.length - 1);
 
-    let x = centerX - totalWidth / 2;
+    let x =
+      centerX - totalWidth / 2;
 
-    const drawNeonLetter = (letter, x, y, color) => {
-      // 1) halo coloré large
+
+    const drawNeonLetter = (
+      letter,
+      x,
+      y,
+      color
+    ) => {
       context.save();
-      context.globalAlpha = haloOpacity;
+
       context.fillStyle = color;
       context.shadowColor = color;
-      context.shadowBlur = largeGlow;
-      context.fillText(letter, x, y);
-      context.restore();
+      context.shadowBlur =
+        this.scaler.x(28);
 
-      // 2) corps principal coloré
-      context.save();
       context.globalAlpha = 1;
-      context.fillStyle = color;
-      context.shadowColor = color;
-      context.shadowBlur = bodyGlow;
-      context.fillText(letter, x, y);
-      context.restore();
 
-      // 3) cœur blanc très léger
-      context.save();
-      context.globalAlpha = 0.22;
-      context.fillStyle = "#ffffff";
-      context.shadowColor = "#ffffff";
-      context.shadowBlur = this.scaler.x(3);
-      context.fillText(letter, x, y);
+      context.globalCompositeOperation =
+        "lighter";
+
+      context.fillText(
+        letter,
+        x,
+        y
+      );
+
       context.restore();
     };
 
-    neonLetters.forEach((item, index) => {
-      drawNeonLetter(item.letter, x, topY, item.color);
-      x += widths[index] + neonTracking;
-    });
+
+    neonLetters.forEach(
+      (item, index) => {
+        drawNeonLetter(
+          item.letter,
+          x,
+          topY,
+          item.color
+        );
+
+        x +=
+          widths[index] +
+          neonTracking;
+      }
+    );
 
     context.restore();
+
 
     this.drawTrackedText(
       context,
@@ -3074,66 +3171,14 @@ class HomeScreen {
         fontFamily: "Orbitron",
         fontWeight: 400,
         tracking: this.scaler.x(25),
-        fillStyle: "rgba(245,248,255,0.96)",
-        shadowColor: "rgba(255,255,255,0.42)",
+        fillStyle:
+          "rgba(245,248,255,0.96)",
+        shadowColor:
+          "rgba(255,255,255,0.42)",
         shadowBlur: this.scaler.x(10)
       }
     );
   }
-
-  // drawLogo(context) {
-  //   const centerX = this.scaler.canvasWidth / 2;
-  //   const topY = this.scaler.y(235);
-
-  //   const neonLetters = [
-  //     { letter: "N", color: NEON_COLORS.red },
-  //     { letter: "E", color: NEON_COLORS.green },
-  //     { letter: "O", color: NEON_COLORS.yellow },
-  //     { letter: "N", color: NEON_COLORS.blue }
-  //   ];
-
-  //   const neonFontSize = this.scaler.x(60);
-  //   const neonTracking = this.scaler.x(10);
-
-  //   context.save();
-  //   context.font = `400 ${neonFontSize}px Orbitron`;
-  //   context.textBaseline = "middle";
-  //   context.textAlign = "left";
-
-  //   const widths = neonLetters.map(item => context.measureText(item.letter).width);
-  //   const totalWidth =
-  //     widths.reduce((sum, width) => sum + width, 0) +
-  //     neonTracking * (neonLetters.length - 1);
-
-  //   let x = centerX - totalWidth / 2;
-
-  //   neonLetters.forEach((item, index) => {
-  //     context.fillStyle = item.color;
-  //     context.shadowColor = item.color;
-  //     context.shadowBlur = this.scaler.x(14);
-  //     context.fillText(item.letter, x, topY);
-  //     x += widths[index] + neonTracking;
-  //   });
-
-  //   context.restore();
-
-  //   this.drawTrackedText(
-  //     context,
-  //     "SWIPE",
-  //     centerX,
-  //     topY + this.scaler.y(56),
-  //     {
-  //       fontSize: this.scaler.x(28),
-  //       fontFamily: "Orbitron",
-  //       fontWeight: 400,
-  //       tracking: this.scaler.x(28),
-  //       fillStyle: "rgba(245,248,255,0.96)",
-  //       shadowColor: "rgba(255,255,255,0.42)",
-  //       shadowBlur: this.scaler.x(10)
-  //     }
-  //   );
-  // }
-
 
   drawPlayButton(context, currentTime) {
     const target = this.hitTargets.play;
@@ -3182,7 +3227,7 @@ class HomeScreen {
 
     context.restore();
   }
-  drawBestScore(context, bestScore) {
+  drawBestScore(context, bestScore, layout) {
     const centerX = this.scaler.canvasWidth / 2;
     context.save();
     context.textAlign = "center";
@@ -3190,14 +3235,14 @@ class HomeScreen {
     context.fillStyle = "rgba(127, 141, 163, 0.9)";
     context.font = `600 ${this.scaler.x(20)}px Orbitron`;
     context.letterSpacing = `${this.scaler.x(5)}px`;
-    context.fillText("BEST", centerX, this.scaler.y(474));
+    context.fillText("BEST", centerX, layout.bestLabelY);
 
     context.fillStyle = "rgba(248, 251, 255, 0.96)";
     context.shadowColor = "rgba(255, 255, 255, 0.55)";
     context.shadowBlur = this.scaler.x(10);
     context.font = `400 ${this.scaler.x(48)}px "Bebas Neue"`;
     context.letterSpacing = "0px";
-    context.fillText(String(bestScore), centerX, this.scaler.y(522));
+    context.fillText(String(bestScore), centerX, layout.bestScoreY);
     context.restore();
   }
 
@@ -3434,112 +3479,7 @@ class HomeScreen {
     context.fillText(
       "DAILY CHALLENGE",
       target.x + target.width / 2,
-      target.y + this.scaler.y(34)
-    );
-
-    context.restore();
-
-
-    // 30 IN A ROW
-    context.save();
-
-    context.textAlign = "center";
-    context.textBaseline = "middle";
-
-    context.fillStyle = "rgba(255,255,255,0.98)";
-    context.shadowColor = "rgba(255,255,255,0.55)";
-    context.shadowBlur = this.scaler.x(10);
-
-    context.font =
-      `600 ${this.scaler.x(16)}px Oxanium`;
-
-    context.letterSpacing =
-      `${this.scaler.x(4)}px`;
-
-    context.fillText(
-      "30 IN A ROW",
-      target.x + target.width / 2,
-      target.y + this.scaler.y(80)
-    );
-
-    context.restore();
-
-
-    // Attempts
-    const dotY =
-      target.y + this.scaler.y(125);
-
-    const dotStartX =
-      target.x + this.scaler.x(82);
-
-    const dotSpacing =
-      this.scaler.x(24);
-
-    const dotRadius =
-      this.scaler.x(6);
-
-    for (
-      let index = 0;
-      index < data.dailyMaxAttempts;
-      index += 1
-    ) {
-      const isAvailable =
-        index < data.dailyAttemptsLeft;
-
-      context.save();
-
-      if (isAvailable) {
-        context.fillStyle = "#ffffff";
-        context.shadowColor = "rgba(255,255,255,0.95)";
-        context.shadowBlur = this.scaler.x(10);
-      } else {
-        context.fillStyle = "rgba(255,255,255,0.06)";
-        context.strokeStyle = "rgba(255,255,255,0.22)";
-        context.lineWidth = this.scaler.x(1.3);
-        context.shadowColor = "transparent";
-      }
-
-      context.beginPath();
-
-      context.arc(
-        dotStartX + index * dotSpacing,
-        dotY,
-        dotRadius,
-        0,
-        Math.PI * 2
-      );
-
-      if (isAvailable) {
-        context.fill();
-      } else {
-        context.fill();
-        context.stroke();
-      }
-
-      context.restore();
-    }
-
-
-    // Texte attempts
-    context.save();
-
-    context.textAlign = "left";
-    context.textBaseline = "middle";
-
-    context.fillStyle = "rgba(238,244,255,0.78)";
-    context.shadowColor = "rgba(255,255,255,0.12)";
-    context.shadowBlur = this.scaler.x(5);
-
-    context.font =
-      `600 ${this.scaler.x(16)}px Oxanium`;
-
-    context.letterSpacing =
-      `${this.scaler.x(2)}px`;
-
-    context.fillText(
-      `${data.dailyAttemptsLeft} ATTEMPTS`,
-      target.x + this.scaler.x(205),
-      dotY
+      target.y + target.height / 2
     );
 
     context.restore();
@@ -3907,6 +3847,387 @@ class HomeScreen {
 
 }
 
+class GameOverScreen {
+  constructor(scaler) {
+    this.scaler = scaler;
+    this.hitTargets = {};
+  }
+
+  draw(context, data, currentTime) {
+    this.hitTargets = this.getLayout();
+
+    const progress =
+      data.transitionProgress ?? 1;
+
+    const eased =
+      1 - Math.pow(1 - progress, 3);
+
+    this.drawOverlay(context, eased);
+
+
+    // GAME OVER
+    const titleProgress = clamp(
+      progress / 0.45,
+      0,
+      1
+    );
+
+    if (titleProgress > 0) {
+      context.save();
+
+      context.globalAlpha =
+        titleProgress;
+
+      context.translate(
+        0,
+        this.scaler.y(
+          12 * (1 - titleProgress)
+        )
+      );
+
+      this.drawTitle(context, this.hitTargets);
+
+      context.restore();
+    }
+
+
+    // SCORE
+    const scoreProgress = clamp(
+      (progress - 0.18) / 0.55,
+      0,
+      1
+    );
+
+    if (scoreProgress > 0) {
+      context.save();
+
+      context.globalAlpha =
+        scoreProgress;
+
+      context.translate(
+        0,
+        this.scaler.y(
+          10 * (1 - scoreProgress)
+        )
+      );
+
+      this.drawScore(
+        context,
+        data.score,
+        this.hitTargets
+      );
+
+      context.restore();
+    }
+
+
+    // BEST
+    const bestProgress = clamp(
+      (progress - 0.38) / 0.45,
+      0,
+      1
+    );
+
+    if (bestProgress > 0) {
+      context.save();
+
+      context.globalAlpha =
+        bestProgress;
+
+      context.translate(
+        0,
+        this.scaler.y(
+          8 * (1 - bestProgress)
+        )
+      );
+
+      this.drawBest(
+        context,
+        data,
+        currentTime,
+        this.hitTargets
+      );
+
+      context.restore();
+    }
+
+
+    // HOME
+    const homeProgress = clamp(
+      (progress - 0.35) / 0.45,
+      0,
+      1
+    );
+
+    if (homeProgress > 0) {
+      context.save();
+      context.globalAlpha = homeProgress;
+
+      this.drawHomeButton(context);
+
+      context.restore();
+    }
+
+
+    // TAP TO RESTART
+    const restartProgress = clamp(
+      (progress - 0.60) / 0.40,
+      0,
+      1
+    );
+
+    if (restartProgress > 0) {
+      context.save();
+
+      context.globalAlpha =
+        restartProgress;
+
+      this.drawRestartHint(
+        context,
+        currentTime,
+        this.hitTargets
+      );
+
+      context.restore();
+    }
+  }
+
+  getLayout() {
+    const extraHeight = this.getResponsiveExtraHeight();
+    const groupOffsetY = extraHeight * 0.35;
+    const restartOffsetY = extraHeight * 0.7;
+
+    return {
+      home: {
+        x: this.scaler.x(22),
+        y: this.scaler.y(34),
+        width: this.scaler.x(58),
+        height: this.scaler.y(58)
+      },
+      titleY: this.scaler.y(315 + groupOffsetY),
+      scoreLabelY: this.scaler.y(375 + groupOffsetY),
+      scoreNumberY: this.scaler.y(455 + groupOffsetY),
+      bestLabelY: this.scaler.y(565 + groupOffsetY),
+      bestNumberY: this.scaler.y(615 + groupOffsetY),
+      restartY: this.scaler.y(735 + restartOffsetY)
+    };
+  }
+
+  getResponsiveExtraHeight() {
+    return Math.max(this.scaler.designHeight - this.scaler.baseDesignHeight, 0);
+  }
+
+  getHitTarget(point) {
+    const homeTarget = this.hitTargets.home || this.getLayout().home;
+
+    if (this.isPointInRect(point, homeTarget)) {
+      return "home";
+    }
+
+    return null;
+  }
+
+  isPointInRect(point, rect) {
+    return (
+      point.x >= rect.x &&
+      point.x <= rect.x + rect.width &&
+      point.y >= rect.y &&
+      point.y <= rect.y + rect.height
+    );
+  }
+
+  drawOverlay(context, progress = 1) {
+    context.save();
+
+    const opacity =
+      0.56 * progress;
+
+    context.fillStyle =
+      `rgba(0, 0, 0, ${opacity})`;
+
+    context.fillRect(
+      0,
+      0,
+      this.scaler.canvasWidth,
+      this.scaler.canvasHeight
+    );
+
+    context.restore();
+  }
+
+  drawHomeButton(context) {
+    const target = this.hitTargets.home;
+    const centerX = target.x + target.width / 2;
+    const centerY = target.y + target.height / 2;
+    const iconSize = this.scaler.x(22);
+
+    context.save();
+    context.strokeStyle = "rgba(238, 244, 255, 0.72)";
+    context.shadowColor = "rgba(255, 255, 255, 0.28)";
+    context.shadowBlur = this.scaler.x(8);
+    context.lineWidth = this.scaler.x(2.1);
+    context.lineCap = "round";
+    context.lineJoin = "round";
+
+    context.beginPath();
+    context.moveTo(centerX - iconSize * 0.62, centerY - iconSize * 0.06);
+    context.lineTo(centerX, centerY - iconSize * 0.62);
+    context.lineTo(centerX + iconSize * 0.62, centerY - iconSize * 0.06);
+    context.moveTo(centerX - iconSize * 0.42, centerY - iconSize * 0.02);
+    context.lineTo(centerX - iconSize * 0.42, centerY + iconSize * 0.55);
+    context.lineTo(centerX + iconSize * 0.42, centerY + iconSize * 0.55);
+    context.lineTo(centerX + iconSize * 0.42, centerY - iconSize * 0.02);
+    context.stroke();
+
+    context.restore();
+  }
+
+  drawTitle(context, layout) {
+    context.save();
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.fillStyle = "rgba(245, 248, 255, 0.96)";
+    context.shadowColor = "rgba(255, 255, 255, 0.38)";
+    context.shadowBlur = this.scaler.x(12);
+    context.font = `800 ${this.scaler.x(40)}px Orbitron`;
+    context.letterSpacing = `${this.scaler.x(8)}px`;
+    context.fillText("GAME OVER", this.scaler.canvasWidth / 2, layout.titleY);
+    context.restore();
+  }
+
+  drawScore(context, score, layout) {
+    const centerX = this.scaler.canvasWidth / 2;
+
+    context.save();
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+
+
+    // SCORE label
+    context.fillStyle = "rgba(127, 141, 163, 0.92)";
+    context.shadowColor = "transparent";
+    context.shadowBlur = 0;
+
+    context.font =
+      `600 ${this.scaler.x(18)}px Oxanium`;
+
+    context.letterSpacing =
+      `${this.scaler.x(5)}px`;
+
+    context.fillText(
+      "SCORE",
+      centerX,
+      layout.scoreLabelY
+    );
+
+
+    // Score principal
+    context.fillStyle = "#ffffff";
+
+    context.shadowColor =
+      "rgba(255,255,255,0.65)";
+
+    context.shadowBlur =
+      this.scaler.x(18);
+
+    context.font =
+      `400 ${this.scaler.x(100)}px "Bebas Neue"`;
+
+    context.letterSpacing = "0px";
+
+    context.fillText(
+      String(score),
+      centerX,
+      layout.scoreNumberY
+    );
+
+    context.restore();
+  }
+
+  drawBest(context, data, currentTime, layout) {
+    const centerX =
+      this.scaler.canvasWidth / 2;
+
+    const pulse =
+      (Math.sin(currentTime / 320) + 1) / 2;
+
+    const wasNewBest =
+      Boolean(data.wasNewBest);
+
+    context.save();
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+
+
+    // BEST / NEW BEST label
+    context.fillStyle = wasNewBest
+      ? "#ffffff"
+      : "rgba(127, 141, 163, 0.9)";
+
+    context.shadowColor = wasNewBest
+      ? "rgba(255,255,255,0.8)"
+      : "transparent";
+
+    context.shadowBlur = wasNewBest
+      ? this.scaler.x(8 + pulse * 8)
+      : 0;
+
+    context.font =
+      `600 ${this.scaler.x(17)}px Oxanium`;
+
+    context.letterSpacing =
+      `${this.scaler.x(5)}px`;
+
+    context.fillText(
+      wasNewBest ? "NEW BEST" : "BEST",
+      centerX,
+      layout.bestLabelY
+    );
+
+
+    // Best number
+    context.fillStyle =
+      "rgba(248,251,255,0.96)";
+
+    context.shadowColor = wasNewBest
+      ? "rgba(255,255,255,0.7)"
+      : "rgba(255,255,255,0.25)";
+
+    context.shadowBlur = wasNewBest
+      ? this.scaler.x(12 + pulse * 5)
+      : this.scaler.x(6);
+
+    context.font =
+      `400 ${this.scaler.x(54)}px "Bebas Neue"`;
+
+    context.letterSpacing = "0px";
+
+    context.fillText(
+      String(data.bestScore),
+      centerX,
+      layout.bestNumberY
+    );
+
+    context.restore();
+  }
+
+  drawRestartHint(context, currentTime, layout) {
+    const pulse = (Math.sin(currentTime / 420) + 1) / 2;
+
+    context.save();
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.globalAlpha = 0.62 + pulse * 0.26;
+    context.fillStyle = "rgba(245, 248, 255, 0.95)";
+    context.shadowColor = "rgba(255, 255, 255, 0.44)";
+    context.shadowBlur = this.scaler.x(8 + pulse * 8);
+    context.font = `600 ${this.scaler.x(20)}px Oxanium`;
+    context.letterSpacing = `${this.scaler.x(5)}px`;
+    context.fillText("TAP TO RESTART", this.scaler.canvasWidth / 2, layout.restartY);
+    context.restore();
+  }
+}
+
 class InputController {
   constructor(canvas, game) {
     this.canvas = canvas;
@@ -3929,7 +4250,7 @@ class InputController {
     }
 
     if (this.game.state === "ended") {
-      this.game.reset();
+      this.game.handleGameOverTap(this.getCanvasPoint(event));
       return;
     }
 
@@ -3996,9 +4317,14 @@ class NeonSwipeGame {
     this.canvas = canvas;
     this.restartButton = restartButton;
     this.context = context;
-    this.scaler = new GeometryScaler(GAME_CONFIG.designWidth, GAME_CONFIG.designHeight);
+    this.scaler = new GeometryScaler(
+      GAME_CONFIG.designWidth,
+      GAME_CONFIG.designHeight,
+      GAME_CONFIG.maxResponsiveDesignHeight
+    );
     this.arena = new Arena(this.scaler, RECEIVER_DEFINITIONS);
     this.homeScreen = new HomeScreen(this.scaler);
+    this.gameOverScreen = new GameOverScreen(this.scaler);
     this.rules = new GameRules(this.arena);
     this.dynamicRuleSequence = new DynamicRuleSequenceController();
     this.receiverEffects = new ReceiverEffectsController();
@@ -4030,6 +4356,9 @@ class NeonSwipeGame {
     this.lastAnimationTime = 0;
     this.centerMessage = "SWIPE";
     this.centerMessageUntil = 0;
+    this.previousBestScore = HOME_UI_DATA.bestScore;
+    this.gameOverWasNewBest = false;
+    this.gameOverStartedAt = 0;
     this.activeShapeRuleName = null;
     this.pendingLevelIntroPhase = null;
     this.movingReceiverOffset = 0;
@@ -4042,11 +4371,29 @@ class NeonSwipeGame {
 
     this.restartButton.addEventListener("click", () => this.reset());
     window.addEventListener("resize", () => this.resize());
+    window.visualViewport?.addEventListener?.("resize", () => this.resize());
   }
 
   resize() {
+    const viewportSize = this.getViewportSize();
+    const canvasSize = this.scaler.getCssSizeForViewport(
+      viewportSize.width,
+      viewportSize.height,
+      GAME_CONFIG.maxCanvasCssWidth
+    );
+
+    this.canvas.style.width = `${canvasSize.width}px`;
+    this.canvas.style.height = `${canvasSize.height}px`;
+
     const pixelRatio = this.scaler.updateFromCanvas(this.canvas);
     this.context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+  }
+
+  getViewportSize() {
+    return {
+      width: window.visualViewport?.width ?? window.innerWidth,
+      height: window.visualViewport?.height ?? window.innerHeight
+    };
   }
 
   reset() {
@@ -4064,6 +4411,9 @@ class NeonSwipeGame {
     this.activeShapeRuleName = null;
     this.pendingLevelIntroPhase = null;
     this.particleSystem.clear();
+    this.previousBestScore = HOME_UI_DATA.bestScore;
+    this.gameOverWasNewBest = false;
+    this.gameOverStartedAt = 0;
     this.showCenterMessage("COLOR", 1100);
 
     this.spawnNextChallenge();
@@ -4082,6 +4432,9 @@ class NeonSwipeGame {
     this.activeShapeRuleName = null;
     this.pendingLevelIntroPhase = null;
     this.particleSystem.clear();
+    this.previousBestScore = HOME_UI_DATA.bestScore;
+    this.gameOverWasNewBest = false;
+    this.gameOverStartedAt = 0;
     this.centerMessage = "PRESS TO START";
     this.centerMessageUntil = Infinity;
 
@@ -4264,7 +4617,7 @@ class NeonSwipeGame {
     this.currentChallengePhase = this.currentPhase;
     const firstShape = this.createDuoShape({
       x: this.scaler.x(GAME_CONFIG.designWidth * 0.27),
-      y: this.scaler.y(GAME_CONFIG.designHeight + 42),
+      y: this.scaler.y(this.scaler.designHeight + 42),
       velocityX: this.scaler.x(GAME_CONFIG.level7HorizontalImpulse),
       velocityY: this.scaler.y(GAME_CONFIG.spawnImpulse * GAME_CONFIG.level7SpawnImpulseMultiplier),
       state: "active"
@@ -4277,7 +4630,7 @@ class NeonSwipeGame {
 
       const secondShape = this.createDuoShape({
         x: this.scaler.x(GAME_CONFIG.designWidth * 0.73),
-        y: this.scaler.y(GAME_CONFIG.designHeight + 42),
+        y: this.scaler.y(this.scaler.designHeight + 42),
         velocityX: this.scaler.x(-GAME_CONFIG.level7HorizontalImpulse),
         velocityY: this.scaler.y(GAME_CONFIG.spawnImpulse * GAME_CONFIG.level7SpawnImpulseMultiplier),
         state: "inactive"
@@ -4663,21 +5016,23 @@ class NeonSwipeGame {
   }
 
   handleHomeTap(point) {
-    const hitTarget = this.homeScreen.getHitTarget(point);
+    const hitTarget =
+      this.homeScreen.getHitTarget(point);
 
-    if (hitTarget === "play") {
-      this.reset();
-      return;
-    }
-
+    // Daily reste un bouton séparé
     if (hitTarget === "daily") {
       console.log("daily clicked");
       return;
     }
 
+    // Settings reste aussi séparé
     if (hitTarget === "settings") {
       console.log("settings clicked");
+      return;
     }
+
+    // Tout le reste de l'écran lance la partie
+    this.reset();
   }
 
   startOrRestartFromKeyboard() {
@@ -4686,14 +5041,42 @@ class NeonSwipeGame {
     }
   }
 
+  handleGameOverTap(point) {
+    const hitTarget = this.gameOverScreen.getHitTarget(point);
+
+    if (hitTarget === "home") {
+      this.showWaitingScreen();
+      return;
+    }
+
+    this.reset();
+  }
+
   endGame(message) {
+    if (this.state === "ended") return;
+
+    this.previousBestScore = HOME_UI_DATA.bestScore;
+
+    this.gameOverWasNewBest =
+      this.score > HOME_UI_DATA.bestScore;
+
+    if (this.gameOverWasNewBest) {
+      HOME_UI_DATA.bestScore = this.score;
+    }
+
+    this.gameOverStartedAt = performance.now();
+
     this.clearPendingDuoSpawn();
     this.receiverEffects.stopAll();
+
     this.state = "ended";
+
     this.centerMessage = message;
     this.centerMessageUntil = Infinity;
+
     this.activeShapeRuleName = null;
     this.pendingLevelIntroPhase = null;
+
     this.clearCurrentChallenge();
   }
 
@@ -4723,6 +5106,45 @@ class NeonSwipeGame {
       this.introVisualState,
       this.getModifierVisualState(currentTime)
     );
+
+    if (this.state === "ended") {
+      // Garde la dernière forme figée à l'écran
+      this.drawActiveShape(currentTime);
+
+      // Laisse l'impact / les particules finir leur animation
+      this.particleSystem.draw(this.context);
+
+      const elapsedGameOverMs =
+        currentTime - this.gameOverStartedAt;
+
+      const transitionElapsedMs =
+        Math.max(
+          elapsedGameOverMs -
+          GAME_CONFIG.gameOverHoldDurationMs,
+          0
+        );
+
+      const transitionProgress = clamp(
+        transitionElapsedMs /
+        GAME_CONFIG.gameOverTransitionDurationMs,
+        0,
+        1
+      );
+
+      this.gameOverScreen.draw(
+        this.context,
+        {
+          score: this.score,
+          bestScore: HOME_UI_DATA.bestScore,
+          previousBestScore: this.previousBestScore,
+          wasNewBest: this.gameOverWasNewBest,
+          transitionProgress
+        },
+        currentTime
+      );
+
+      return;
+    }
 
     this.drawHud();
     this.drawActiveShape(currentTime);
@@ -5038,7 +5460,10 @@ class NeonSwipeGame {
       return this.scaler.canvasHeight / 2 - this.scaler.y(58);
     }
 
-    return this.scaler.y(isRuleLabel ? 486 : 376);
+    const extraHeight = Math.max(this.scaler.designHeight - this.scaler.baseDesignHeight, 0);
+    const ruleLabelY = 486 + extraHeight * 0.5;
+
+    return this.scaler.y(isRuleLabel ? ruleLabelY : 376);
   }
 
   get visiblePhase() {
