@@ -67,7 +67,7 @@ const GAME_CONFIG = {
   level12StartScore: 27,
   level13StartScore: 30,
   level14StartScore: 36,
-  level14ReceiverTrackLength: 160,
+  shortReceiverTrackLength: 160,
   level15StartScore: 39,
   level16StartScore: 42,
   level17StartScore: 48,
@@ -187,12 +187,12 @@ const GAME_PHASES = [
   { level: 11, ruleName: "COLOR", startScore: GAME_CONFIG.level11StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicWallColors: true },
   { level: 12, ruleName: "SHAPE", startScore: GAME_CONFIG.level12StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicReceiverShapes: true },
   { level: 13, ruleName: "COLOR", startScore: GAME_CONFIG.level13StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2, usesRuleControlledReceiverRotation: true },
-  { level: 14, ruleName: "COLOR", startScore: GAME_CONFIG.level14StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2, permutesReceiverColorsAfterSuccess: true, permutesReceiverShapesAfterSuccess: true, usesShortReceiverTracks: true },
-  { level: 15, ruleName: "COLOR", startScore: GAME_CONFIG.level15StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2, permutesReceiverColorsAfterSuccess: true, permutesReceiverShapesAfterSuccess: true, usesShortReceiverTracks: true, projectileEntry: "top" },
-  { level: 16, ruleName: "COLOR", startScore: GAME_CONFIG.level16StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2, permutesReceiverColorsAfterSuccess: true, permutesReceiverShapesAfterSuccess: true, usesShortReceiverTracks: true, projectileEntry: "side" },
-  { level: 17, ruleName: "COLOR", startScore: GAME_CONFIG.level17StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2, permutesReceiverColorsAfterSuccess: true, permutesReceiverShapesAfterSuccess: true, usesShortReceiverTracks: true, projectileEntry: "random" },
-  { level: 18, ruleName: "COLOR", startScore: GAME_CONFIG.level18StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2, usesShortReceiverTracks: true, usesMovingReceiverTracks: true, projectileEntry: "movingGap" },
-  { level: 19, ruleName: "COLOR", startScore: GAME_CONFIG.level19StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2, usesShortReceiverTracks: true, usesMovingReceiverTracks: true, usesPreciseDuoSelection: true, projectileEntry: "movingGapDuo" }
+  { level: 14, ruleName: "COLOR", startScore: GAME_CONFIG.level14StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2, permutesReceiverColorsAfterSuccess: true, permutesReceiverShapesAfterSuccess: true },
+  { level: 15, ruleName: "COLOR", startScore: GAME_CONFIG.level15StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2, permutesReceiverColorsAfterSuccess: true, permutesReceiverShapesAfterSuccess: true, projectileEntry: "top" },
+  { level: 16, ruleName: "COLOR", startScore: GAME_CONFIG.level16StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2, permutesReceiverColorsAfterSuccess: true, permutesReceiverShapesAfterSuccess: true, projectileEntry: "side" },
+  { level: 17, ruleName: "COLOR", startScore: GAME_CONFIG.level17StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2, permutesReceiverColorsAfterSuccess: true, permutesReceiverShapesAfterSuccess: true, projectileEntry: "random" },
+  { level: 18, ruleName: "COLOR", startScore: GAME_CONFIG.level18StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2, projectileEntry: "movingGap" },
+  { level: 19, ruleName: "COLOR", startScore: GAME_CONFIG.level19StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2, usesPreciseDuoSelection: true, projectileEntry: "movingGapDuo" }
 ];
 
 // const NEON_COLORS = {
@@ -934,12 +934,12 @@ class Arena {
     return NEON_COLORS[this.getReceiverColorId(receiver, currentPhase)];
   }
 
-  findReceiverHitByShape(fallingShape, currentPhase) {
+  findReceiverHitByShape(fallingShape, currentPhase, modifierVisualState = null) {
     if (!fallingShape.canHitReceiver) return null;
 
     const collisionRadius = fallingShape.radius * 0.55;
     return this.receivers.find((receiver) => {
-      return this.getReceiverHitAreas(receiver, currentPhase).some((hitArea) => {
+      return this.getReceiverHitAreas(receiver, currentPhase, modifierVisualState).some((hitArea) => {
         return this.circleOverlapsRect(fallingShape.x, fallingShape.y, collisionRadius, hitArea);
       });
     });
@@ -982,12 +982,18 @@ class Arena {
     };
   }
 
-  getReceiverHitAreas(receiver, currentPhase) {
-    if (currentPhase?.usesMovingReceiverTracks) {
-      return this.getMovingReceiverTrackHitAreas(receiver, currentPhase);
+  getReceiverHitAreas(receiver, currentPhase, modifierVisualState = null) {
+    const receiverModifierState = this.getReceiverModifierState(modifierVisualState);
+
+    if (receiverModifierState.isSliding) {
+      return this.getMovingReceiverTrackHitAreas(
+        receiver,
+        currentPhase,
+        modifierVisualState
+      );
     }
 
-    if (currentPhase?.usesShortReceiverTracks) {
+    if (receiverModifierState.isShort) {
       return this.getShortReceiverTrackHitAreas(receiver);
     }
 
@@ -1133,8 +1139,46 @@ class Arena {
     return segments;
   }
 
-  getMovingReceiverTrackLength() {
-    return this.scaler.x(GAME_CONFIG.level14ReceiverTrackLength);
+  getReceiverTrackLength(isShortReceiver) {
+    if (isShortReceiver) {
+      return this.scaler.x(GAME_CONFIG.shortReceiverTrackLength);
+    }
+
+    return this.getLongReceiverTrackLength();
+  }
+
+  getLongReceiverTrackLength() {
+    return this.getOuterTrackPerimeterLength() / this.receivers.length;
+  }
+
+  getQuadraticCurveLength(startPoint, controlPoint, endPoint, steps = 12) {
+    let length = 0;
+    let previousPoint = startPoint;
+
+    for (let step = 1; step <= steps; step += 1) {
+      const t = step / steps;
+      const inverseT = 1 - t;
+      const point = {
+        x:
+          inverseT * inverseT * startPoint.x +
+          2 * inverseT * t * controlPoint.x +
+          t * t * endPoint.x,
+        y:
+          inverseT * inverseT * startPoint.y +
+          2 * inverseT * t * controlPoint.y +
+          t * t * endPoint.y
+      };
+
+      length += Math.hypot(point.x - previousPoint.x, point.y - previousPoint.y);
+      previousPoint = point;
+    }
+
+    return length;
+  }
+
+  getMovingReceiverTrackLength(modifierVisualState = null) {
+    const receiverModifierState = this.getReceiverModifierState(modifierVisualState);
+    return this.getReceiverTrackLength(receiverModifierState.isShort);
   }
 
   getMovingReceiverBaseDistance(receiver) {
@@ -1142,26 +1186,27 @@ class Arena {
     return (this.getOuterTrackPerimeterLength() / this.receivers.length) * receiverIndex;
   }
 
-  getMovingReceiverStartDistance(receiver, currentPhase) {
-    return this.getMovingReceiverBaseDistance(receiver) + (currentPhase.movingReceiverOffset || 0);
+  getMovingReceiverStartDistance(receiver, currentPhase, modifierVisualState = null) {
+    const receiverModifierState = this.getReceiverModifierState(modifierVisualState);
+    return this.getMovingReceiverBaseDistance(receiver) + receiverModifierState.movingOffset;
   }
 
-  getMovingReceiverTrackSegments(receiver, currentPhase) {
+  getMovingReceiverTrackSegments(receiver, currentPhase, modifierVisualState = null) {
     return this.getTrackSegmentsOnOuterPerimeter(
-      this.getMovingReceiverStartDistance(receiver, currentPhase),
-      this.getMovingReceiverTrackLength()
+      this.getMovingReceiverStartDistance(receiver, currentPhase, modifierVisualState),
+      this.getMovingReceiverTrackLength(modifierVisualState)
     );
   }
 
-  getMovingReceiverTrackHitAreas(receiver, currentPhase) {
+  getMovingReceiverTrackHitAreas(receiver, currentPhase, modifierVisualState = null) {
     const layout = this.getScaledLayout();
-    return this.getMovingReceiverTrackSegments(receiver, currentPhase).map((segment) => {
+    return this.getMovingReceiverTrackSegments(receiver, currentPhase, modifierVisualState).map((segment) => {
       return this.getSegmentHitArea(segment.start, segment.end, layout.railSize);
     });
   }
 
-  getMovingReceiverIconPoint(receiver, currentPhase) {
-    const centerDistance = this.getMovingReceiverStartDistance(receiver, currentPhase) + this.getMovingReceiverTrackLength() / 2;
+  getMovingReceiverIconPoint(receiver, currentPhase, modifierVisualState = null) {
+    const centerDistance = this.getMovingReceiverStartDistance(receiver, currentPhase, modifierVisualState) + this.getMovingReceiverTrackLength(modifierVisualState) / 2;
     const centerPoint = this.getPointOnOuterTrack(centerDistance);
     const iconInset = this.scaler.x(GAME_CONFIG.movingReceiverIconInset);
 
@@ -1171,9 +1216,12 @@ class Arena {
     };
   }
 
-  getMovingBottomGapSpawnOptions(currentPhase) {
+  getMovingBottomGapSpawnOptions(currentPhase, modifierVisualState = null) {
     const bounds = this.getOuterTrackBounds();
-    const occupiedIntervals = this.getMovingReceiverOccupiedBottomIntervals(currentPhase);
+    const occupiedIntervals = this.getMovingReceiverOccupiedBottomIntervals(
+      currentPhase,
+      modifierVisualState
+    );
     const freeIntervals = this.getFreeBottomIntervals(bounds, occupiedIntervals);
     const safeSpawnOptions = this.getSafeBottomSpawnOptions(freeIntervals);
 
@@ -1193,14 +1241,18 @@ class Arena {
     }];
   }
 
-  getMovingReceiverOccupiedBottomIntervals(currentPhase) {
+  getMovingReceiverOccupiedBottomIntervals(currentPhase, modifierVisualState = null) {
     const bounds = this.getOuterTrackBounds();
     const layout = this.getScaledLayout();
     const bottomEdgeEpsilon = this.scaler.x(0.5);
     const railCapMargin = layout.railSize / 2;
 
     const occupiedIntervals = this.receivers
-      .flatMap((receiver) => this.getMovingReceiverTrackSegments(receiver, currentPhase))
+      .flatMap((receiver) => this.getMovingReceiverTrackSegments(
+        receiver,
+        currentPhase,
+        modifierVisualState
+      ))
       .filter((segment) => {
         return (
           Math.abs(segment.start.y - bounds.bottom) <= bottomEdgeEpsilon &&
@@ -1292,7 +1344,7 @@ class Arena {
 
   getShortReceiverTrackGeometry(receiver) {
     const layout = this.getScaledLayout();
-    const trackLength = this.scaler.x(GAME_CONFIG.level14ReceiverTrackLength);
+    const trackLength = this.getReceiverTrackLength(true);
     const rightX = layout.outerX + layout.outerWidth;
     const bottomY = layout.outerY + layout.outerHeight;
     const leftTrackX = layout.outerX + layout.railSize / 2;
@@ -1430,15 +1482,40 @@ class Arena {
   ) {
     const railOpacity = introVisualState?.railOpacity ?? 1;
     const iconOpacity = introVisualState?.iconOpacity ?? 1;
+    const receiverModifierState = this.getReceiverModifierState(modifierVisualState);
 
-    if (currentPhase.usesMovingReceiverTracks) {
+    if (receiverModifierState.isSliding) {
+      if (wallColorAnimation && wallColorAnimation.progress < 1) {
+        this.drawMovingReceiverTracksWithWallColorAnimation(
+          context,
+          currentPhase,
+          wallColorAnimation,
+          hitFeedbackByReceiverId,
+          railOpacity,
+          modifierVisualState
+        );
+
+        this.drawReceiverIconsWithWallColorAnimation(
+          context,
+          currentPhase,
+          wallColorAnimation,
+          hitFeedbackByReceiverId,
+          iconOpacity,
+          modifierVisualState
+        );
+
+        return;
+      }
+
       this.receivers.forEach((receiver) =>
         this.drawMovingReceiverTrack(
           context,
           receiver,
           currentPhase,
           hitFeedbackByReceiverId[receiver.id] || 0,
-          modifierVisualState
+          modifierVisualState,
+          null,
+          railOpacity
         )
       );
 
@@ -1495,6 +1572,49 @@ class Arena {
       modifierVisualState
     );
 
+  }
+
+  drawMovingReceiverTracksWithWallColorAnimation(
+    context,
+    currentPhase,
+    wallColorAnimation,
+    hitFeedbackByReceiverId = {},
+    opacity = 1,
+    modifierVisualState = null
+  ) {
+    this.receivers.forEach((receiver) => {
+      const previousColor = wallColorAnimation.previousColorsByPositionId
+        ? NEON_COLORS[
+        wallColorAnimation.previousColorsByPositionId[receiver.id]
+        ]
+        : this.getReceiverNeonColor(receiver, currentPhase);
+
+      const currentColor =
+        this.getReceiverNeonColor(receiver, currentPhase);
+
+      const hitStrength =
+        hitFeedbackByReceiverId[receiver.id] || 0;
+
+      this.drawMovingReceiverTrack(
+        context,
+        receiver,
+        currentPhase,
+        hitStrength,
+        modifierVisualState,
+        previousColor,
+        (1 - wallColorAnimation.progress) * opacity
+      );
+
+      this.drawMovingReceiverTrack(
+        context,
+        receiver,
+        currentPhase,
+        hitStrength,
+        modifierVisualState,
+        currentColor,
+        wallColorAnimation.progress * opacity
+      );
+    });
   }
 
   drawReceiverTracksWithWallColorAnimation(
@@ -1585,12 +1705,21 @@ class Arena {
     context.lineTo(geometry.verticalEnd.x, geometry.verticalEnd.y);
   }
 
-  drawMovingReceiverTrack(context, receiver, currentPhase, hitStrength = 0, modifierVisualState = null) {
+  drawMovingReceiverTrack(
+    context,
+    receiver,
+    currentPhase,
+    hitStrength = 0,
+    modifierVisualState = null,
+    colorOverride = null,
+    opacity = 1
+  ) {
     const receiverVisual = this.getReceiverVisualStyle(
       receiver,
       currentPhase,
-      1,
-      modifierVisualState
+      opacity,
+      modifierVisualState,
+      colorOverride
     );
     const receiverNeonColor = receiverVisual.color;
 
@@ -1612,7 +1741,7 @@ class Arena {
     context.lineJoin = "round";
 
     context.beginPath();
-    this.getMovingReceiverTrackSegments(receiver, currentPhase).forEach((segment) => {
+    this.getMovingReceiverTrackSegments(receiver, currentPhase, modifierVisualState).forEach((segment) => {
       context.moveTo(segment.start.x, segment.start.y);
       context.lineTo(segment.end.x, segment.end.y);
     });
@@ -1659,7 +1788,9 @@ class Arena {
 
     context.beginPath();
 
-    if (currentPhase.usesShortReceiverTracks) {
+    const receiverModifierState = this.getReceiverModifierState(modifierVisualState);
+
+    if (receiverModifierState.isShort) {
       this.drawShortReceiverTrackPath(context, receiver);
     } else if (receiver.id === "topLeft") {
       context.moveTo(middleX, layout.outerY + layout.railSize / 2);
@@ -1701,10 +1832,10 @@ class Arena {
       this.scaler.x(GAME_CONFIG.shapeRadius);
 
     const iconPositionsByReceiverId =
-      currentPhase.usesMovingReceiverTracks
+      this.getReceiverModifierState(modifierVisualState).isSliding
         ? this.receivers.reduce((positionsByReceiverId, receiver) => {
           positionsByReceiverId[receiver.id] =
-            this.getMovingReceiverIconPoint(receiver, currentPhase);
+            this.getMovingReceiverIconPoint(receiver, currentPhase, modifierVisualState);
 
           return positionsByReceiverId;
         }, {})
@@ -1764,6 +1895,14 @@ class Arena {
         strokeMultiplier
       );
     });
+  }
+
+  getReceiverModifierState(modifierVisualState) {
+    return {
+      isSliding: Boolean(modifierVisualState?.receivers?.isSliding),
+      isShort: Boolean(modifierVisualState?.receivers?.isShort),
+      movingOffset: modifierVisualState?.receivers?.movingOffset || 0
+    };
   }
 
   getReceiverVisualStyle(receiver, currentPhase, opacity, modifierVisualState, colorOverride = null) {
@@ -2409,11 +2548,15 @@ class SpawnController {
   }
 
   getMovingGapSpawn(phase) {
-    const movingPhase = {
-      ...phase,
-      movingReceiverOffset: this.game.movingReceiverOffset
-    };
-    const spawnOptions = this.game.arena.getMovingBottomGapSpawnOptions(movingPhase);
+    if (!this.game.activeModifiers.slide) {
+      return this.getBottomSpawn(phase);
+    }
+
+    const modifierVisualState = this.game.getModifierVisualState(performance.now());
+    const spawnOptions = this.game.arena.getMovingBottomGapSpawnOptions(
+      phase,
+      modifierVisualState
+    );
     const { spawnX } = getRandomItem(spawnOptions);
 
     return {
@@ -4638,7 +4781,9 @@ class NeonSwipeGame {
       pulse: false,
       burst: false,
       twin: false,
-      reveal: true,
+      reveal: false,
+      slide: true,
+      shortReceivers: false,
       void: false
     };
     this.lastAnimationTime = 0;
@@ -4767,7 +4912,11 @@ class NeonSwipeGame {
     for (const shape of this.currentShapes) {
       if (shape.state === "resolved") continue;
 
-      const touchedReceiver = this.arena.findReceiverHitByShape(shape, this.getCollisionPhaseForShape(shape));
+      const touchedReceiver = this.arena.findReceiverHitByShape(
+        shape,
+        this.getCollisionPhaseForShape(shape),
+        this.getModifierVisualState(performance.now())
+      );
       if (touchedReceiver) {
         this.resolveReceiverTouch(shape, touchedReceiver);
         return;
@@ -5088,14 +5237,7 @@ class NeonSwipeGame {
   }
 
   getCollisionPhaseForShape(shape) {
-    const shapeChallengePhase = shape.challengePhase || this.currentChallengePhase || this.currentPhase;
-
-    if (!shapeChallengePhase.usesMovingReceiverTracks) return shapeChallengePhase;
-
-    return {
-      ...shapeChallengePhase,
-      movingReceiverOffset: this.movingReceiverOffset
-    };
+    return shape.challengePhase || this.currentChallengePhase || this.currentPhase;
   }
 
   getValidationPhaseForShape(shape) {
@@ -5258,7 +5400,11 @@ class NeonSwipeGame {
     });
 
     for (const shape of this.currentShapes) {
-      const touchedReceiver = this.arena.findReceiverHitByShape(shape, this.visiblePhase);
+      const touchedReceiver = this.arena.findReceiverHitByShape(
+        shape,
+        this.visiblePhase,
+        this.getModifierVisualState(performance.now())
+      );
       if (touchedReceiver) {
         this.resolveReceiverTouch(shape, touchedReceiver);
         return;
@@ -5306,17 +5452,8 @@ class NeonSwipeGame {
       return;
     }
 
-    if (resolvedChallengePhase?.level !== this.currentPhase.level && this.currentPhase.usesShortReceiverTracks) {
+    if (resolvedChallengePhase?.level !== this.currentPhase.level) {
       this.receiverEffects.syncPermutationToPhase(this.currentPhase);
-    }
-
-    if (resolvedChallengePhase?.level !== this.currentPhase.level && this.currentPhase.usesMovingReceiverTracks) {
-      this.receiverEffects.syncPermutationToPhase(this.currentPhase);
-      this.movingReceiverOffset = 0;
-      if (!options.skipSpawn) {
-        this.spawnNextChallenge();
-      }
-      return;
     }
 
     if (this.phasePermutesReceiversAfterSuccess(resolvedChallengePhase)) {
@@ -5404,7 +5541,10 @@ class NeonSwipeGame {
   }
 
   updateMovingReceiverTracks(deltaSeconds) {
-    if (!this.visiblePhase.usesMovingReceiverTracks) return;
+    if (!this.activeModifiers.slide) {
+      this.movingReceiverOffset = 0;
+      return;
+    }
 
     const perimeterLength = this.arena.getOuterTrackPerimeterLength();
     this.movingReceiverOffset = (this.movingReceiverOffset + GAME_CONFIG.movingReceiverSpeed * deltaSeconds) % perimeterLength;
@@ -5969,7 +6109,12 @@ class NeonSwipeGame {
       blink: this.blinkController.getVisualState(
         currentTime,
         this.activeModifiers.blink
-      )
+      ),
+      receivers: {
+        isSliding: Boolean(this.activeModifiers.slide),
+        isShort: Boolean(this.activeModifiers.shortReceivers),
+        movingOffset: this.movingReceiverOffset
+      }
     };
   }
 
@@ -5985,14 +6130,7 @@ class NeonSwipeGame {
   }
 
   get visiblePhase() {
-    const visiblePhase = this.getPhaseWithCurrentWallColors(this.currentChallengePhase || this.currentPhase);
-
-    if (!visiblePhase.usesMovingReceiverTracks) return visiblePhase;
-
-    return {
-      ...visiblePhase,
-      movingReceiverOffset: this.movingReceiverOffset
-    };
+    return this.getPhaseWithCurrentWallColors(this.currentChallengePhase || this.currentPhase);
   }
 
   get visibleRuleName() {
