@@ -983,51 +983,7 @@ class Arena {
   }
 
   getReceiverHitAreas(receiver, currentPhase, modifierVisualState = null) {
-    const receiverModifierState = this.getReceiverModifierState(modifierVisualState);
-
-    if (receiverModifierState.isSliding) {
-      return this.getMovingReceiverTrackHitAreas(
-        receiver,
-        currentPhase,
-        modifierVisualState
-      );
-    }
-
-    if (receiverModifierState.isShort) {
-      return this.getShortReceiverTrackHitAreas(receiver);
-    }
-
-    const layout = this.getScaledLayout();
-    const middleX = layout.outerX + layout.outerWidth / 2;
-    const middleY = layout.outerY + layout.outerHeight / 2;
-    const rightRailX = layout.outerX + layout.outerWidth - layout.railSize;
-    const bottomRailY = layout.outerY + layout.outerHeight - layout.railSize;
-
-    if (receiver.id === "topLeft") {
-      return [
-        { x: layout.outerX, y: layout.outerY, width: layout.outerWidth / 2, height: layout.railSize },
-        { x: layout.outerX, y: layout.outerY, width: layout.railSize, height: layout.outerHeight / 2 }
-      ];
-    }
-
-    if (receiver.id === "topRight") {
-      return [
-        { x: middleX, y: layout.outerY, width: layout.outerWidth / 2, height: layout.railSize },
-        { x: rightRailX, y: layout.outerY, width: layout.railSize, height: layout.outerHeight / 2 }
-      ];
-    }
-
-    if (receiver.id === "bottomLeft") {
-      return [
-        { x: layout.outerX, y: middleY, width: layout.railSize, height: layout.outerHeight / 2 },
-        { x: layout.outerX, y: bottomRailY, width: layout.outerWidth / 2, height: layout.railSize }
-      ];
-    }
-
-    return [
-      { x: rightRailX, y: middleY, width: layout.railSize, height: layout.outerHeight / 2 },
-      { x: middleX, y: bottomRailY, width: layout.outerWidth / 2, height: layout.railSize }
-    ];
+    return this.getReceiverTrackHitAreas(receiver, currentPhase, modifierVisualState);
   }
 
   getOuterTrackBounds() {
@@ -1040,103 +996,225 @@ class Arena {
     };
   }
 
-  getOuterTrackPerimeterLength() {
+  getRoundedTrackRadius() {
+    const layout = this.getScaledLayout();
     const bounds = this.getOuterTrackBounds();
-    return 2 * ((bounds.right - bounds.left) + (bounds.bottom - bounds.top));
+    const maxRadius = Math.min(
+      (bounds.right - bounds.left) / 2,
+      (bounds.bottom - bounds.top) / 2
+    );
+
+    return Math.min(
+      Math.max(layout.cornerRadius - layout.railSize / 2, 0),
+      maxRadius
+    );
+  }
+
+  getRoundedTrackPieces() {
+    const bounds = this.getOuterTrackBounds();
+    const radius = this.getRoundedTrackRadius();
+    const middleX = (bounds.left + bounds.right) / 2;
+    const middleY = (bounds.top + bounds.bottom) / 2;
+    const topRightCenter = { x: bounds.right - radius, y: bounds.top + radius };
+    const bottomRightCenter = { x: bounds.right - radius, y: bounds.bottom - radius };
+    const bottomLeftCenter = { x: bounds.left + radius, y: bounds.bottom - radius };
+    const topLeftCenter = { x: bounds.left + radius, y: bounds.top + radius };
+
+    return [
+      {
+        type: "line",
+        side: "top",
+        start: { x: middleX, y: bounds.top },
+        end: { x: bounds.right - radius, y: bounds.top }
+      },
+      {
+        type: "arc",
+        side: "topRightArc",
+        center: topRightCenter,
+        radius,
+        startAngle: -Math.PI / 2,
+        endAngle: 0
+      },
+      {
+        type: "line",
+        side: "right",
+        start: { x: bounds.right, y: bounds.top + radius },
+        end: { x: bounds.right, y: middleY }
+      },
+      {
+        type: "line",
+        side: "right",
+        start: { x: bounds.right, y: middleY },
+        end: { x: bounds.right, y: bounds.bottom - radius }
+      },
+      {
+        type: "arc",
+        side: "bottomRightArc",
+        center: bottomRightCenter,
+        radius,
+        startAngle: 0,
+        endAngle: Math.PI / 2
+      },
+      {
+        type: "line",
+        side: "bottom",
+        start: { x: bounds.right - radius, y: bounds.bottom },
+        end: { x: middleX, y: bounds.bottom }
+      },
+      {
+        type: "line",
+        side: "bottom",
+        start: { x: middleX, y: bounds.bottom },
+        end: { x: bounds.left + radius, y: bounds.bottom }
+      },
+      {
+        type: "arc",
+        side: "bottomLeftArc",
+        center: bottomLeftCenter,
+        radius,
+        startAngle: Math.PI / 2,
+        endAngle: Math.PI
+      },
+      {
+        type: "line",
+        side: "left",
+        start: { x: bounds.left, y: bounds.bottom - radius },
+        end: { x: bounds.left, y: middleY }
+      },
+      {
+        type: "line",
+        side: "left",
+        start: { x: bounds.left, y: middleY },
+        end: { x: bounds.left, y: bounds.top + radius }
+      },
+      {
+        type: "arc",
+        side: "topLeftArc",
+        center: topLeftCenter,
+        radius,
+        startAngle: Math.PI,
+        endAngle: Math.PI * 1.5
+      },
+      {
+        type: "line",
+        side: "top",
+        start: { x: bounds.left + radius, y: bounds.top },
+        end: { x: middleX, y: bounds.top }
+      }
+    ].map((piece) => ({
+      ...piece,
+      length: this.getRoundedTrackPieceLength(piece)
+    }));
+  }
+
+  getRoundedTrackPieceLength(piece) {
+    if (piece.type === "arc") {
+      return Math.abs(piece.endAngle - piece.startAngle) * piece.radius;
+    }
+
+    return Math.hypot(
+      piece.end.x - piece.start.x,
+      piece.end.y - piece.start.y
+    );
+  }
+
+  getRoundedTrackPerimeterLength() {
+    return this.getRoundedTrackPieces().reduce(
+      (totalLength, piece) => totalLength + piece.length,
+      0
+    );
+  }
+
+  getOuterTrackPerimeterLength() {
+    return this.getRoundedTrackPerimeterLength();
   }
 
   normalizeOuterTrackDistance(distance) {
-    const perimeterLength = this.getOuterTrackPerimeterLength();
+    const perimeterLength = this.getRoundedTrackPerimeterLength();
     return ((distance % perimeterLength) + perimeterLength) % perimeterLength;
   }
 
-  getPointOnOuterTrack(distance) {
-    const bounds = this.getOuterTrackBounds();
-    const horizontalLength = bounds.right - bounds.left;
-    const verticalLength = bounds.bottom - bounds.top;
+  getPointOnRoundedTrack(distance) {
+    const pieces = this.getRoundedTrackPieces();
     let normalizedDistance = this.normalizeOuterTrackDistance(distance);
 
-    if (normalizedDistance <= horizontalLength) {
+    for (const piece of pieces) {
+      if (normalizedDistance <= piece.length || piece === pieces[pieces.length - 1]) {
+        return this.getPointOnRoundedTrackPiece(piece, normalizedDistance);
+      }
+
+      normalizedDistance -= piece.length;
+    }
+
+    return this.getPointOnRoundedTrackPiece(pieces[0], 0);
+  }
+
+  getPointOnRoundedTrackPiece(piece, distanceOnPiece) {
+    const safeLength = piece.length || 1;
+    const progress = clamp(distanceOnPiece / safeLength, 0, 1);
+
+    if (piece.type === "arc") {
+      const angle = piece.startAngle + (piece.endAngle - piece.startAngle) * progress;
+      const radiusX = Math.cos(angle);
+      const radiusY = Math.sin(angle);
+
       return {
-        x: bounds.left + normalizedDistance,
-        y: bounds.top,
-        side: "top",
-        inwardNormalX: 0,
-        inwardNormalY: 1
+        x: piece.center.x + radiusX * piece.radius,
+        y: piece.center.y + radiusY * piece.radius,
+        tangentX: -radiusY,
+        tangentY: radiusX,
+        inwardNormalX: -radiusX,
+        inwardNormalY: -radiusY,
+        side: piece.side
       };
     }
 
-    normalizedDistance -= horizontalLength;
-    if (normalizedDistance <= verticalLength) {
-      return {
-        x: bounds.right,
-        y: bounds.top + normalizedDistance,
-        side: "right",
-        inwardNormalX: -1,
-        inwardNormalY: 0
-      };
-    }
+    const deltaX = piece.end.x - piece.start.x;
+    const deltaY = piece.end.y - piece.start.y;
+    const tangentLength = Math.hypot(deltaX, deltaY) || 1;
+    const tangentX = deltaX / tangentLength;
+    const tangentY = deltaY / tangentLength;
 
-    normalizedDistance -= verticalLength;
-    if (normalizedDistance <= horizontalLength) {
-      return {
-        x: bounds.right - normalizedDistance,
-        y: bounds.bottom,
-        side: "bottom",
-        inwardNormalX: 0,
-        inwardNormalY: -1
-      };
-    }
-
-    normalizedDistance -= horizontalLength;
     return {
-      x: bounds.left,
-      y: bounds.bottom - normalizedDistance,
-      side: "left",
-      inwardNormalX: 1,
-      inwardNormalY: 0
+      x: piece.start.x + deltaX * progress,
+      y: piece.start.y + deltaY * progress,
+      tangentX,
+      tangentY,
+      inwardNormalX: -tangentY,
+      inwardNormalY: tangentX,
+      side: piece.side
     };
   }
 
-  getDistanceToOuterTrackCorner(distance) {
-    const bounds = this.getOuterTrackBounds();
-    const horizontalLength = bounds.right - bounds.left;
-    const verticalLength = bounds.bottom - bounds.top;
-    const normalizedDistance = this.normalizeOuterTrackDistance(distance);
-
-    if (normalizedDistance < horizontalLength) return horizontalLength - normalizedDistance;
-    if (normalizedDistance < horizontalLength + verticalLength) return horizontalLength + verticalLength - normalizedDistance;
-    if (normalizedDistance < horizontalLength * 2 + verticalLength) return horizontalLength * 2 + verticalLength - normalizedDistance;
-    return this.getOuterTrackPerimeterLength() - normalizedDistance;
+  getPointOnOuterTrack(distance) {
+    return this.getPointOnRoundedTrack(distance);
   }
 
-  getTrackSegmentsOnOuterPerimeter(startDistance, length) {
+  getRoundedTrackSegments(startDistance, length) {
     const segments = [];
-    let remainingLength = length;
-    let currentDistance = this.normalizeOuterTrackDistance(startDistance);
+    const layout = this.getScaledLayout();
+    const segmentLength = Math.max(layout.railSize / 4, this.scaler.x(8));
+    const segmentCount = Math.max(Math.ceil(length / segmentLength), 1);
+    let previousPoint = this.getPointOnRoundedTrack(startDistance);
 
-    while (remainingLength > 0.001) {
-      let distanceToCorner = this.getDistanceToOuterTrackCorner(currentDistance);
-      if (distanceToCorner <= 0.001) {
-        currentDistance += 0.001;
-        distanceToCorner = this.getDistanceToOuterTrackCorner(currentDistance);
-      }
-
-      const segmentLength = Math.min(remainingLength, distanceToCorner);
-      const segmentStart = this.getPointOnOuterTrack(currentDistance);
-      const segmentEnd = this.getPointOnOuterTrack(currentDistance + segmentLength);
+    for (let index = 1; index <= segmentCount; index += 1) {
+      const currentDistance = startDistance + (length * index) / segmentCount;
+      const currentPoint = this.getPointOnRoundedTrack(currentDistance);
 
       segments.push({
-        start: segmentStart,
-        end: segmentEnd,
-        side: segmentStart.side
+        start: previousPoint,
+        end: currentPoint,
+        side: previousPoint.side
       });
 
-      remainingLength -= segmentLength;
-      currentDistance += segmentLength;
+      previousPoint = currentPoint;
     }
 
     return segments;
+  }
+
+  getTrackSegmentsOnOuterPerimeter(startDistance, length) {
+    return this.getRoundedTrackSegments(startDistance, length);
   }
 
   getReceiverTrackLength(isShortReceiver) {
@@ -1148,32 +1226,44 @@ class Arena {
   }
 
   getLongReceiverTrackLength() {
-    return this.getOuterTrackPerimeterLength() / this.receivers.length;
+    return this.getRoundedTrackPerimeterLength() / this.receivers.length;
   }
 
-  getQuadraticCurveLength(startPoint, controlPoint, endPoint, steps = 12) {
-    let length = 0;
-    let previousPoint = startPoint;
+  getReceiverBaseDistance(receiver) {
+    const quarterLength = this.getRoundedTrackPerimeterLength() / this.receivers.length;
+    const baseDistanceByReceiverId = {
+      topRight: 0,
+      bottomRight: quarterLength,
+      bottomLeft: quarterLength * 2,
+      topLeft: quarterLength * 3
+    };
 
-    for (let step = 1; step <= steps; step += 1) {
-      const t = step / steps;
-      const inverseT = 1 - t;
-      const point = {
-        x:
-          inverseT * inverseT * startPoint.x +
-          2 * inverseT * t * controlPoint.x +
-          t * t * endPoint.x,
-        y:
-          inverseT * inverseT * startPoint.y +
-          2 * inverseT * t * controlPoint.y +
-          t * t * endPoint.y
-      };
+    return baseDistanceByReceiverId[receiver.id] || 0;
+  }
 
-      length += Math.hypot(point.x - previousPoint.x, point.y - previousPoint.y);
-      previousPoint = point;
-    }
+  getReceiverTrackStartDistance(receiver, modifierVisualState = null) {
+    const receiverModifierState = this.getReceiverModifierState(modifierVisualState);
+    const offset = receiverModifierState.isSliding
+      ? receiverModifierState.movingOffset
+      : 0;
 
-    return length;
+    return this.getReceiverBaseDistance(receiver) + offset;
+  }
+
+  getReceiverTrackSegments(receiver, currentPhase, modifierVisualState = null) {
+    const receiverModifierState = this.getReceiverModifierState(modifierVisualState);
+
+    return this.getRoundedTrackSegments(
+      this.getReceiverTrackStartDistance(receiver, modifierVisualState),
+      this.getReceiverTrackLength(receiverModifierState.isShort)
+    );
+  }
+
+  getReceiverTrackHitAreas(receiver, currentPhase, modifierVisualState = null) {
+    const layout = this.getScaledLayout();
+    return this.getReceiverTrackSegments(receiver, currentPhase, modifierVisualState).map((segment) => {
+      return this.getSegmentHitArea(segment.start, segment.end, layout.railSize);
+    });
   }
 
   getMovingReceiverTrackLength(modifierVisualState = null) {
@@ -1182,32 +1272,27 @@ class Arena {
   }
 
   getMovingReceiverBaseDistance(receiver) {
-    const receiverIndex = this.receivers.findIndex((candidate) => candidate.id === receiver.id);
-    return (this.getOuterTrackPerimeterLength() / this.receivers.length) * receiverIndex;
+    return this.getReceiverBaseDistance(receiver);
   }
 
   getMovingReceiverStartDistance(receiver, currentPhase, modifierVisualState = null) {
-    const receiverModifierState = this.getReceiverModifierState(modifierVisualState);
-    return this.getMovingReceiverBaseDistance(receiver) + receiverModifierState.movingOffset;
+    return this.getReceiverTrackStartDistance(receiver, modifierVisualState);
   }
 
   getMovingReceiverTrackSegments(receiver, currentPhase, modifierVisualState = null) {
-    return this.getTrackSegmentsOnOuterPerimeter(
-      this.getMovingReceiverStartDistance(receiver, currentPhase, modifierVisualState),
-      this.getMovingReceiverTrackLength(modifierVisualState)
-    );
+    return this.getReceiverTrackSegments(receiver, currentPhase, modifierVisualState);
   }
 
   getMovingReceiverTrackHitAreas(receiver, currentPhase, modifierVisualState = null) {
-    const layout = this.getScaledLayout();
-    return this.getMovingReceiverTrackSegments(receiver, currentPhase, modifierVisualState).map((segment) => {
-      return this.getSegmentHitArea(segment.start, segment.end, layout.railSize);
-    });
+    return this.getReceiverTrackHitAreas(receiver, currentPhase, modifierVisualState);
   }
 
   getMovingReceiverIconPoint(receiver, currentPhase, modifierVisualState = null) {
-    const centerDistance = this.getMovingReceiverStartDistance(receiver, currentPhase, modifierVisualState) + this.getMovingReceiverTrackLength(modifierVisualState) / 2;
-    const centerPoint = this.getPointOnOuterTrack(centerDistance);
+    const receiverModifierState = this.getReceiverModifierState(modifierVisualState);
+    const centerDistance =
+      this.getReceiverTrackStartDistance(receiver, modifierVisualState) +
+      this.getReceiverTrackLength(receiverModifierState.isShort) / 2;
+    const centerPoint = this.getPointOnRoundedTrack(centerDistance);
     const iconInset = this.scaler.x(GAME_CONFIG.movingReceiverIconInset);
 
     return {
@@ -1244,8 +1329,8 @@ class Arena {
   getMovingReceiverOccupiedBottomIntervals(currentPhase, modifierVisualState = null) {
     const bounds = this.getOuterTrackBounds();
     const layout = this.getScaledLayout();
-    const bottomEdgeEpsilon = this.scaler.x(0.5);
     const railCapMargin = layout.railSize / 2;
+    const bottomCollisionBandTop = bounds.bottom - railCapMargin;
 
     const occupiedIntervals = this.receivers
       .flatMap((receiver) => this.getMovingReceiverTrackSegments(
@@ -1255,8 +1340,8 @@ class Arena {
       ))
       .filter((segment) => {
         return (
-          Math.abs(segment.start.y - bounds.bottom) <= bottomEdgeEpsilon &&
-          Math.abs(segment.end.y - bounds.bottom) <= bottomEdgeEpsilon
+          segment.start.y >= bottomCollisionBandTop ||
+          segment.end.y >= bottomCollisionBandTop
         );
       })
       .map((segment) => {
@@ -1342,116 +1427,6 @@ class Arena {
     }, null);
   }
 
-  getShortReceiverTrackGeometry(receiver) {
-    const layout = this.getScaledLayout();
-    const trackLength = this.getReceiverTrackLength(true);
-    const rightX = layout.outerX + layout.outerWidth;
-    const bottomY = layout.outerY + layout.outerHeight;
-    const leftTrackX = layout.outerX + layout.railSize / 2;
-    const rightTrackX = rightX - layout.railSize / 2;
-    const topTrackY = layout.outerY + layout.railSize / 2;
-    const bottomTrackY = bottomY - layout.railSize / 2;
-
-    if (receiver.id === "topLeft") {
-      return {
-        horizontalStart: { x: leftTrackX + layout.cornerRadius, y: topTrackY },
-        horizontalEnd: { x: leftTrackX + trackLength, y: topTrackY },
-        curveControl: { x: leftTrackX, y: topTrackY },
-        curveEnd: { x: leftTrackX, y: layout.outerY + layout.cornerRadius },
-        verticalStart: { x: leftTrackX, y: layout.outerY + layout.cornerRadius },
-        verticalEnd: { x: leftTrackX, y: topTrackY + trackLength }
-      };
-    }
-
-    if (receiver.id === "topRight") {
-      return {
-        horizontalStart: { x: rightTrackX - layout.cornerRadius, y: topTrackY },
-        horizontalEnd: { x: rightTrackX - trackLength, y: topTrackY },
-        curveControl: { x: rightTrackX, y: topTrackY },
-        curveEnd: { x: rightTrackX, y: layout.outerY + layout.cornerRadius },
-        verticalStart: { x: rightTrackX, y: layout.outerY + layout.cornerRadius },
-        verticalEnd: { x: rightTrackX, y: topTrackY + trackLength }
-      };
-    }
-
-    if (receiver.id === "bottomLeft") {
-      return {
-        horizontalStart: { x: leftTrackX + layout.cornerRadius, y: bottomTrackY },
-        horizontalEnd: { x: leftTrackX + trackLength, y: bottomTrackY },
-        curveControl: { x: leftTrackX, y: bottomTrackY },
-        curveEnd: { x: leftTrackX, y: bottomY - layout.cornerRadius },
-        verticalStart: { x: leftTrackX, y: bottomY - layout.cornerRadius },
-        verticalEnd: { x: leftTrackX, y: bottomTrackY - trackLength }
-      };
-    }
-
-    return {
-      horizontalStart: { x: rightTrackX - layout.cornerRadius, y: bottomTrackY },
-      horizontalEnd: { x: rightTrackX - trackLength, y: bottomTrackY },
-      curveControl: { x: rightTrackX, y: bottomTrackY },
-      curveEnd: { x: rightTrackX, y: bottomY - layout.cornerRadius },
-      verticalStart: { x: rightTrackX, y: bottomY - layout.cornerRadius },
-      verticalEnd: { x: rightTrackX, y: bottomTrackY - trackLength }
-    };
-  }
-
-  getShortReceiverTrackHitAreas(receiver) {
-    const geometry = this.getShortReceiverTrackGeometry(receiver);
-    const layout = this.getScaledLayout();
-
-    const hitAreas = [];
-
-    // Partie horizontale
-    hitAreas.push(
-      this.getSegmentHitArea(
-        geometry.horizontalStart,
-        geometry.horizontalEnd,
-        layout.railSize
-      )
-    );
-
-    // Partie arrondie du récepteur
-    const curveSteps = 10;
-    let previousPoint = geometry.horizontalStart;
-
-    for (let step = 1; step <= curveSteps; step += 1) {
-      const t = step / curveSteps;
-      const inverseT = 1 - t;
-
-      const curvePoint = {
-        x:
-          inverseT * inverseT * geometry.horizontalStart.x +
-          2 * inverseT * t * geometry.curveControl.x +
-          t * t * geometry.curveEnd.x,
-
-        y:
-          inverseT * inverseT * geometry.horizontalStart.y +
-          2 * inverseT * t * geometry.curveControl.y +
-          t * t * geometry.curveEnd.y
-      };
-
-      hitAreas.push(
-        this.getSegmentHitArea(
-          previousPoint,
-          curvePoint,
-          layout.railSize
-        )
-      );
-
-      previousPoint = curvePoint;
-    }
-
-    // Partie verticale
-    hitAreas.push(
-      this.getSegmentHitArea(
-        geometry.verticalStart,
-        geometry.verticalEnd,
-        layout.railSize
-      )
-    );
-
-    return hitAreas;
-  }
   getSegmentHitArea(startPoint, endPoint, thickness) {
     const halfThickness = thickness / 2;
 
@@ -1696,15 +1671,6 @@ class Arena {
     );
   }
 
-  drawShortReceiverTrackPath(context, receiver) {
-    const geometry = this.getShortReceiverTrackGeometry(receiver);
-
-    context.moveTo(geometry.horizontalEnd.x, geometry.horizontalEnd.y);
-    context.lineTo(geometry.horizontalStart.x, geometry.horizontalStart.y);
-    context.quadraticCurveTo(geometry.curveControl.x, geometry.curveControl.y, geometry.curveEnd.x, geometry.curveEnd.y);
-    context.lineTo(geometry.verticalEnd.x, geometry.verticalEnd.y);
-  }
-
   drawMovingReceiverTrack(
     context,
     receiver,
@@ -1753,12 +1719,6 @@ class Arena {
   }
 
   drawReceiverTrack(context, receiver, currentPhase, colorOverride = null, opacity = 1, hitStrength = 0, modifierVisualState = null) {
-    const layout = this.getScaledLayout();
-    const middleX = layout.outerX + layout.outerWidth / 2;
-    const middleY = layout.outerY + layout.outerHeight / 2;
-    const rightX = layout.outerX + layout.outerWidth;
-    const bottomY = layout.outerY + layout.outerHeight;
-
     const receiverVisual = this.getReceiverVisualStyle(
       receiver,
       currentPhase,
@@ -1788,31 +1748,19 @@ class Arena {
 
     context.beginPath();
 
-    const receiverModifierState = this.getReceiverModifierState(modifierVisualState);
+    const trackSegments = this.getReceiverTrackSegments(
+      receiver,
+      currentPhase,
+      modifierVisualState
+    );
 
-    if (receiverModifierState.isShort) {
-      this.drawShortReceiverTrackPath(context, receiver);
-    } else if (receiver.id === "topLeft") {
-      context.moveTo(middleX, layout.outerY + layout.railSize / 2);
-      context.lineTo(layout.outerX + layout.cornerRadius, layout.outerY + layout.railSize / 2);
-      context.quadraticCurveTo(layout.outerX + layout.railSize / 2, layout.outerY + layout.railSize / 2, layout.outerX + layout.railSize / 2, layout.outerY + layout.cornerRadius);
-      context.lineTo(layout.outerX + layout.railSize / 2, middleY);
-    } else if (receiver.id === "topRight") {
-      context.moveTo(middleX, layout.outerY + layout.railSize / 2);
-      context.lineTo(rightX - layout.cornerRadius, layout.outerY + layout.railSize / 2);
-      context.quadraticCurveTo(rightX - layout.railSize / 2, layout.outerY + layout.railSize / 2, rightX - layout.railSize / 2, layout.outerY + layout.cornerRadius);
-      context.lineTo(rightX - layout.railSize / 2, middleY);
-    } else if (receiver.id === "bottomLeft") {
-      context.moveTo(layout.outerX + layout.railSize / 2, middleY);
-      context.lineTo(layout.outerX + layout.railSize / 2, bottomY - layout.cornerRadius);
-      context.quadraticCurveTo(layout.outerX + layout.railSize / 2, bottomY - layout.railSize / 2, layout.outerX + layout.cornerRadius, bottomY - layout.railSize / 2);
-      context.lineTo(middleX, bottomY - layout.railSize / 2);
-    } else {
-      context.moveTo(rightX - layout.railSize / 2, middleY);
-      context.lineTo(rightX - layout.railSize / 2, bottomY - layout.cornerRadius);
-      context.quadraticCurveTo(rightX - layout.railSize / 2, bottomY - layout.railSize / 2, rightX - layout.cornerRadius, bottomY - layout.railSize / 2);
-      context.lineTo(middleX, bottomY - layout.railSize / 2);
-    }
+    trackSegments.forEach((segment, index) => {
+      if (index === 0) {
+        context.moveTo(segment.start.x, segment.start.y);
+      }
+
+      context.lineTo(segment.end.x, segment.end.y);
+    });
 
 
     context.globalAlpha = receiverVisual.opacity;
@@ -1823,46 +1771,23 @@ class Arena {
   }
 
   drawReceiverIcons(context, currentPhase, opacity = 1, hitFeedbackByReceiverId = {}, modifierVisualState = null) {
-    const layout = this.getScaledLayout();
-
-    const iconInsetX = this.scaler.x(120);
-    const iconInsetY = this.scaler.y(180);
-
     const receiverIconRadius =
       this.scaler.x(GAME_CONFIG.shapeRadius);
 
-    const iconPositionsByReceiverId =
-      this.getReceiverModifierState(modifierVisualState).isSliding
-        ? this.receivers.reduce((positionsByReceiverId, receiver) => {
-          positionsByReceiverId[receiver.id] =
-            this.getMovingReceiverIconPoint(receiver, currentPhase, modifierVisualState);
+    const iconPositionsByReceiverId = this.receivers.reduce(
+      (positionsByReceiverId, receiver) => {
+        positionsByReceiverId[receiver.id] =
+          this.getMovingReceiverIconPoint(
+            receiver,
+            currentPhase,
+            modifierVisualState
+          );
 
-          return positionsByReceiverId;
-        }, {})
-        : {
-          topLeft: {
-            x: layout.outerX + iconInsetX,
-            y: layout.outerY + iconInsetY
-          },
+        return positionsByReceiverId;
+      },
+      {}
+    );
 
-          topRight: {
-            x: layout.outerX + layout.outerWidth - iconInsetX,
-            y: layout.outerY + iconInsetY
-          },
-
-          bottomLeft: {
-            x: layout.outerX + iconInsetX,
-            y: layout.outerY + layout.outerHeight - iconInsetY
-          },
-
-          bottomRight: {
-            x: layout.outerX + layout.outerWidth - iconInsetX,
-            y: layout.outerY + layout.outerHeight - iconInsetY
-          }
-        };
-
-    // Les symboles restent à distance constante
-    // des coins de l'arène, quel que soit le ratio de l'écran.
     this.receivers.forEach((receiver) => {
       const hitStrength =
         hitFeedbackByReceiverId[receiver.id] || 0;
@@ -4783,7 +4708,7 @@ class NeonSwipeGame {
       twin: false,
       reveal: false,
       slide: true,
-      shortReceivers: false,
+      shortReceivers: true,
       void: false
     };
     this.lastAnimationTime = 0;
