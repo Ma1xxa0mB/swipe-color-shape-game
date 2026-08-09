@@ -78,7 +78,15 @@ const GAME_CONFIG = {
   level10WallRotationIntervalMs: 1000,
   level10WallRotationDurationMs: 180,
   blinkVisibleDurationMs: 800,
-  blinkNeutralDurationMs: 800
+  blinkNeutralDurationMs: 800,
+  voidSpawnChance: 0.25,
+  topSpawnGravityMultiplier: 0.65,
+};
+
+const HOME_UI_DATA = {
+  bestScore: 76,
+  dailyAttemptsLeft: 4,
+  dailyMaxAttempts: 4
 };
 
 const WALL_LAYOUT_A_RECEIVER_COLORS_BY_POSITION_ID = {
@@ -184,7 +192,11 @@ const NEON_COLORS = {
   green: "#4dff88",
   red: "#ff4560",
   blue: "#4da6ff",
-  yellow: "#efff2e"
+  yellow: "#efff2e",
+
+  pink: "#ff2bda",
+  purple: "#9a4dff",
+  white: "#ffffff"
 };
 
 const NEUTRAL_RECEIVER_VISUALS = {
@@ -211,6 +223,8 @@ const CLOCKWISE_RECEIVER_ROTATION_BY_POSITION_ID = {
 
 const AVAILABLE_SHAPES = ["circle", "square", "triangle", "star"];
 const AVAILABLE_COLOR_IDS = ["red", "yellow", "green", "blue"];
+const VOID_SHAPES = ["hexagon", "diamond", "rectangle"];
+const VOID_COLOR_IDS = ["pink", "purple", "white"];
 
 const KEYBOARD_TARGETS = {
   ArrowUp: "up",
@@ -302,7 +316,7 @@ class SwipeGesture {
 }
 
 class FallingShape {
-  constructor({ x, y, radius, colorId, shapeName, velocityX = 0, velocityY, state = "active" }) {
+  constructor({ x, y, radius, colorId, shapeName, velocityX = 0, velocityY, state = "active", isVoid = false }) {
     this.x = x;
     this.y = y;
     this.radius = radius;
@@ -311,6 +325,7 @@ class FallingShape {
     this.velocityX = velocityX;
     this.velocityY = velocityY;
     this.state = state;
+    this.isVoid = isVoid;
     this.hasBeenThrown = false;
     this.createdAt = performance.now();
     this.spawnAnimationStartedAt = null;
@@ -1652,7 +1667,53 @@ class ShapeRenderer {
       return;
     }
 
+    if (shapeName === "hexagon") {
+      context.moveTo(center.x, center.y - radius * 1.18);
+      context.lineTo(center.x + radius * 0.98, center.y - radius * 0.55);
+      context.lineTo(center.x + radius * 0.98, center.y + radius * 0.55);
+      context.lineTo(center.x, center.y + radius * 1.18);
+      context.lineTo(center.x - radius * 0.98, center.y + radius * 0.55);
+      context.lineTo(center.x - radius * 0.98, center.y - radius * 0.55);
+      context.closePath();
+      return;
+    }
+
+    if (shapeName === "diamond") {
+      context.moveTo(center.x, center.y - radius * 1.45);
+      context.lineTo(center.x + radius * 0.78, center.y);
+      context.lineTo(center.x, center.y + radius * 1.45);
+      context.lineTo(center.x - radius * 0.78, center.y);
+      context.closePath();
+      return;
+    }
+
+    if (shapeName === "rectangle") {
+      context.rect(
+        center.x - radius * 1.45,
+        center.y - radius * 0.46,
+        radius * 2.9,
+        radius * 0.92
+      );
+      return;
+    }
+
     ShapeRenderer.createStarPath(context, center.x, center.y, radius * 0.56, radius * 1.08, 5);
+  }
+
+  static createRegularPolygonPath(context, x, y, radius, sideCount, rotation = -Math.PI / 2) {
+    for (let index = 0; index < sideCount; index += 1) {
+      const angle = rotation + (Math.PI * 2 * index) / sideCount;
+      const pointX = x + Math.cos(angle) * radius;
+      const pointY = y + Math.sin(angle) * radius;
+
+      if (index === 0) {
+        context.moveTo(pointX, pointY);
+      } else {
+        context.lineTo(pointX, pointY);
+      }
+    }
+
+    context.closePath();
   }
 
   static createStarPath(context, x, y, innerRadius, outerRadius, spikeCount) {
@@ -2019,6 +2080,9 @@ class ChallengePhysics {
   static getGravity(challengePhase) {
     if (challengePhase.usesPreciseDuoSelection) {
       return GAME_CONFIG.gravity * GAME_CONFIG.level19GravityMultiplier;
+    }
+    if (challengePhase.projectileEntry === "top") {
+      return GAME_CONFIG.gravity * GAME_CONFIG.topSpawnGravityMultiplier;
     }
     return GAME_CONFIG.gravity;
   }
@@ -2680,6 +2744,1169 @@ class LevelIntroController {
   }
 }
 
+class HomeScreen {
+  constructor(scaler) {
+    this.scaler = scaler;
+    this.hitTargets = {};
+  }
+
+  draw(context, data, currentTime) {
+    this.hitTargets = this.getLayout();
+
+    this.drawBorder(context);
+    this.drawCornerShapes(context, currentTime);
+    this.drawSettingsButton(context);
+    this.drawLogo(context, currentTime);
+    this.drawPlayButton(context, currentTime);
+    this.drawBestScore(context, data.bestScore);
+    this.drawDailyCard(context, data, currentTime);
+
+  }
+
+  getLayout() {
+    const centerX = this.scaler.canvasWidth / 2;
+
+    return {
+      settings: this.rectFromCenter(this.scaler.x(42), this.scaler.y(38), this.scaler.x(46), this.scaler.y(46)),
+      play: this.rectFromCenter(centerX, this.scaler.y(390), this.scaler.x(294), this.scaler.y(76)),
+      daily: this.rectFromCenter(centerX, this.scaler.y(700), this.scaler.x(390), this.scaler.y(170)),
+    };
+  }
+
+  rectFromCenter(centerX, centerY, width, height) {
+    return {
+      x: centerX - width / 2,
+      y: centerY - height / 2,
+      width,
+      height
+    };
+  }
+
+  getHitTarget(point) {
+    return ["play", "daily", "settings"].find((targetName) => {
+      const target = this.hitTargets[targetName] || this.getLayout()[targetName];
+      return this.isPointInRect(point, target);
+    }) || null;
+  }
+
+  isPointInRect(point, rect) {
+    return (
+      point.x >= rect.x &&
+      point.x <= rect.x + rect.width &&
+      point.y >= rect.y &&
+      point.y <= rect.y + rect.height
+    );
+  }
+
+  drawBorder(context) {
+    const layout = this.getArenaLikeLayout();
+    const middleX = layout.outerX + layout.outerWidth / 2;
+    const rightX = layout.outerX + layout.outerWidth;
+    const bottomY = layout.outerY + layout.outerHeight;
+
+    this.drawBorderSegment(context, NEON_COLORS.green, (ctx) => {
+      ctx.moveTo(middleX, layout.outerY + layout.railSize / 2);
+      ctx.lineTo(layout.outerX + layout.cornerRadius, layout.outerY + layout.railSize / 2);
+      ctx.quadraticCurveTo(layout.outerX + layout.railSize / 2, layout.outerY + layout.railSize / 2, layout.outerX + layout.railSize / 2, layout.outerY + layout.cornerRadius);
+      ctx.lineTo(layout.outerX + layout.railSize / 2, layout.outerY + layout.outerHeight / 2);
+    });
+
+    this.drawBorderSegment(context, NEON_COLORS.red, (ctx) => {
+      ctx.moveTo(middleX, layout.outerY + layout.railSize / 2);
+      ctx.lineTo(rightX - layout.cornerRadius, layout.outerY + layout.railSize / 2);
+      ctx.quadraticCurveTo(rightX - layout.railSize / 2, layout.outerY + layout.railSize / 2, rightX - layout.railSize / 2, layout.outerY + layout.cornerRadius);
+      ctx.lineTo(rightX - layout.railSize / 2, layout.outerY + layout.outerHeight / 2);
+    });
+
+    this.drawBorderSegment(context, NEON_COLORS.blue, (ctx) => {
+      ctx.moveTo(layout.outerX + layout.railSize / 2, layout.outerY + layout.outerHeight / 2);
+      ctx.lineTo(layout.outerX + layout.railSize / 2, bottomY - layout.cornerRadius);
+      ctx.quadraticCurveTo(layout.outerX + layout.railSize / 2, bottomY - layout.railSize / 2, layout.outerX + layout.cornerRadius, bottomY - layout.railSize / 2);
+      ctx.lineTo(middleX, bottomY - layout.railSize / 2);
+    });
+
+    this.drawBorderSegment(context, NEON_COLORS.yellow, (ctx) => {
+      ctx.moveTo(rightX - layout.railSize / 2, layout.outerY + layout.outerHeight / 2);
+      ctx.lineTo(rightX - layout.railSize / 2, bottomY - layout.cornerRadius);
+      ctx.quadraticCurveTo(rightX - layout.railSize / 2, bottomY - layout.railSize / 2, rightX - layout.cornerRadius, bottomY - layout.railSize / 2);
+      ctx.lineTo(middleX, bottomY - layout.railSize / 2);
+    });
+  }
+
+  getArenaLikeLayout() {
+    return {
+      outerX: this.scaler.x(2),
+      outerY: this.scaler.y(52),
+      outerWidth: this.scaler.x(536),
+      outerHeight: this.scaler.y(906),
+      railSize: this.scaler.x(48),
+      cornerRadius: this.scaler.x(150)
+    };
+  }
+
+  drawBorderSegment(context, color, drawPath) {
+    context.save();
+    context.lineCap = "round";
+    context.lineJoin = "round";
+    context.shadowColor = color;
+    context.shadowBlur = this.scaler.x(28);
+    context.strokeStyle = color;
+    context.lineWidth = this.scaler.x(7);
+    context.globalCompositeOperation = "lighter";
+    context.beginPath();
+    drawPath(context);
+    context.stroke();
+    context.restore();
+  }
+
+  drawCornerShapes(context, currentTime) {
+    const layout = this.getArenaLikeLayout();
+    const iconRadius = this.scaler.x(20);
+    const insetX = this.scaler.x(85);
+    const insetY = this.scaler.y(100);
+
+    const floatAmount = this.scaler.y(6);
+    const speed = 550;
+
+    const triangleOffset = Math.sin(currentTime / speed) * floatAmount;
+    const starOffset = Math.sin(currentTime / speed + 1.5) * floatAmount;
+    const squareOffset = Math.sin(currentTime / speed + 3) * floatAmount;
+    const circleOffset = Math.sin(currentTime / speed + 4.5) * floatAmount;
+
+    ShapeRenderer.draw(
+      context,
+      {
+        x: layout.outerX + insetX,
+        y: layout.outerY + insetY + triangleOffset
+      },
+      "triangle",
+      NEON_COLORS.green,
+      iconRadius,
+      0.9,
+      1.25
+    );
+
+    ShapeRenderer.draw(
+      context,
+      {
+        x: layout.outerX + layout.outerWidth - insetX,
+        y: layout.outerY + insetY + starOffset
+      },
+      "star",
+      NEON_COLORS.red,
+      iconRadius,
+      0.9,
+      1.25
+    );
+
+    ShapeRenderer.draw(
+      context,
+      {
+        x: layout.outerX + insetX,
+        y: layout.outerY + layout.outerHeight - insetY + squareOffset
+      },
+      "square",
+      NEON_COLORS.blue,
+      iconRadius,
+      0.9,
+      1.25
+    );
+
+    ShapeRenderer.draw(
+      context,
+      {
+        x: layout.outerX + layout.outerWidth - insetX,
+        y: layout.outerY + layout.outerHeight - insetY + circleOffset
+      },
+      "circle",
+      NEON_COLORS.yellow,
+      iconRadius,
+      0.9,
+      1.25
+    );
+  }
+
+  drawSettingsButton(context) {
+    const target = this.hitTargets.settings;
+    const center = {
+      x: target.x + target.width / 2,
+      y: target.y + target.height / 2
+    };
+    const radius = this.scaler.x(12);
+
+    context.save();
+    context.strokeStyle = "rgba(238, 244, 255, 0.72)";
+    context.shadowColor = "rgba(238, 244, 255, 0.38)";
+    context.shadowBlur = this.scaler.x(8);
+    context.lineWidth = this.scaler.x(2);
+    context.beginPath();
+    context.arc(center.x, center.y, radius, 0, Math.PI * 2);
+    context.stroke();
+
+    for (let index = 0; index < 8; index += 1) {
+      const angle = (Math.PI * 2 * index) / 8;
+      const inner = radius + this.scaler.x(3);
+      const outer = radius + this.scaler.x(7);
+      context.beginPath();
+      context.moveTo(center.x + Math.cos(angle) * inner, center.y + Math.sin(angle) * inner);
+      context.lineTo(center.x + Math.cos(angle) * outer, center.y + Math.sin(angle) * outer);
+      context.stroke();
+    }
+
+    context.restore();
+  }
+
+  drawTrackedText(context, text, centerX, y, options = {}) {
+    const {
+      fontSize = 40,
+      fontFamily = "Oxanium",
+      fontWeight = 400,
+      tracking = 10,
+      fillStyle = "#ffffff",
+      shadowColor = "rgba(255,255,255,0.5)",
+      shadowBlur = 10
+    } = options;
+
+    context.save();
+    context.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
+    context.textBaseline = "middle";
+    context.textAlign = "left";
+    context.fillStyle = fillStyle;
+    context.shadowColor = shadowColor;
+    context.shadowBlur = shadowBlur;
+
+    const letters = text.split("");
+    const widths = letters.map(letter => context.measureText(letter).width);
+    const totalWidth =
+      widths.reduce((sum, width) => sum + width, 0) + tracking * (letters.length - 1);
+
+    let x = centerX - totalWidth / 2;
+
+    letters.forEach((letter, index) => {
+      context.fillText(letter, x, y);
+      x += widths[index] + tracking;
+    });
+
+    context.restore();
+  }
+
+  drawLogo(context, currentTime) {
+    const centerX = this.scaler.canvasWidth / 2;
+    const topY = this.scaler.y(235);
+
+    const glowPulse =
+      (Math.sin(currentTime / 850) + 1) / 2;
+
+    const largeGlow =
+      this.scaler.x(18 + glowPulse * 12);
+
+    const bodyGlow =
+      this.scaler.x(8 + glowPulse * 7);
+
+    const haloOpacity =
+      0.42 + glowPulse * 0.18;
+
+    const neonLetters = [
+      { letter: "N", color: NEON_COLORS.red },
+      { letter: "E", color: NEON_COLORS.green },
+      { letter: "O", color: NEON_COLORS.yellow },
+      { letter: "N", color: NEON_COLORS.blue }
+    ];
+
+    const neonFontSize = this.scaler.x(54);
+    const neonTracking = this.scaler.x(8);
+
+    context.save();
+    context.font = `400 ${neonFontSize}px Orbitron`;
+    context.textBaseline = "middle";
+    context.textAlign = "left";
+
+    const widths = neonLetters.map(item => context.measureText(item.letter).width);
+    const totalWidth =
+      widths.reduce((sum, width) => sum + width, 0) +
+      neonTracking * (neonLetters.length - 1);
+
+    let x = centerX - totalWidth / 2;
+
+    const drawNeonLetter = (letter, x, y, color) => {
+      // 1) halo coloré large
+      context.save();
+      context.globalAlpha = haloOpacity;
+      context.fillStyle = color;
+      context.shadowColor = color;
+      context.shadowBlur = largeGlow;
+      context.fillText(letter, x, y);
+      context.restore();
+
+      // 2) corps principal coloré
+      context.save();
+      context.globalAlpha = 1;
+      context.fillStyle = color;
+      context.shadowColor = color;
+      context.shadowBlur = bodyGlow;
+      context.fillText(letter, x, y);
+      context.restore();
+
+      // 3) cœur blanc très léger
+      context.save();
+      context.globalAlpha = 0.22;
+      context.fillStyle = "#ffffff";
+      context.shadowColor = "#ffffff";
+      context.shadowBlur = this.scaler.x(3);
+      context.fillText(letter, x, y);
+      context.restore();
+    };
+
+    neonLetters.forEach((item, index) => {
+      drawNeonLetter(item.letter, x, topY, item.color);
+      x += widths[index] + neonTracking;
+    });
+
+    context.restore();
+
+    this.drawTrackedText(
+      context,
+      "SWIPE",
+      centerX,
+      topY + this.scaler.y(56),
+      {
+        fontSize: this.scaler.x(25),
+        fontFamily: "Orbitron",
+        fontWeight: 400,
+        tracking: this.scaler.x(25),
+        fillStyle: "rgba(245,248,255,0.96)",
+        shadowColor: "rgba(255,255,255,0.42)",
+        shadowBlur: this.scaler.x(10)
+      }
+    );
+  }
+
+  // drawLogo(context) {
+  //   const centerX = this.scaler.canvasWidth / 2;
+  //   const topY = this.scaler.y(235);
+
+  //   const neonLetters = [
+  //     { letter: "N", color: NEON_COLORS.red },
+  //     { letter: "E", color: NEON_COLORS.green },
+  //     { letter: "O", color: NEON_COLORS.yellow },
+  //     { letter: "N", color: NEON_COLORS.blue }
+  //   ];
+
+  //   const neonFontSize = this.scaler.x(60);
+  //   const neonTracking = this.scaler.x(10);
+
+  //   context.save();
+  //   context.font = `400 ${neonFontSize}px Orbitron`;
+  //   context.textBaseline = "middle";
+  //   context.textAlign = "left";
+
+  //   const widths = neonLetters.map(item => context.measureText(item.letter).width);
+  //   const totalWidth =
+  //     widths.reduce((sum, width) => sum + width, 0) +
+  //     neonTracking * (neonLetters.length - 1);
+
+  //   let x = centerX - totalWidth / 2;
+
+  //   neonLetters.forEach((item, index) => {
+  //     context.fillStyle = item.color;
+  //     context.shadowColor = item.color;
+  //     context.shadowBlur = this.scaler.x(14);
+  //     context.fillText(item.letter, x, topY);
+  //     x += widths[index] + neonTracking;
+  //   });
+
+  //   context.restore();
+
+  //   this.drawTrackedText(
+  //     context,
+  //     "SWIPE",
+  //     centerX,
+  //     topY + this.scaler.y(56),
+  //     {
+  //       fontSize: this.scaler.x(28),
+  //       fontFamily: "Orbitron",
+  //       fontWeight: 400,
+  //       tracking: this.scaler.x(28),
+  //       fillStyle: "rgba(245,248,255,0.96)",
+  //       shadowColor: "rgba(255,255,255,0.42)",
+  //       shadowBlur: this.scaler.x(10)
+  //     }
+  //   );
+  // }
+
+
+  drawPlayButton(context, currentTime) {
+    const target = this.hitTargets.play;
+
+    const centerX = target.x + target.width / 2;
+    const centerY = target.y + target.height / 2;
+
+    const pulse =
+      (Math.sin(currentTime / 350) + 1) / 2;
+
+    const opacity =
+      0.72 + pulse * 0.28;
+
+    const scale =
+      1 + pulse * 0.025;
+
+    const glow =
+      this.scaler.x(8 + pulse * 14);
+
+    context.save();
+
+    context.translate(centerX, centerY);
+    context.scale(scale, scale);
+
+    context.globalAlpha = opacity;
+
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+
+    context.fillStyle = "#f8fbff";
+
+    //context.shadowColor = "rgba(255,255,255,0.95)";
+    context.shadowBlur = glow;
+
+    context.font =
+      `800 ${this.scaler.x(26)}px Orbitron`;
+
+    context.letterSpacing =
+      `${this.scaler.x(6)}px`;
+
+    context.fillText(
+      "TAP TO PLAY",
+      0,
+      0
+    );
+
+    context.restore();
+  }
+  drawBestScore(context, bestScore) {
+    const centerX = this.scaler.canvasWidth / 2;
+    context.save();
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.fillStyle = "rgba(127, 141, 163, 0.9)";
+    context.font = `600 ${this.scaler.x(20)}px Orbitron`;
+    context.letterSpacing = `${this.scaler.x(5)}px`;
+    context.fillText("BEST", centerX, this.scaler.y(474));
+
+    context.fillStyle = "rgba(248, 251, 255, 0.96)";
+    context.shadowColor = "rgba(255, 255, 255, 0.55)";
+    context.shadowBlur = this.scaler.x(10);
+    context.font = `400 ${this.scaler.x(48)}px "Bebas Neue"`;
+    context.letterSpacing = "0px";
+    context.fillText(String(bestScore), centerX, this.scaler.y(522));
+    context.restore();
+  }
+
+  drawDailyCard(context, data, currentTime) {
+    const target = this.hitTargets.daily;
+
+    // Fond noir
+    context.save();
+
+    context.fillStyle = "rgba(0, 4, 7, 0.94)";
+
+    ShapeRenderer.roundRect(
+      context,
+      target.x,
+      target.y,
+      target.width,
+      target.height,
+      this.scaler.x(12)
+    );
+
+    context.fill();
+    context.restore();
+
+
+    // Contour 4 coins colorés
+    const radius = this.scaler.x(12);
+    const lineWidth = this.scaler.x(1.7);
+
+    const left = target.x;
+    const top = target.y;
+    const right = target.x + target.width;
+    const bottom = target.y + target.height;
+
+    // HAUT : vert -> rouge
+    let edgeGradient = context.createLinearGradient(
+      left + radius,
+      top,
+      right - radius,
+      top
+    );
+
+    edgeGradient.addColorStop(0, NEON_COLORS.green);
+    edgeGradient.addColorStop(1, NEON_COLORS.red);
+
+    context.save();
+    context.strokeStyle = edgeGradient;
+    context.lineWidth = lineWidth;
+    context.shadowColor = "rgba(255,255,255,0.18)";
+    context.shadowBlur = this.scaler.x(10);
+    context.lineCap = "round";
+
+    context.beginPath();
+    context.moveTo(left + radius, top);
+    context.lineTo(right - radius, top);
+    context.stroke();
+
+    context.restore();
+
+
+    // DROITE : rouge -> jaune
+    edgeGradient = context.createLinearGradient(
+      right,
+      top + radius,
+      right,
+      bottom - radius
+    );
+
+    edgeGradient.addColorStop(0, NEON_COLORS.red);
+    edgeGradient.addColorStop(1, NEON_COLORS.yellow);
+
+    context.save();
+    context.strokeStyle = edgeGradient;
+    context.lineWidth = lineWidth;
+    context.shadowColor = "rgba(255,255,255,0.18)";
+    context.shadowBlur = this.scaler.x(10);
+    context.lineCap = "round";
+
+    context.beginPath();
+    context.moveTo(right, top + radius);
+    context.lineTo(right, bottom - radius);
+    context.stroke();
+
+    context.restore();
+
+
+    // BAS : bleu -> jaune
+    edgeGradient = context.createLinearGradient(
+      left + radius,
+      bottom,
+      right - radius,
+      bottom
+    );
+
+    edgeGradient.addColorStop(0, NEON_COLORS.blue);
+    edgeGradient.addColorStop(1, NEON_COLORS.yellow);
+
+    context.save();
+    context.strokeStyle = edgeGradient;
+    context.lineWidth = lineWidth;
+    context.shadowColor = "rgba(255,255,255,0.18)";
+    context.shadowBlur = this.scaler.x(10);
+    context.lineCap = "round";
+
+    context.beginPath();
+    context.moveTo(left + radius, bottom);
+    context.lineTo(right - radius, bottom);
+    context.stroke();
+
+    context.restore();
+
+
+    // GAUCHE : vert -> bleu
+    edgeGradient = context.createLinearGradient(
+      left,
+      top + radius,
+      left,
+      bottom - radius
+    );
+
+    edgeGradient.addColorStop(0, NEON_COLORS.green);
+    edgeGradient.addColorStop(1, NEON_COLORS.blue);
+
+    context.save();
+    context.strokeStyle = edgeGradient;
+    context.lineWidth = lineWidth;
+    context.shadowColor = "rgba(255,255,255,0.18)";
+    context.shadowBlur = this.scaler.x(10);
+    context.lineCap = "round";
+
+    context.beginPath();
+    context.moveTo(left, top + radius);
+    context.lineTo(left, bottom - radius);
+    context.stroke();
+
+    context.restore();
+
+
+    // COIN HAUT GAUCHE = vert
+    context.save();
+    context.strokeStyle = NEON_COLORS.green;
+    context.lineWidth = lineWidth;
+    context.shadowColor = NEON_COLORS.green;
+    context.shadowBlur = this.scaler.x(10);
+
+    context.beginPath();
+    context.arc(
+      left + radius,
+      top + radius,
+      radius,
+      Math.PI,
+      Math.PI * 1.5
+    );
+    context.stroke();
+
+    context.restore();
+
+
+    // COIN HAUT DROIT = rouge
+    context.save();
+    context.strokeStyle = NEON_COLORS.red;
+    context.lineWidth = lineWidth;
+    context.shadowColor = NEON_COLORS.red;
+    context.shadowBlur = this.scaler.x(10);
+
+    context.beginPath();
+    context.arc(
+      right - radius,
+      top + radius,
+      radius,
+      Math.PI * 1.5,
+      Math.PI * 2
+    );
+    context.stroke();
+
+    context.restore();
+
+
+    // COIN BAS DROIT = jaune
+    context.save();
+    context.strokeStyle = NEON_COLORS.yellow;
+    context.lineWidth = lineWidth;
+    context.shadowColor = NEON_COLORS.yellow;
+    context.shadowBlur = this.scaler.x(10);
+
+    context.beginPath();
+    context.arc(
+      right - radius,
+      bottom - radius,
+      radius,
+      0,
+      Math.PI * 0.5
+    );
+    context.stroke();
+
+    context.restore();
+
+
+    // COIN BAS GAUCHE = bleu
+    context.save();
+    context.strokeStyle = NEON_COLORS.blue;
+    context.lineWidth = lineWidth;
+    context.shadowColor = NEON_COLORS.blue;
+    context.shadowBlur = this.scaler.x(10);
+
+    context.beginPath();
+    context.arc(
+      left + radius,
+      bottom - radius,
+      radius,
+      Math.PI * 0.5,
+      Math.PI
+    );
+    context.stroke();
+
+    context.restore();
+
+
+    // DAILY CHALLENGE
+    context.save();
+
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+
+    context.fillStyle = "rgba(248, 251, 255, 0.92)";
+    context.shadowColor = "rgba(255,255,255,0.18)";
+    context.shadowBlur = this.scaler.x(6);
+
+    context.font =
+      `600 ${this.scaler.x(20)}px Oxanium`;
+
+    context.letterSpacing =
+      `${this.scaler.x(3)}px`;
+
+    context.fillText(
+      "DAILY CHALLENGE",
+      target.x + target.width / 2,
+      target.y + this.scaler.y(34)
+    );
+
+    context.restore();
+
+
+    // 30 IN A ROW
+    context.save();
+
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+
+    context.fillStyle = "rgba(255,255,255,0.98)";
+    context.shadowColor = "rgba(255,255,255,0.55)";
+    context.shadowBlur = this.scaler.x(10);
+
+    context.font =
+      `600 ${this.scaler.x(16)}px Oxanium`;
+
+    context.letterSpacing =
+      `${this.scaler.x(4)}px`;
+
+    context.fillText(
+      "30 IN A ROW",
+      target.x + target.width / 2,
+      target.y + this.scaler.y(80)
+    );
+
+    context.restore();
+
+
+    // Attempts
+    const dotY =
+      target.y + this.scaler.y(125);
+
+    const dotStartX =
+      target.x + this.scaler.x(82);
+
+    const dotSpacing =
+      this.scaler.x(24);
+
+    const dotRadius =
+      this.scaler.x(6);
+
+    for (
+      let index = 0;
+      index < data.dailyMaxAttempts;
+      index += 1
+    ) {
+      const isAvailable =
+        index < data.dailyAttemptsLeft;
+
+      context.save();
+
+      if (isAvailable) {
+        context.fillStyle = "#ffffff";
+        context.shadowColor = "rgba(255,255,255,0.95)";
+        context.shadowBlur = this.scaler.x(10);
+      } else {
+        context.fillStyle = "rgba(255,255,255,0.06)";
+        context.strokeStyle = "rgba(255,255,255,0.22)";
+        context.lineWidth = this.scaler.x(1.3);
+        context.shadowColor = "transparent";
+      }
+
+      context.beginPath();
+
+      context.arc(
+        dotStartX + index * dotSpacing,
+        dotY,
+        dotRadius,
+        0,
+        Math.PI * 2
+      );
+
+      if (isAvailable) {
+        context.fill();
+      } else {
+        context.fill();
+        context.stroke();
+      }
+
+      context.restore();
+    }
+
+
+    // Texte attempts
+    context.save();
+
+    context.textAlign = "left";
+    context.textBaseline = "middle";
+
+    context.fillStyle = "rgba(238,244,255,0.78)";
+    context.shadowColor = "rgba(255,255,255,0.12)";
+    context.shadowBlur = this.scaler.x(5);
+
+    context.font =
+      `600 ${this.scaler.x(16)}px Oxanium`;
+
+    context.letterSpacing =
+      `${this.scaler.x(2)}px`;
+
+    context.fillText(
+      `${data.dailyAttemptsLeft} ATTEMPTS`,
+      target.x + this.scaler.x(205),
+      dotY
+    );
+
+    context.restore();
+
+
+    // Shimmer blanc toutes les ~4 secondes
+    const shimmerCycle = 3800;
+    const shimmerDuration = 850;
+
+    const shimmerTime =
+      currentTime % shimmerCycle;
+
+    if (shimmerTime < shimmerDuration) {
+      const progress =
+        shimmerTime / shimmerDuration;
+
+      const shimmerX =
+        target.x -
+        this.scaler.x(55) +
+        progress *
+        (target.width + this.scaler.x(110));
+
+      const shimmerWidth =
+        this.scaler.x(52);
+
+      const shimmerGradient =
+        context.createLinearGradient(
+          shimmerX - shimmerWidth,
+          0,
+          shimmerX + shimmerWidth,
+          0
+        );
+
+      shimmerGradient.addColorStop(
+        0,
+        "rgba(255,255,255,0)"
+      );
+
+      shimmerGradient.addColorStop(
+        0.38,
+        "rgba(255,255,255,0.10)"
+      );
+
+      shimmerGradient.addColorStop(
+        0.5,
+        "rgba(255,255,255,0.95)"
+      );
+
+      shimmerGradient.addColorStop(
+        0.62,
+        "rgba(255,255,255,0.10)"
+      );
+
+      shimmerGradient.addColorStop(
+        1,
+        "rgba(255,255,255,0)"
+      );
+
+      context.save();
+
+      context.strokeStyle =
+        shimmerGradient;
+
+      context.lineWidth =
+        this.scaler.x(2.5);
+
+      context.shadowColor =
+        "rgba(255,255,255,0.75)";
+
+      context.shadowBlur =
+        this.scaler.x(12);
+
+      ShapeRenderer.roundRect(
+        context,
+        target.x,
+        target.y,
+        target.width,
+        target.height,
+        this.scaler.x(12)
+      );
+
+      context.stroke();
+
+      context.restore();
+    }
+  }
+  // drawDailyCard(context, data, currentTime) {
+  //   const target = this.hitTargets.daily;
+
+  //   const cyan = "#35f4ff";
+
+  //   // Fond noir + contour cyan
+  //   context.save();
+
+  //   context.fillStyle = "rgba(0, 5, 8, 0.92)";
+  //   context.strokeStyle = cyan;
+  //   context.shadowColor = cyan;
+  //   context.shadowBlur = this.scaler.x(14);
+  //   context.lineWidth = this.scaler.x(1.5);
+
+  //   ShapeRenderer.roundRect(
+  //     context,
+  //     target.x,
+  //     target.y,
+  //     target.width,
+  //     target.height,
+  //     this.scaler.x(12)
+  //   );
+
+  //   context.fill();
+  //   context.stroke();
+
+  //   context.restore();
+
+
+  //   // DAILY CHALLENGE
+  //   context.save();
+
+  //   context.textAlign = "center";
+  //   context.textBaseline = "middle";
+
+  //   context.fillStyle = "rgba(53, 244, 255, 0.78)";
+  //   context.shadowColor = "rgba(53, 244, 255, 0.35)";
+  //   context.shadowBlur = this.scaler.x(7);
+
+  //   context.font =
+  //     `400 ${this.scaler.x(16)}px Orbitron`;
+
+  //   context.letterSpacing =
+  //     `${this.scaler.x(4)}px`;
+
+  //   context.fillText(
+  //     "DAILY CHALLENGE",
+  //     target.x + target.width / 2,
+  //     target.y + this.scaler.y(42)
+  //   );
+
+  //   context.restore();
+
+
+  //   // 30 IN A ROW
+  //   context.save();
+
+  //   context.textAlign = "center";
+  //   context.textBaseline = "middle";
+
+  //   context.fillStyle = "#ffffff";
+  //   context.shadowColor = "rgba(255,255,255,0.72)";
+  //   context.shadowBlur = this.scaler.x(13);
+
+  //   context.font =
+  //     `400 ${this.scaler.x(34)}px Orbitron`;
+
+  //   context.letterSpacing =
+  //     `${this.scaler.x(5)}px`;
+
+  //   context.fillText(
+  //     "30 IN A ROW",
+  //     target.x + target.width / 2,
+  //     target.y + this.scaler.y(96)
+  //   );
+
+  //   context.restore();
+
+
+  //   // Vies / attempts
+  //   const dotY =
+  //     target.y + this.scaler.y(145);
+
+  //   const dotStartX =
+  //     target.x + this.scaler.x(75);
+
+  //   const dotSpacing =
+  //     this.scaler.x(28);
+
+  //   const dotRadius =
+  //     this.scaler.x(6);
+
+  //   for (
+  //     let index = 0;
+  //     index < data.dailyMaxAttempts;
+  //     index += 1
+  //   ) {
+  //     const isAvailable =
+  //       index < data.dailyAttemptsLeft;
+
+  //     context.save();
+
+  //     if (isAvailable) {
+  //       context.fillStyle = cyan;
+  //       context.shadowColor = cyan;
+  //       context.shadowBlur = this.scaler.x(11);
+  //     } else {
+  //       context.fillStyle = "rgba(53,244,255,0.12)";
+  //       context.strokeStyle = "rgba(53,244,255,0.42)";
+  //       context.lineWidth = this.scaler.x(1.5);
+  //       context.shadowColor = "transparent";
+  //     }
+
+  //     context.beginPath();
+
+  //     context.arc(
+  //       dotStartX + index * dotSpacing,
+  //       dotY,
+  //       dotRadius,
+  //       0,
+  //       Math.PI * 2
+  //     );
+
+  //     if (isAvailable) {
+  //       context.fill();
+  //     } else {
+  //       context.fill();
+  //       context.stroke();
+  //     }
+
+  //     context.restore();
+  //   }
+
+
+  //   // 4 ATTEMPTS
+  //   context.save();
+
+  //   context.textAlign = "left";
+  //   context.textBaseline = "middle";
+
+  //   context.fillStyle = cyan;
+  //   context.shadowColor = "rgba(53,244,255,0.38)";
+  //   context.shadowBlur = this.scaler.x(7);
+
+  //   context.font =
+  //     `400 ${this.scaler.x(15)}px Orbitron`;
+
+  //   context.letterSpacing =
+  //     `${this.scaler.x(2.5)}px`;
+
+  //   context.fillText(
+  //     `${data.dailyAttemptsLeft} ATTEMPTS`,
+  //     target.x + this.scaler.x(220),
+  //     dotY
+  //   );
+
+  //   context.restore();
+
+  //   // Shimmer du contour toutes les ~4 secondes
+  //   const shimmerCycle = 3800;
+  //   const shimmerDuration = 850;
+
+  //   const shimmerTime =
+  //     currentTime % shimmerCycle;
+
+  //   if (shimmerTime < shimmerDuration) {
+  //     const progress =
+  //       shimmerTime / shimmerDuration;
+
+  //     const shimmerX =
+  //       target.x -
+  //       this.scaler.x(50) +
+  //       progress *
+  //       (target.width + this.scaler.x(100));
+
+  //     const shimmerWidth =
+  //       this.scaler.x(55);
+
+  //     const gradient =
+  //       context.createLinearGradient(
+  //         shimmerX - shimmerWidth,
+  //         0,
+  //         shimmerX + shimmerWidth,
+  //         0
+  //       );
+
+  //     gradient.addColorStop(
+  //       0,
+  //       "rgba(255,255,255,0)"
+  //     );
+
+  //     gradient.addColorStop(
+  //       0.32,
+  //       "rgba(53,244,255,0.15)"
+  //     );
+
+  //     gradient.addColorStop(
+  //       0.5,
+  //       "rgba(255,255,255,1)"
+  //     );
+
+  //     gradient.addColorStop(
+  //       0.68,
+  //       "rgba(53,244,255,0.15)"
+  //     );
+
+  //     gradient.addColorStop(
+  //       1,
+  //       "rgba(255,255,255,0)"
+  //     );
+
+  //     context.save();
+
+  //     context.strokeStyle = gradient;
+  //     context.lineWidth =
+  //       this.scaler.x(2.5);
+
+  //     context.shadowColor =
+  //       "#35f4ff";
+
+  //     context.shadowBlur =
+  //       this.scaler.x(14);
+
+  //     ShapeRenderer.roundRect(
+  //       context,
+  //       target.x,
+  //       target.y,
+  //       target.width,
+  //       target.height,
+  //       this.scaler.x(12)
+  //     );
+
+  //     context.stroke();
+
+  //     context.restore();
+  //   }
+  // }
+
+  drawSecondaryButtons(context) {
+    this.drawSecondaryButton(context, this.hitTargets.badges, "BADGES", "diamond", NEON_COLORS.blue);
+    this.drawSecondaryButton(context, this.hitTargets.skins, "SKINS", "circle", NEON_COLORS.yellow);
+  }
+
+  drawSecondaryButton(context, target, label, shapeName, color) {
+    this.drawThinPanel(context, target, "rgba(238, 244, 255, 0.22)", "rgba(238, 244, 255, 0.05)");
+
+    const iconX = target.x + this.scaler.x(34);
+    const iconY = target.y + target.height / 2;
+    const iconSize = this.scaler.x(18);
+
+    if (shapeName === "badge") {
+      this.drawBadgeIcon(context, iconX, iconY, iconSize);
+    } else if (shapeName === "skin") {
+      this.drawSkinIcon(context, iconX, iconY, iconSize);
+    }
+
+    context.save();
+    context.fillStyle = "rgba(238, 244, 255, 0.78)";
+    context.textAlign = "left";
+    context.textBaseline = "middle";
+    context.font = `600 ${this.scaler.x(13)}px Oxanium`;
+    context.letterSpacing = `${this.scaler.x(2)}px`;
+    context.fillText(label, target.x + this.scaler.x(52), target.y + target.height / 2);
+    context.restore();
+  }
+
+  drawThinPanel(context, rect, strokeColor, fillColor) {
+    context.save();
+    context.fillStyle = fillColor;
+    context.strokeStyle = strokeColor;
+    context.shadowColor = strokeColor;
+    context.shadowBlur = this.scaler.x(12);
+    context.lineWidth = this.scaler.x(1.2);
+    ShapeRenderer.roundRect(context, rect.x, rect.y, rect.width, rect.height, this.scaler.x(8));
+    context.fill();
+    context.stroke();
+    context.restore();
+  }
+
+}
+
 class InputController {
   constructor(canvas, game) {
     this.canvas = canvas;
@@ -2696,10 +3923,12 @@ class InputController {
   handlePointerDown(event) {
     event.preventDefault();
 
-    if (
-      this.game.isWaitingToStart() ||
-      this.game.state === "ended"
-    ) {
+    if (this.game.isWaitingToStart()) {
+      this.game.handleHomeTap(this.getCanvasPoint(event));
+      return;
+    }
+
+    if (this.game.state === "ended") {
       this.game.reset();
       return;
     }
@@ -2769,6 +3998,7 @@ class NeonSwipeGame {
     this.context = context;
     this.scaler = new GeometryScaler(GAME_CONFIG.designWidth, GAME_CONFIG.designHeight);
     this.arena = new Arena(this.scaler, RECEIVER_DEFINITIONS);
+    this.homeScreen = new HomeScreen(this.scaler);
     this.rules = new GameRules(this.arena);
     this.dynamicRuleSequence = new DynamicRuleSequenceController();
     this.receiverEffects = new ReceiverEffectsController();
@@ -2792,7 +4022,7 @@ class NeonSwipeGame {
 
     this.score = 0;
     this.activeModifiers = {
-      blink: true,
+      blink: false,
       pulse: false,
       burst: false,
       void: false
@@ -2825,7 +4055,7 @@ class NeonSwipeGame {
     this.dynamicRuleSequence.reset();
     this.blinkController.reset();
     // TEMP TEST BLINK LEVEL 14 - restore to 0 after validation
-    this.score = 36;
+    this.score = 0;
     this.state = "playing";
     this.resetLevelRuntime();
     this.movingReceiverOffset = 0;
@@ -2903,6 +4133,11 @@ class NeonSwipeGame {
       }
 
       if (shape.isBelowScreen(this.scaler.canvasHeight, this.scaler.y(28))) {
+        if (shape.isVoid && !shape.hasBeenThrown) {
+          this.resolveIgnoredVoidShape(shape);
+          return;
+        }
+
         this.endGame("GAME OVER");
         return;
       }
@@ -2938,6 +4173,8 @@ class NeonSwipeGame {
     const fallingShape = this.createShapeFromSpawn(spawn);
     const previousActiveShapeRuleName = this.activeShapeRuleName;
 
+    this.applyVoidModifierToShape(fallingShape, challengePhaseSnapshot);
+
     fallingShape.challengePhase = challengePhaseSnapshot;
     fallingShape.validationPhase = validationPhaseSnapshot;
     fallingShape.gravity = this.scaler.x(ChallengePhysics.getGravity(challengePhaseSnapshot));
@@ -2948,6 +4185,24 @@ class NeonSwipeGame {
       challengePhaseSnapshot.ruleName,
       previousActiveShapeRuleName
     );
+  }
+
+  applyVoidModifierToShape(fallingShape, challengePhase) {
+    fallingShape.isVoid = false;
+
+    if (!this.activeModifiers.void) return;
+    if (Math.random() >= GAME_CONFIG.voidSpawnChance) return;
+
+    fallingShape.isVoid = true;
+
+    if (challengePhase.ruleName === "SHAPE") {
+      fallingShape.shapeName = getRandomItem(VOID_SHAPES);
+      fallingShape.colorId = getRandomItem(AVAILABLE_COLOR_IDS);
+      return;
+    }
+
+    fallingShape.shapeName = getRandomItem(AVAILABLE_SHAPES);
+    fallingShape.colorId = getRandomItem(VOID_COLOR_IDS);
   }
 
   updateVisibleRuleForActiveShape(nextRuleName, previousRuleName = this.activeShapeRuleName) {
@@ -3084,7 +4339,20 @@ class NeonSwipeGame {
     );
   }
 
+  resolveIgnoredVoidShape(resolvedShape) {
+    resolvedShape.state = "resolved";
+
+    if (this.tryStartPendingLevelIntro()) return;
+
+    this.spawnNextChallenge();
+  }
+
   resolveReceiverTouch(resolvedShape, touchedReceiver) {
+    if (resolvedShape.isVoid) {
+      this.endGame("GAME OVER");
+      return;
+    }
+
     const challengePhase = resolvedShape.challengePhase || this.currentChallengePhase || this.currentPhase;
     const validationPhase = this.getValidationPhaseForShape(resolvedShape);
     const expectedReceiver = this.rules.getExpectedReceiver(resolvedShape, validationPhase);
@@ -3326,6 +4594,12 @@ class NeonSwipeGame {
 
   handleShapeThrown(thrownShape) {
     if (!thrownShape || this.activeChallengeUsesDuoShapes) return;
+
+    if (thrownShape.isVoid) {
+      this.endGame("GAME OVER");
+      return;
+    }
+
     if (this.pendingLevelIntroPhase) return;
 
     const nextSpawnDelayMs = getNextSpawnDelayMs(this.score);
@@ -3388,6 +4662,24 @@ class NeonSwipeGame {
     return this.stateController.isWaitingToStart;
   }
 
+  handleHomeTap(point) {
+    const hitTarget = this.homeScreen.getHitTarget(point);
+
+    if (hitTarget === "play") {
+      this.reset();
+      return;
+    }
+
+    if (hitTarget === "daily") {
+      console.log("daily clicked");
+      return;
+    }
+
+    if (hitTarget === "settings") {
+      console.log("settings clicked");
+    }
+  }
+
   startOrRestartFromKeyboard() {
     if (this.state === "waiting" || this.state === "ended") {
       this.reset();
@@ -3417,6 +4709,12 @@ class NeonSwipeGame {
   draw(currentTime) {
     this.context.clearRect(0, 0, this.scaler.canvasWidth, this.scaler.canvasHeight);
     this.drawBackground();
+
+    if (this.isWaitingToStart()) {
+      this.homeScreen.draw(this.context, HOME_UI_DATA, currentTime);
+      return;
+    }
+
     this.arena.draw(
       this.context,
       this.visiblePhase,
@@ -3456,7 +4754,7 @@ class NeonSwipeGame {
     this.context.shadowBlur = this.scaler.x(9);
     this.context.textAlign = "center";
     this.context.textBaseline = "middle";
-    this.context.font = `400 ${this.scaler.x(56)}px Orbitron`;
+    this.context.font = `400 ${this.scaler.x(56)}px "Bebas Neue"`;
     this.context.fillText(String(this.score).padStart(2, "0"), this.scaler.canvasWidth / 2, this.scaler.y(42));
 
     this.context.restore();
