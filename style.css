@@ -13,11 +13,48 @@
 }
 
 @font-face {
-  font-family: "Orbitron";
+  font-family: "Bebas Neue";
   src: url("BebasNeue-Regular.ttf") format("truetype");
   font-weight: 400;
   font-style: normal;
 }
+
+@font-face {
+  font-family: "Rajdhani";
+  src: url("Rajdhani-Medium.ttf") format("truetype");
+  font-weight: 500;
+}
+
+@font-face {
+  font-family: "Rajdhani";
+  src: url("Rajdhani-SemiBold.ttf") format("truetype");
+  font-weight: 600;
+}
+
+@font-face {
+  font-family: "Rajdhani";
+  src: url("Rajdhani-Light.ttf") format("truetype");
+  font-weight: 300;
+}
+
+@font-face {
+  font-family: "Orbitron";
+  src: url("Orbitron-Regular.ttf") format("truetype");
+  font-weight: 400;
+}
+
+@font-face {
+  font-family: "Orbitron";
+  src: url("Orbitron-SemiBold.ttf") format("truetype");
+  font-weight: 600;
+}
+
+@font-face {
+  font-family: "Orbitron";
+  src: url("Orbitron-ExtraBold.ttf") format("truetype");
+  font-weight: 800;
+}
+
 
 :root {
   color-scheme: dark;
@@ -45,26 +82,72 @@ body {
 }
 
 .game-shell {
-  position: relative;
-  display: grid;
-  place-items: center;
+  position: fixed;
+  inset: 0;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
   width: 100vw;
   height: 100dvh;
-  min-height: 540px;
-  padding: 0;
+
+  overflow: hidden;
+  background: #000;
 }
 
 #gameCanvas {
   display: block;
-  width: min(100vw, calc(100dvh * 0.5625), 540px);
-  height: auto;
-  aspect-ratio: 9 / 16;
-  max-width: 540px;
-  max-height: 960px;
-  border: 1px solid rgba(147, 170, 255, 0.16);
-  border-radius: 16px;
+
+  border: none;
+  border-radius: 0;
+
   background: #000;
+  box-shadow: none;
+
+  touch-action: none;
+}
+
+.restart-button {
+  position: absolute;
+  left: 50%;
+  top: calc(50% + 58px);
+  display: grid;
+  place-items: center;
+  width: 86px;
+  height: 86px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 50%;
+  background: rgba(24, 26, 30, 0.78);
+  color: var(--text);
   box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.04),
-    0 24px 70px rgba(0, 0, 0, 0.72);
+    0 0 44px rgba(255, 255, 255, 0.16),
+    inset 0 0 30px rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 18px) scale(0.96);
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.restart-icon {
+  width: 48px;
+  height: 48px;
+  fill: none;
+  filter: drop-shadow(0 0 9px rgba(255, 255, 255, 0.78));
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.9;
+}
+
+.restart-button.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, 0) scale(1);
+}
+
+.restart-button:focus-visible {
+  outline: 2px solid #4aa3ff;
+  outline-offset: 3px;
 }

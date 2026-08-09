@@ -10,6 +10,8 @@ const drawingContext = canvasElement.getContext("2d");
 const GAME_CONFIG = {
   designWidth: 540,
   designHeight: 960,
+  maxResponsiveDesignHeight: 1080,
+  maxCanvasCssWidth: 540,
   gravity: 1450, // 1450
   spawnImpulse: -1300, // -1120
   minSwipeDistance: 15,
@@ -76,7 +78,19 @@ const GAME_CONFIG = {
   shapeRotationIntervalMs: 1000,
   shapeRotationDurationMs: 180,
   level10WallRotationIntervalMs: 1000,
-  level10WallRotationDurationMs: 180
+  level10WallRotationDurationMs: 180,
+  blinkVisibleDurationMs: 800,
+  blinkNeutralDurationMs: 800,
+  voidSpawnChance: 0.25,
+  topSpawnGravityMultiplier: 0.65,
+  gameOverHoldDurationMs: 250,
+  gameOverTransitionDurationMs: 700,
+};
+
+const HOME_UI_DATA = {
+  bestScore: 0,
+  dailyAttemptsLeft: 4,
+  dailyMaxAttempts: 4
 };
 
 const WALL_LAYOUT_A_RECEIVER_COLORS_BY_POSITION_ID = {
@@ -182,7 +196,19 @@ const NEON_COLORS = {
   green: "#4dff88",
   red: "#ff4560",
   blue: "#4da6ff",
-  yellow: "#efff2e"
+  yellow: "#efff2e",
+
+  pink: "#ff2bda",
+  purple: "#9a4dff",
+  white: "#ffffff"
+};
+
+const NEUTRAL_RECEIVER_VISUALS = {
+  railColor: "rgba(190, 204, 220, 0.72)",
+  iconColor: "rgba(205, 216, 230, 0.78)",
+  railOpacityMultiplier: 0.55,
+  iconOpacityMultiplier: 0.62,
+  glowMultiplier: 0.34
 };
 
 const RECEIVER_DEFINITIONS = [
@@ -201,6 +227,8 @@ const CLOCKWISE_RECEIVER_ROTATION_BY_POSITION_ID = {
 
 const AVAILABLE_SHAPES = ["circle", "square", "triangle", "star"];
 const AVAILABLE_COLOR_IDS = ["red", "yellow", "green", "blue"];
+const VOID_SHAPES = ["hexagon", "diamond", "rectangle"];
+const VOID_COLOR_IDS = ["pink", "purple", "white"];
 
 const KEYBOARD_TARGETS = {
   ArrowUp: "up",
@@ -218,12 +246,54 @@ const KEYBOARD_TARGETS = {
 };
 
 class GeometryScaler {
-  constructor(designWidth, designHeight) {
+  constructor(designWidth, designHeight, maxDesignHeight = designHeight) {
     this.designWidth = designWidth;
+    this.baseDesignHeight = designHeight;
+    this.maxDesignHeight = maxDesignHeight;
     this.designHeight = designHeight;
     this.canvasWidth = designWidth;
     this.canvasHeight = designHeight;
     this.scale = 1;
+  }
+
+  get minDesignHeight() {
+    return this.baseDesignHeight;
+  }
+
+  get maxLogicalHeight() {
+    return this.maxDesignHeight;
+  }
+
+  getLogicalHeightForCssSize(cssWidth, cssHeight) {
+    if (!cssWidth || !cssHeight) return this.baseDesignHeight;
+
+    return clamp(
+      cssHeight / (cssWidth / this.designWidth),
+      this.minDesignHeight,
+      this.maxLogicalHeight
+    );
+  }
+
+  getCssSizeForViewport(viewportWidth, viewportHeight, maxCssWidth) {
+    const safeViewportWidth = Math.max(viewportWidth || this.designWidth, 1);
+    const safeViewportHeight = Math.max(viewportHeight || this.baseDesignHeight, 1);
+    const maxWidth = maxCssWidth || this.designWidth;
+
+    let cssWidth = Math.min(safeViewportWidth, maxWidth);
+    let logicalHeight = this.getLogicalHeightForCssSize(cssWidth, safeViewportHeight);
+    let cssHeight = cssWidth * (logicalHeight / this.designWidth);
+
+    if (cssHeight > safeViewportHeight) {
+      cssHeight = safeViewportHeight;
+      cssWidth = cssHeight * (this.designWidth / logicalHeight);
+      logicalHeight = this.getLogicalHeightForCssSize(cssWidth, cssHeight);
+    }
+
+    return {
+      width: cssWidth,
+      height: cssHeight,
+      logicalHeight
+    };
   }
 
   updateFromCanvas(canvas) {
@@ -235,9 +305,10 @@ class GeometryScaler {
 
     this.canvasWidth = canvasBounds.width;
     this.canvasHeight = canvasBounds.height;
-    this.scale = Math.min(
-      canvasBounds.width / this.designWidth,
-      canvasBounds.height / this.designHeight
+    this.scale = canvasBounds.width / this.designWidth;
+    this.designHeight = this.getLogicalHeightForCssSize(
+      canvasBounds.width,
+      canvasBounds.height
     );
 
     return pixelRatio;
@@ -292,7 +363,7 @@ class SwipeGesture {
 }
 
 class FallingShape {
-  constructor({ x, y, radius, colorId, shapeName, velocityX = 0, velocityY, state = "active" }) {
+  constructor({ x, y, radius, colorId, shapeName, velocityX = 0, velocityY, state = "active", isVoid = false }) {
     this.x = x;
     this.y = y;
     this.radius = radius;
@@ -301,6 +372,7 @@ class FallingShape {
     this.velocityX = velocityX;
     this.velocityY = velocityY;
     this.state = state;
+    this.isVoid = isVoid;
     this.hasBeenThrown = false;
     this.createdAt = performance.now();
     this.spawnAnimationStartedAt = null;
@@ -778,15 +850,24 @@ class Arena {
 
   getScaledLayout() {
     const layout = this.layout;
+
     return {
       outerX: this.scaler.x(layout.outerX),
       outerY: this.scaler.y(layout.outerY),
       outerWidth: this.scaler.x(layout.outerWidth),
-      outerHeight: this.scaler.y(layout.outerHeight),
+
+      outerHeight: this.scaler.y(
+        this.scaler.designHeight - 54
+      ),
+
       innerX: this.scaler.x(layout.innerX),
       innerY: this.scaler.y(layout.innerY),
       innerWidth: this.scaler.x(layout.innerWidth),
-      innerHeight: this.scaler.y(layout.innerHeight),
+
+      innerHeight: this.scaler.y(
+        this.scaler.designHeight - 230
+      ),
+
       railSize: this.scaler.x(layout.railSize),
       cornerRadius: this.scaler.x(layout.cornerRadius)
     };
@@ -1235,7 +1316,8 @@ class Arena {
     currentPhase,
     wallColorAnimation = null,
     hitFeedbackByReceiverId = {},
-    introVisualState = null
+    introVisualState = null,
+    modifierVisualState = null
   ) {
     const railOpacity = introVisualState?.railOpacity ?? 1;
     const iconOpacity = introVisualState?.iconOpacity ?? 1;
@@ -1246,7 +1328,8 @@ class Arena {
           context,
           receiver,
           currentPhase,
-          hitFeedbackByReceiverId[receiver.id] || 0
+          hitFeedbackByReceiverId[receiver.id] || 0,
+          modifierVisualState
         )
       );
 
@@ -1254,10 +1337,10 @@ class Arena {
         context,
         currentPhase,
         iconOpacity,
-        hitFeedbackByReceiverId
+        hitFeedbackByReceiverId,
+        modifierVisualState
       );
 
-      this.drawInnerGuide(context);
       return;
     }
 
@@ -1267,7 +1350,8 @@ class Arena {
         currentPhase,
         wallColorAnimation,
         hitFeedbackByReceiverId,
-        railOpacity
+        railOpacity,
+        modifierVisualState
       );
 
       this.drawReceiverIconsWithWallColorAnimation(
@@ -1275,10 +1359,10 @@ class Arena {
         currentPhase,
         wallColorAnimation,
         hitFeedbackByReceiverId,
-        iconOpacity
+        iconOpacity,
+        modifierVisualState
       );
 
-      this.drawInnerGuide(context);
       return;
     }
 
@@ -1289,7 +1373,8 @@ class Arena {
         currentPhase,
         null,
         railOpacity,
-        hitFeedbackByReceiverId[receiver.id] || 0
+        hitFeedbackByReceiverId[receiver.id] || 0,
+        modifierVisualState
       )
     );
 
@@ -1297,10 +1382,10 @@ class Arena {
       context,
       currentPhase,
       iconOpacity,
-      hitFeedbackByReceiverId
+      hitFeedbackByReceiverId,
+      modifierVisualState
     );
 
-    this.drawInnerGuide(context);
   }
 
   drawReceiverTracksWithWallColorAnimation(
@@ -1308,7 +1393,8 @@ class Arena {
     currentPhase,
     wallColorAnimation,
     hitFeedbackByReceiverId = {},
-    opacity = 1
+    opacity = 1,
+    modifierVisualState = null
   ) {
     this.receivers.forEach((receiver) => {
       const previousColor = wallColorAnimation.previousColorsByPositionId
@@ -1329,7 +1415,8 @@ class Arena {
         currentPhase,
         previousColor,
         (1 - wallColorAnimation.progress) * opacity,
-        hitStrength
+        hitStrength,
+        modifierVisualState
       );
 
       this.drawReceiverTrack(
@@ -1338,7 +1425,8 @@ class Arena {
         currentPhase,
         currentColor,
         wallColorAnimation.progress * opacity,
-        hitStrength
+        hitStrength,
+        modifierVisualState
       );
     });
   }
@@ -1348,7 +1436,8 @@ class Arena {
     currentPhase,
     wallColorAnimation,
     hitFeedbackByReceiverId = {},
-    opacity = 1
+    opacity = 1,
+    modifierVisualState = null
   ) {
     const previousIconPhase = {
       ...currentPhase,
@@ -1365,14 +1454,16 @@ class Arena {
       context,
       previousIconPhase,
       (1 - wallColorAnimation.progress) * opacity,
-      hitFeedbackByReceiverId
+      hitFeedbackByReceiverId,
+      modifierVisualState
     );
 
     this.drawReceiverIcons(
       context,
       currentPhase,
       wallColorAnimation.progress * opacity,
-      hitFeedbackByReceiverId
+      hitFeedbackByReceiverId,
+      modifierVisualState
     );
   }
 
@@ -1385,8 +1476,14 @@ class Arena {
     context.lineTo(geometry.verticalEnd.x, geometry.verticalEnd.y);
   }
 
-  drawMovingReceiverTrack(context, receiver, currentPhase, hitStrength = 0) {
-    const receiverNeonColor = this.getReceiverNeonColor(receiver, currentPhase);
+  drawMovingReceiverTrack(context, receiver, currentPhase, hitStrength = 0, modifierVisualState = null) {
+    const receiverVisual = this.getReceiverVisualStyle(
+      receiver,
+      currentPhase,
+      1,
+      modifierVisualState
+    );
+    const receiverNeonColor = receiverVisual.color;
 
     const thicknessMultiplier =
       1 +
@@ -1400,7 +1497,7 @@ class Arena {
 
     context.save();
     context.shadowColor = receiverNeonColor;
-    context.shadowBlur = this.scaler.x(48) * haloMultiplier;
+    context.shadowBlur = this.scaler.x(48) * haloMultiplier * receiverVisual.glowMultiplier;
     context.strokeStyle = receiverNeonColor;
     context.lineCap = "round";
     context.lineJoin = "round";
@@ -1411,20 +1508,27 @@ class Arena {
       context.lineTo(segment.end.x, segment.end.y);
     });
 
-    context.globalAlpha = 1;
+    context.globalAlpha = receiverVisual.opacity;
     context.lineWidth = this.scaler.x(7) * thicknessMultiplier;
     context.stroke();
     context.restore();
   }
 
-  drawReceiverTrack(context, receiver, currentPhase, colorOverride = null, opacity = 1, hitStrength = 0) {
+  drawReceiverTrack(context, receiver, currentPhase, colorOverride = null, opacity = 1, hitStrength = 0, modifierVisualState = null) {
     const layout = this.getScaledLayout();
     const middleX = layout.outerX + layout.outerWidth / 2;
     const middleY = layout.outerY + layout.outerHeight / 2;
     const rightX = layout.outerX + layout.outerWidth;
     const bottomY = layout.outerY + layout.outerHeight;
 
-    const receiverNeonColor = colorOverride || this.getReceiverNeonColor(receiver, currentPhase);
+    const receiverVisual = this.getReceiverVisualStyle(
+      receiver,
+      currentPhase,
+      opacity,
+      modifierVisualState,
+      colorOverride
+    );
+    const receiverNeonColor = receiverVisual.color;
 
     const thicknessMultiplier =
       1 +
@@ -1438,7 +1542,7 @@ class Arena {
 
     context.save();
     context.shadowColor = receiverNeonColor;
-    context.shadowBlur = this.scaler.x(48) * haloMultiplier;
+    context.shadowBlur = this.scaler.x(48) * haloMultiplier * receiverVisual.glowMultiplier;
     context.strokeStyle = receiverNeonColor;
     context.lineCap = "round";
     context.lineJoin = "round";
@@ -1471,31 +1575,53 @@ class Arena {
     }
 
 
-    context.globalAlpha = opacity;
+    context.globalAlpha = receiverVisual.opacity;
     context.lineWidth = this.scaler.x(7) * thicknessMultiplier;
     context.globalCompositeOperation = "lighter";
     context.stroke();
     context.restore();
   }
 
-  drawReceiverIcons(context, currentPhase, opacity = 1, hitFeedbackByReceiverId = {}) {
-    const layout = this.layout;
-    const iconMargin = 64;
-    const receiverIconRadius = this.scaler.x(GAME_CONFIG.shapeRadius);
-    const iconPositionsByReceiverId = currentPhase.usesMovingReceiverTracks
-      ? this.receivers.reduce((positionsByReceiverId, receiver) => {
-        positionsByReceiverId[receiver.id] = this.getMovingReceiverIconPoint(receiver, currentPhase);
-        return positionsByReceiverId;
-      }, {})
-      : {
-        topLeft: this.scaler.point(layout.innerX + iconMargin, layout.innerY + iconMargin),
-        topRight: this.scaler.point(layout.innerX + layout.innerWidth - iconMargin, layout.innerY + iconMargin),
-        bottomLeft: this.scaler.point(layout.innerX + iconMargin, layout.innerY + layout.innerHeight - iconMargin),
-        bottomRight: this.scaler.point(layout.innerX + layout.innerWidth - iconMargin, layout.innerY + layout.innerHeight - iconMargin)
-      };
+  drawReceiverIcons(context, currentPhase, opacity = 1, hitFeedbackByReceiverId = {}, modifierVisualState = null) {
+    const layout = this.getScaledLayout();
 
-    // Les symboles de reference sont dans les coins du carre interieur,
-    // separes des rails neon pour ne pas donner l'impression qu'ils sont sur le mur.
+    const iconInset = this.scaler.x(140);
+
+    const receiverIconRadius =
+      this.scaler.x(GAME_CONFIG.shapeRadius);
+
+    const iconPositionsByReceiverId =
+      currentPhase.usesMovingReceiverTracks
+        ? this.receivers.reduce((positionsByReceiverId, receiver) => {
+          positionsByReceiverId[receiver.id] =
+            this.getMovingReceiverIconPoint(receiver, currentPhase);
+
+          return positionsByReceiverId;
+        }, {})
+        : {
+          topLeft: {
+            x: layout.outerX + iconInset,
+            y: layout.outerY + iconInset
+          },
+
+          topRight: {
+            x: layout.outerX + layout.outerWidth - iconInset,
+            y: layout.outerY + iconInset
+          },
+
+          bottomLeft: {
+            x: layout.outerX + iconInset,
+            y: layout.outerY + layout.outerHeight - iconInset
+          },
+
+          bottomRight: {
+            x: layout.outerX + layout.outerWidth - iconInset,
+            y: layout.outerY + layout.outerHeight - iconInset
+          }
+        };
+
+    // Les symboles restent à distance constante
+    // des coins de l'arène, quel que soit le ratio de l'écran.
     this.receivers.forEach((receiver) => {
       const hitStrength =
         hitFeedbackByReceiverId[receiver.id] || 0;
@@ -1510,29 +1636,58 @@ class Arena {
         hitStrength *
         (GAME_CONFIG.receiverIconHitHaloMultiplier - 1);
 
+      const iconVisual = this.getReceiverIconVisualStyle(
+        receiver,
+        currentPhase,
+        opacity,
+        modifierVisualState
+      );
+
       ShapeRenderer.draw(
         context,
         iconPositionsByReceiverId[receiver.id],
         this.getReceiverShapeName(receiver, currentPhase),
-        this.getReceiverNeonColor(receiver, currentPhase),
+        iconVisual.color,
         receiverIconRadius,
-        opacity,
-        glowMultiplier,
+        iconVisual.opacity,
+        glowMultiplier * iconVisual.glowMultiplier,
         strokeMultiplier
       );
     });
   }
 
-  drawInnerGuide(context) {
-    const layout = this.getScaledLayout();
+  getReceiverVisualStyle(receiver, currentPhase, opacity, modifierVisualState, colorOverride = null) {
+    if (modifierVisualState?.blink?.isNeutral) {
+      return {
+        color: modifierVisualState.blink.railColor,
+        opacity: opacity * modifierVisualState.blink.railOpacityMultiplier,
+        glowMultiplier: modifierVisualState.blink.glowMultiplier
+      };
+    }
 
-    context.save();
-    context.strokeStyle = "rgba(255,255,255,0.07)";
-    context.lineWidth = this.scaler.x(1);
-    ShapeRenderer.roundRect(context, layout.innerX, layout.innerY, layout.innerWidth, layout.innerHeight, layout.cornerRadius);
-    context.stroke();
-    context.restore();
+    return {
+      color: colorOverride || this.getReceiverNeonColor(receiver, currentPhase),
+      opacity,
+      glowMultiplier: 1
+    };
   }
+
+  getReceiverIconVisualStyle(receiver, currentPhase, opacity, modifierVisualState) {
+    if (modifierVisualState?.blink?.isNeutral) {
+      return {
+        color: modifierVisualState.blink.iconColor,
+        opacity: 0,
+        glowMultiplier: 0
+      };
+    }
+
+    return {
+      color: this.getReceiverNeonColor(receiver, currentPhase),
+      opacity,
+      glowMultiplier: 1
+    };
+  }
+
 }
 
 class ShapeRenderer {
@@ -1577,7 +1732,53 @@ class ShapeRenderer {
       return;
     }
 
+    if (shapeName === "hexagon") {
+      context.moveTo(center.x, center.y - radius * 1.18);
+      context.lineTo(center.x + radius * 0.98, center.y - radius * 0.55);
+      context.lineTo(center.x + radius * 0.98, center.y + radius * 0.55);
+      context.lineTo(center.x, center.y + radius * 1.18);
+      context.lineTo(center.x - radius * 0.98, center.y + radius * 0.55);
+      context.lineTo(center.x - radius * 0.98, center.y - radius * 0.55);
+      context.closePath();
+      return;
+    }
+
+    if (shapeName === "diamond") {
+      context.moveTo(center.x, center.y - radius * 1.45);
+      context.lineTo(center.x + radius * 0.78, center.y);
+      context.lineTo(center.x, center.y + radius * 1.45);
+      context.lineTo(center.x - radius * 0.78, center.y);
+      context.closePath();
+      return;
+    }
+
+    if (shapeName === "rectangle") {
+      context.rect(
+        center.x - radius * 1.45,
+        center.y - radius * 0.46,
+        radius * 2.9,
+        radius * 0.92
+      );
+      return;
+    }
+
     ShapeRenderer.createStarPath(context, center.x, center.y, radius * 0.56, radius * 1.08, 5);
+  }
+
+  static createRegularPolygonPath(context, x, y, radius, sideCount, rotation = -Math.PI / 2) {
+    for (let index = 0; index < sideCount; index += 1) {
+      const angle = rotation + (Math.PI * 2 * index) / sideCount;
+      const pointX = x + Math.cos(angle) * radius;
+      const pointY = y + Math.sin(angle) * radius;
+
+      if (index === 0) {
+        context.moveTo(pointX, pointY);
+      } else {
+        context.lineTo(pointX, pointY);
+      }
+    }
+
+    context.closePath();
   }
 
   static createStarPath(context, x, y, innerRadius, outerRadius, spikeCount) {
@@ -1945,6 +2146,9 @@ class ChallengePhysics {
     if (challengePhase.usesPreciseDuoSelection) {
       return GAME_CONFIG.gravity * GAME_CONFIG.level19GravityMultiplier;
     }
+    if (challengePhase.projectileEntry === "top") {
+      return GAME_CONFIG.gravity * GAME_CONFIG.topSpawnGravityMultiplier;
+    }
     return GAME_CONFIG.gravity;
   }
 }
@@ -1979,6 +2183,34 @@ class GameStateController {
   }
 }
 
+class BlinkController {
+  constructor({ visibleDurationMs, neutralDurationMs }) {
+    this.visibleDurationMs = visibleDurationMs;
+    this.neutralDurationMs = neutralDurationMs;
+    this.reset();
+  }
+
+  reset() {
+    this.startedAt = performance.now();
+  }
+
+  getVisualState(currentTime, isEnabled) {
+    if (!isEnabled) return null;
+
+    const cycleDurationMs = this.visibleDurationMs + this.neutralDurationMs;
+    const elapsedCycleMs = (currentTime - this.startedAt) % cycleDurationMs;
+
+    if (elapsedCycleMs < this.visibleDurationMs) {
+      return { isNeutral: false };
+    }
+
+    return {
+      isNeutral: true,
+      ...NEUTRAL_RECEIVER_VISUALS
+    };
+  }
+}
+
 class SpawnController {
   constructor(game) {
     this.game = game;
@@ -2005,7 +2237,7 @@ class SpawnController {
 
     return {
       x: scaler.x(GAME_CONFIG.designWidth / 2),
-      y: scaler.y(GAME_CONFIG.designHeight + 38),
+      y: scaler.y(scaler.designHeight + 38),
       velocityX: 0,
       velocityY: scaler.y(this.game.currentChallengeSpawnImpulse)
     };
@@ -2028,7 +2260,11 @@ class SpawnController {
 
   getLeftSpawn() {
     const { scaler } = this.game;
-    const spawnY = scaler.y(GAME_CONFIG.designHeight * GAME_CONFIG.sideEntryHeightRatio);
+    const spawnY =
+      scaler.y(
+        scaler.designHeight *
+        GAME_CONFIG.sideEntryHeightRatio
+      );
 
     return {
       x: scaler.x(-GAME_CONFIG.shapeRadius - 8),
@@ -2040,7 +2276,11 @@ class SpawnController {
 
   getRightSpawn() {
     const { scaler } = this.game;
-    const spawnY = scaler.y(GAME_CONFIG.designHeight * GAME_CONFIG.sideEntryHeightRatio);
+    const spawnY =
+      scaler.y(
+        scaler.designHeight *
+        GAME_CONFIG.sideEntryHeightRatio
+      );
 
     return {
       x: scaler.x(GAME_CONFIG.designWidth + GAME_CONFIG.shapeRadius + 8),
@@ -2068,7 +2308,7 @@ class SpawnController {
 
     return {
       x: spawnX,
-      y: this.game.scaler.y(GAME_CONFIG.designHeight + 38),
+      y: this.game.scaler.y(this.game.scaler.designHeight + 38),
       velocityX: this.getMovingBottomSpawnVelocityX(spawnX),
       velocityY: this.game.scaler.y(this.game.currentChallengeSpawnImpulse)
     };
@@ -2577,6 +2817,1417 @@ class LevelIntroController {
   }
 }
 
+class HomeScreen {
+  constructor(scaler) {
+    this.scaler = scaler;
+    this.hitTargets = {};
+  }
+
+  draw(context, data, currentTime) {
+    this.hitTargets = this.getLayout();
+
+    this.drawBorder(context);
+    this.drawCornerShapes(context, currentTime);
+    this.drawSettingsButton(context);
+    this.drawLogo(context, currentTime, this.hitTargets);
+    this.drawPlayButton(context, currentTime);
+    this.drawBestScore(context, data.bestScore, this.hitTargets);
+    this.drawDailyCard(context, data, currentTime);
+
+  }
+
+  getLayout() {
+    const centerX = this.scaler.canvasWidth / 2;
+    const extraHeight = this.getResponsiveExtraHeight();
+    const logoY = 235 + extraHeight * 0.2;
+    const playY = 420 + extraHeight * 0.45;
+    const bestOffsetY = extraHeight * 0.45;
+    const dailyY = this.scaler.designHeight - 230;
+
+    return {
+      settings: this.rectFromCenter(this.scaler.x(42), this.scaler.y(38), this.scaler.x(46), this.scaler.y(46)),
+      logoY: this.scaler.y(logoY),
+      play: this.rectFromCenter(centerX, this.scaler.y(playY), this.scaler.x(294), this.scaler.y(76)),
+      bestLabelY: this.scaler.y(530 + bestOffsetY),
+      bestScoreY: this.scaler.y(580 + bestOffsetY),
+      daily: this.rectFromCenter(centerX, this.scaler.y(dailyY), this.scaler.x(300), this.scaler.y(80))
+    };
+  }
+
+  getResponsiveExtraHeight() {
+    return Math.max(this.scaler.designHeight - this.scaler.baseDesignHeight, 0);
+  }
+
+  rectFromCenter(centerX, centerY, width, height) {
+    return {
+      x: centerX - width / 2,
+      y: centerY - height / 2,
+      width,
+      height
+    };
+  }
+
+  getHitTarget(point) {
+    return ["play", "daily", "settings"].find((targetName) => {
+      const target = this.hitTargets[targetName] || this.getLayout()[targetName];
+      return this.isPointInRect(point, target);
+    }) || null;
+  }
+
+  isPointInRect(point, rect) {
+    return (
+      point.x >= rect.x &&
+      point.x <= rect.x + rect.width &&
+      point.y >= rect.y &&
+      point.y <= rect.y + rect.height
+    );
+  }
+
+  drawBorder(context) {
+    const layout = this.getArenaLikeLayout();
+    const middleX = layout.outerX + layout.outerWidth / 2;
+    const rightX = layout.outerX + layout.outerWidth;
+    const bottomY = layout.outerY + layout.outerHeight;
+
+    this.drawBorderSegment(context, NEON_COLORS.green, (ctx) => {
+      ctx.moveTo(middleX, layout.outerY + layout.railSize / 2);
+      ctx.lineTo(layout.outerX + layout.cornerRadius, layout.outerY + layout.railSize / 2);
+      ctx.quadraticCurveTo(layout.outerX + layout.railSize / 2, layout.outerY + layout.railSize / 2, layout.outerX + layout.railSize / 2, layout.outerY + layout.cornerRadius);
+      ctx.lineTo(layout.outerX + layout.railSize / 2, layout.outerY + layout.outerHeight / 2);
+    });
+
+    this.drawBorderSegment(context, NEON_COLORS.red, (ctx) => {
+      ctx.moveTo(middleX, layout.outerY + layout.railSize / 2);
+      ctx.lineTo(rightX - layout.cornerRadius, layout.outerY + layout.railSize / 2);
+      ctx.quadraticCurveTo(rightX - layout.railSize / 2, layout.outerY + layout.railSize / 2, rightX - layout.railSize / 2, layout.outerY + layout.cornerRadius);
+      ctx.lineTo(rightX - layout.railSize / 2, layout.outerY + layout.outerHeight / 2);
+    });
+
+    this.drawBorderSegment(context, NEON_COLORS.blue, (ctx) => {
+      ctx.moveTo(layout.outerX + layout.railSize / 2, layout.outerY + layout.outerHeight / 2);
+      ctx.lineTo(layout.outerX + layout.railSize / 2, bottomY - layout.cornerRadius);
+      ctx.quadraticCurveTo(layout.outerX + layout.railSize / 2, bottomY - layout.railSize / 2, layout.outerX + layout.cornerRadius, bottomY - layout.railSize / 2);
+      ctx.lineTo(middleX, bottomY - layout.railSize / 2);
+    });
+
+    this.drawBorderSegment(context, NEON_COLORS.yellow, (ctx) => {
+      ctx.moveTo(rightX - layout.railSize / 2, layout.outerY + layout.outerHeight / 2);
+      ctx.lineTo(rightX - layout.railSize / 2, bottomY - layout.cornerRadius);
+      ctx.quadraticCurveTo(rightX - layout.railSize / 2, bottomY - layout.railSize / 2, rightX - layout.cornerRadius, bottomY - layout.railSize / 2);
+      ctx.lineTo(middleX, bottomY - layout.railSize / 2);
+    });
+  }
+
+  getArenaLikeLayout() {
+    return {
+      outerX: this.scaler.x(2),
+      outerY: this.scaler.y(52),
+      outerWidth: this.scaler.x(536),
+      outerHeight: this.scaler.y(this.scaler.designHeight - 54),
+      railSize: this.scaler.x(48),
+      cornerRadius: this.scaler.x(150)
+    };
+  }
+
+  drawBorderSegment(context, color, drawPath) {
+    context.save();
+    context.lineCap = "round";
+    context.lineJoin = "round";
+    context.shadowColor = color;
+    context.shadowBlur = this.scaler.x(28);
+    context.strokeStyle = color;
+    context.lineWidth = this.scaler.x(7);
+    context.globalCompositeOperation = "lighter";
+    context.beginPath();
+    drawPath(context);
+    context.stroke();
+    context.restore();
+  }
+
+  drawCornerShapes(context, currentTime) {
+    const layout = this.getArenaLikeLayout();
+    const iconRadius = this.scaler.x(20);
+    const insetX = this.scaler.x(85);
+    const insetY = this.scaler.y(100);
+
+    const floatAmount = this.scaler.y(6);
+    const speed = 550;
+
+    const triangleOffset = Math.sin(currentTime / speed) * floatAmount;
+    const starOffset = Math.sin(currentTime / speed + 1.5) * floatAmount;
+    const squareOffset = Math.sin(currentTime / speed + 3) * floatAmount;
+    const circleOffset = Math.sin(currentTime / speed + 4.5) * floatAmount;
+
+    ShapeRenderer.draw(
+      context,
+      {
+        x: layout.outerX + insetX,
+        y: layout.outerY + insetY + triangleOffset
+      },
+      "triangle",
+      NEON_COLORS.green,
+      iconRadius,
+      0.9,
+      1.25
+    );
+
+    ShapeRenderer.draw(
+      context,
+      {
+        x: layout.outerX + layout.outerWidth - insetX,
+        y: layout.outerY + insetY + starOffset
+      },
+      "star",
+      NEON_COLORS.red,
+      iconRadius,
+      0.9,
+      1.25
+    );
+
+    ShapeRenderer.draw(
+      context,
+      {
+        x: layout.outerX + insetX,
+        y: layout.outerY + layout.outerHeight - insetY + squareOffset
+      },
+      "square",
+      NEON_COLORS.blue,
+      iconRadius,
+      0.9,
+      1.25
+    );
+
+    ShapeRenderer.draw(
+      context,
+      {
+        x: layout.outerX + layout.outerWidth - insetX,
+        y: layout.outerY + layout.outerHeight - insetY + circleOffset
+      },
+      "circle",
+      NEON_COLORS.yellow,
+      iconRadius,
+      0.9,
+      1.25
+    );
+  }
+
+  drawSettingsButton(context) {
+    const target = this.hitTargets.settings;
+    const center = {
+      x: target.x + target.width / 2,
+      y: target.y + target.height / 2
+    };
+    const radius = this.scaler.x(12);
+
+    context.save();
+    context.strokeStyle = "rgba(238, 244, 255, 0.72)";
+    context.shadowColor = "rgba(238, 244, 255, 0.38)";
+    context.shadowBlur = this.scaler.x(8);
+    context.lineWidth = this.scaler.x(2);
+    context.beginPath();
+    context.arc(center.x, center.y, radius, 0, Math.PI * 2);
+    context.stroke();
+
+    for (let index = 0; index < 8; index += 1) {
+      const angle = (Math.PI * 2 * index) / 8;
+      const inner = radius + this.scaler.x(3);
+      const outer = radius + this.scaler.x(7);
+      context.beginPath();
+      context.moveTo(center.x + Math.cos(angle) * inner, center.y + Math.sin(angle) * inner);
+      context.lineTo(center.x + Math.cos(angle) * outer, center.y + Math.sin(angle) * outer);
+      context.stroke();
+    }
+
+    context.restore();
+  }
+
+  drawTrackedText(context, text, centerX, y, options = {}) {
+    const {
+      fontSize = 40,
+      fontFamily = "Oxanium",
+      fontWeight = 400,
+      tracking = 10,
+      fillStyle = "#ffffff",
+      shadowColor = "rgba(255,255,255,0.5)",
+      shadowBlur = 10
+    } = options;
+
+    context.save();
+    context.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
+    context.textBaseline = "middle";
+    context.textAlign = "left";
+    context.fillStyle = fillStyle;
+    context.shadowColor = shadowColor;
+    context.shadowBlur = shadowBlur;
+
+    const letters = text.split("");
+    const widths = letters.map(letter => context.measureText(letter).width);
+    const totalWidth =
+      widths.reduce((sum, width) => sum + width, 0) + tracking * (letters.length - 1);
+
+    let x = centerX - totalWidth / 2;
+
+    letters.forEach((letter, index) => {
+      context.fillText(letter, x, y);
+      x += widths[index] + tracking;
+    });
+
+    context.restore();
+  }
+
+  drawLogo(context, currentTime, layout) {
+    const centerX = this.scaler.canvasWidth / 2;
+    const topY = layout.logoY;
+
+    const neonLetters = [
+      { letter: "N", color: NEON_COLORS.red },
+      { letter: "E", color: NEON_COLORS.green },
+      { letter: "O", color: NEON_COLORS.yellow },
+      { letter: "N", color: NEON_COLORS.blue }
+    ];
+
+    const neonFontSize = this.scaler.x(54);
+    const neonTracking = this.scaler.x(8);
+
+    context.save();
+
+    context.font =
+      `400 ${neonFontSize}px Orbitron`;
+
+    context.textBaseline = "middle";
+    context.textAlign = "left";
+
+    const widths =
+      neonLetters.map(
+        item =>
+          context.measureText(item.letter).width
+      );
+
+    const totalWidth =
+      widths.reduce(
+        (sum, width) => sum + width,
+        0
+      ) +
+      neonTracking *
+      (neonLetters.length - 1);
+
+    let x =
+      centerX - totalWidth / 2;
+
+
+    const drawNeonLetter = (
+      letter,
+      x,
+      y,
+      color
+    ) => {
+      context.save();
+
+      context.fillStyle = color;
+      context.shadowColor = color;
+      context.shadowBlur =
+        this.scaler.x(28);
+
+      context.globalAlpha = 1;
+
+      context.globalCompositeOperation =
+        "lighter";
+
+      context.fillText(
+        letter,
+        x,
+        y
+      );
+
+      context.restore();
+    };
+
+
+    neonLetters.forEach(
+      (item, index) => {
+        drawNeonLetter(
+          item.letter,
+          x,
+          topY,
+          item.color
+        );
+
+        x +=
+          widths[index] +
+          neonTracking;
+      }
+    );
+
+    context.restore();
+
+
+    this.drawTrackedText(
+      context,
+      "SWIPE",
+      centerX,
+      topY + this.scaler.y(56),
+      {
+        fontSize: this.scaler.x(25),
+        fontFamily: "Orbitron",
+        fontWeight: 400,
+        tracking: this.scaler.x(25),
+        fillStyle:
+          "rgba(245,248,255,0.96)",
+        shadowColor:
+          "rgba(255,255,255,0.42)",
+        shadowBlur: this.scaler.x(10)
+      }
+    );
+  }
+
+  drawPlayButton(context, currentTime) {
+    const target = this.hitTargets.play;
+
+    const centerX = target.x + target.width / 2;
+    const centerY = target.y + target.height / 2;
+
+    const pulse =
+      (Math.sin(currentTime / 350) + 1) / 2;
+
+    const opacity =
+      0.72 + pulse * 0.28;
+
+    const scale =
+      1 + pulse * 0.025;
+
+    const glow =
+      this.scaler.x(8 + pulse * 14);
+
+    context.save();
+
+    context.translate(centerX, centerY);
+    context.scale(scale, scale);
+
+    context.globalAlpha = opacity;
+
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+
+    context.fillStyle = "#f8fbff";
+
+    //context.shadowColor = "rgba(255,255,255,0.95)";
+    context.shadowBlur = glow;
+
+    context.font =
+      `800 ${this.scaler.x(26)}px Orbitron`;
+
+    context.letterSpacing =
+      `${this.scaler.x(6)}px`;
+
+    context.fillText(
+      "TAP TO PLAY",
+      0,
+      0
+    );
+
+    context.restore();
+  }
+  drawBestScore(context, bestScore, layout) {
+    const centerX = this.scaler.canvasWidth / 2;
+    context.save();
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.fillStyle = "rgba(127, 141, 163, 0.9)";
+    context.font = `600 ${this.scaler.x(20)}px Orbitron`;
+    context.letterSpacing = `${this.scaler.x(5)}px`;
+    context.fillText("BEST", centerX, layout.bestLabelY);
+
+    context.fillStyle = "rgba(248, 251, 255, 0.96)";
+    context.shadowColor = "rgba(255, 255, 255, 0.55)";
+    context.shadowBlur = this.scaler.x(10);
+    context.font = `400 ${this.scaler.x(48)}px "Bebas Neue"`;
+    context.letterSpacing = "0px";
+    context.fillText(String(bestScore), centerX, layout.bestScoreY);
+    context.restore();
+  }
+
+  drawDailyCard(context, data, currentTime) {
+    const target = this.hitTargets.daily;
+
+    // Fond noir
+    context.save();
+
+    context.fillStyle = "rgba(0, 4, 7, 0.94)";
+
+    ShapeRenderer.roundRect(
+      context,
+      target.x,
+      target.y,
+      target.width,
+      target.height,
+      this.scaler.x(12)
+    );
+
+    context.fill();
+    context.restore();
+
+
+    // Contour 4 coins colorés
+    const radius = this.scaler.x(12);
+    const lineWidth = this.scaler.x(1.7);
+
+    const left = target.x;
+    const top = target.y;
+    const right = target.x + target.width;
+    const bottom = target.y + target.height;
+
+    // HAUT : vert -> rouge
+    let edgeGradient = context.createLinearGradient(
+      left + radius,
+      top,
+      right - radius,
+      top
+    );
+
+    edgeGradient.addColorStop(0, NEON_COLORS.green);
+    edgeGradient.addColorStop(1, NEON_COLORS.red);
+
+    context.save();
+    context.strokeStyle = edgeGradient;
+    context.lineWidth = lineWidth;
+    context.shadowColor = "rgba(255,255,255,0.18)";
+    context.shadowBlur = this.scaler.x(10);
+    context.lineCap = "round";
+
+    context.beginPath();
+    context.moveTo(left + radius, top);
+    context.lineTo(right - radius, top);
+    context.stroke();
+
+    context.restore();
+
+
+    // DROITE : rouge -> jaune
+    edgeGradient = context.createLinearGradient(
+      right,
+      top + radius,
+      right,
+      bottom - radius
+    );
+
+    edgeGradient.addColorStop(0, NEON_COLORS.red);
+    edgeGradient.addColorStop(1, NEON_COLORS.yellow);
+
+    context.save();
+    context.strokeStyle = edgeGradient;
+    context.lineWidth = lineWidth;
+    context.shadowColor = "rgba(255,255,255,0.18)";
+    context.shadowBlur = this.scaler.x(10);
+    context.lineCap = "round";
+
+    context.beginPath();
+    context.moveTo(right, top + radius);
+    context.lineTo(right, bottom - radius);
+    context.stroke();
+
+    context.restore();
+
+
+    // BAS : bleu -> jaune
+    edgeGradient = context.createLinearGradient(
+      left + radius,
+      bottom,
+      right - radius,
+      bottom
+    );
+
+    edgeGradient.addColorStop(0, NEON_COLORS.blue);
+    edgeGradient.addColorStop(1, NEON_COLORS.yellow);
+
+    context.save();
+    context.strokeStyle = edgeGradient;
+    context.lineWidth = lineWidth;
+    context.shadowColor = "rgba(255,255,255,0.18)";
+    context.shadowBlur = this.scaler.x(10);
+    context.lineCap = "round";
+
+    context.beginPath();
+    context.moveTo(left + radius, bottom);
+    context.lineTo(right - radius, bottom);
+    context.stroke();
+
+    context.restore();
+
+
+    // GAUCHE : vert -> bleu
+    edgeGradient = context.createLinearGradient(
+      left,
+      top + radius,
+      left,
+      bottom - radius
+    );
+
+    edgeGradient.addColorStop(0, NEON_COLORS.green);
+    edgeGradient.addColorStop(1, NEON_COLORS.blue);
+
+    context.save();
+    context.strokeStyle = edgeGradient;
+    context.lineWidth = lineWidth;
+    context.shadowColor = "rgba(255,255,255,0.18)";
+    context.shadowBlur = this.scaler.x(10);
+    context.lineCap = "round";
+
+    context.beginPath();
+    context.moveTo(left, top + radius);
+    context.lineTo(left, bottom - radius);
+    context.stroke();
+
+    context.restore();
+
+
+    // COIN HAUT GAUCHE = vert
+    context.save();
+    context.strokeStyle = NEON_COLORS.green;
+    context.lineWidth = lineWidth;
+    context.shadowColor = NEON_COLORS.green;
+    context.shadowBlur = this.scaler.x(10);
+
+    context.beginPath();
+    context.arc(
+      left + radius,
+      top + radius,
+      radius,
+      Math.PI,
+      Math.PI * 1.5
+    );
+    context.stroke();
+
+    context.restore();
+
+
+    // COIN HAUT DROIT = rouge
+    context.save();
+    context.strokeStyle = NEON_COLORS.red;
+    context.lineWidth = lineWidth;
+    context.shadowColor = NEON_COLORS.red;
+    context.shadowBlur = this.scaler.x(10);
+
+    context.beginPath();
+    context.arc(
+      right - radius,
+      top + radius,
+      radius,
+      Math.PI * 1.5,
+      Math.PI * 2
+    );
+    context.stroke();
+
+    context.restore();
+
+
+    // COIN BAS DROIT = jaune
+    context.save();
+    context.strokeStyle = NEON_COLORS.yellow;
+    context.lineWidth = lineWidth;
+    context.shadowColor = NEON_COLORS.yellow;
+    context.shadowBlur = this.scaler.x(10);
+
+    context.beginPath();
+    context.arc(
+      right - radius,
+      bottom - radius,
+      radius,
+      0,
+      Math.PI * 0.5
+    );
+    context.stroke();
+
+    context.restore();
+
+
+    // COIN BAS GAUCHE = bleu
+    context.save();
+    context.strokeStyle = NEON_COLORS.blue;
+    context.lineWidth = lineWidth;
+    context.shadowColor = NEON_COLORS.blue;
+    context.shadowBlur = this.scaler.x(10);
+
+    context.beginPath();
+    context.arc(
+      left + radius,
+      bottom - radius,
+      radius,
+      Math.PI * 0.5,
+      Math.PI
+    );
+    context.stroke();
+
+    context.restore();
+
+
+    // DAILY CHALLENGE
+    context.save();
+
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+
+    context.fillStyle = "rgba(248, 251, 255, 0.92)";
+    context.shadowColor = "rgba(255,255,255,0.18)";
+    context.shadowBlur = this.scaler.x(6);
+
+    context.font =
+      `600 ${this.scaler.x(20)}px Oxanium`;
+
+    context.letterSpacing =
+      `${this.scaler.x(3)}px`;
+
+    context.fillText(
+      "DAILY CHALLENGE",
+      target.x + target.width / 2,
+      target.y + target.height / 2
+    );
+
+    context.restore();
+
+
+    // Shimmer blanc toutes les ~4 secondes
+    const shimmerCycle = 3800;
+    const shimmerDuration = 850;
+
+    const shimmerTime =
+      currentTime % shimmerCycle;
+
+    if (shimmerTime < shimmerDuration) {
+      const progress =
+        shimmerTime / shimmerDuration;
+
+      const shimmerX =
+        target.x -
+        this.scaler.x(55) +
+        progress *
+        (target.width + this.scaler.x(110));
+
+      const shimmerWidth =
+        this.scaler.x(52);
+
+      const shimmerGradient =
+        context.createLinearGradient(
+          shimmerX - shimmerWidth,
+          0,
+          shimmerX + shimmerWidth,
+          0
+        );
+
+      shimmerGradient.addColorStop(
+        0,
+        "rgba(255,255,255,0)"
+      );
+
+      shimmerGradient.addColorStop(
+        0.38,
+        "rgba(255,255,255,0.10)"
+      );
+
+      shimmerGradient.addColorStop(
+        0.5,
+        "rgba(255,255,255,0.95)"
+      );
+
+      shimmerGradient.addColorStop(
+        0.62,
+        "rgba(255,255,255,0.10)"
+      );
+
+      shimmerGradient.addColorStop(
+        1,
+        "rgba(255,255,255,0)"
+      );
+
+      context.save();
+
+      context.strokeStyle =
+        shimmerGradient;
+
+      context.lineWidth =
+        this.scaler.x(2.5);
+
+      context.shadowColor =
+        "rgba(255,255,255,0.75)";
+
+      context.shadowBlur =
+        this.scaler.x(12);
+
+      ShapeRenderer.roundRect(
+        context,
+        target.x,
+        target.y,
+        target.width,
+        target.height,
+        this.scaler.x(12)
+      );
+
+      context.stroke();
+
+      context.restore();
+    }
+  }
+  // drawDailyCard(context, data, currentTime) {
+  //   const target = this.hitTargets.daily;
+
+  //   const cyan = "#35f4ff";
+
+  //   // Fond noir + contour cyan
+  //   context.save();
+
+  //   context.fillStyle = "rgba(0, 5, 8, 0.92)";
+  //   context.strokeStyle = cyan;
+  //   context.shadowColor = cyan;
+  //   context.shadowBlur = this.scaler.x(14);
+  //   context.lineWidth = this.scaler.x(1.5);
+
+  //   ShapeRenderer.roundRect(
+  //     context,
+  //     target.x,
+  //     target.y,
+  //     target.width,
+  //     target.height,
+  //     this.scaler.x(12)
+  //   );
+
+  //   context.fill();
+  //   context.stroke();
+
+  //   context.restore();
+
+
+  //   // DAILY CHALLENGE
+  //   context.save();
+
+  //   context.textAlign = "center";
+  //   context.textBaseline = "middle";
+
+  //   context.fillStyle = "rgba(53, 244, 255, 0.78)";
+  //   context.shadowColor = "rgba(53, 244, 255, 0.35)";
+  //   context.shadowBlur = this.scaler.x(7);
+
+  //   context.font =
+  //     `400 ${this.scaler.x(16)}px Orbitron`;
+
+  //   context.letterSpacing =
+  //     `${this.scaler.x(4)}px`;
+
+  //   context.fillText(
+  //     "DAILY CHALLENGE",
+  //     target.x + target.width / 2,
+  //     target.y + this.scaler.y(42)
+  //   );
+
+  //   context.restore();
+
+
+  //   // 30 IN A ROW
+  //   context.save();
+
+  //   context.textAlign = "center";
+  //   context.textBaseline = "middle";
+
+  //   context.fillStyle = "#ffffff";
+  //   context.shadowColor = "rgba(255,255,255,0.72)";
+  //   context.shadowBlur = this.scaler.x(13);
+
+  //   context.font =
+  //     `400 ${this.scaler.x(34)}px Orbitron`;
+
+  //   context.letterSpacing =
+  //     `${this.scaler.x(5)}px`;
+
+  //   context.fillText(
+  //     "30 IN A ROW",
+  //     target.x + target.width / 2,
+  //     target.y + this.scaler.y(96)
+  //   );
+
+  //   context.restore();
+
+
+  //   // Vies / attempts
+  //   const dotY =
+  //     target.y + this.scaler.y(145);
+
+  //   const dotStartX =
+  //     target.x + this.scaler.x(75);
+
+  //   const dotSpacing =
+  //     this.scaler.x(28);
+
+  //   const dotRadius =
+  //     this.scaler.x(6);
+
+  //   for (
+  //     let index = 0;
+  //     index < data.dailyMaxAttempts;
+  //     index += 1
+  //   ) {
+  //     const isAvailable =
+  //       index < data.dailyAttemptsLeft;
+
+  //     context.save();
+
+  //     if (isAvailable) {
+  //       context.fillStyle = cyan;
+  //       context.shadowColor = cyan;
+  //       context.shadowBlur = this.scaler.x(11);
+  //     } else {
+  //       context.fillStyle = "rgba(53,244,255,0.12)";
+  //       context.strokeStyle = "rgba(53,244,255,0.42)";
+  //       context.lineWidth = this.scaler.x(1.5);
+  //       context.shadowColor = "transparent";
+  //     }
+
+  //     context.beginPath();
+
+  //     context.arc(
+  //       dotStartX + index * dotSpacing,
+  //       dotY,
+  //       dotRadius,
+  //       0,
+  //       Math.PI * 2
+  //     );
+
+  //     if (isAvailable) {
+  //       context.fill();
+  //     } else {
+  //       context.fill();
+  //       context.stroke();
+  //     }
+
+  //     context.restore();
+  //   }
+
+
+  //   // 4 ATTEMPTS
+  //   context.save();
+
+  //   context.textAlign = "left";
+  //   context.textBaseline = "middle";
+
+  //   context.fillStyle = cyan;
+  //   context.shadowColor = "rgba(53,244,255,0.38)";
+  //   context.shadowBlur = this.scaler.x(7);
+
+  //   context.font =
+  //     `400 ${this.scaler.x(15)}px Orbitron`;
+
+  //   context.letterSpacing =
+  //     `${this.scaler.x(2.5)}px`;
+
+  //   context.fillText(
+  //     `${data.dailyAttemptsLeft} ATTEMPTS`,
+  //     target.x + this.scaler.x(220),
+  //     dotY
+  //   );
+
+  //   context.restore();
+
+  //   // Shimmer du contour toutes les ~4 secondes
+  //   const shimmerCycle = 3800;
+  //   const shimmerDuration = 850;
+
+  //   const shimmerTime =
+  //     currentTime % shimmerCycle;
+
+  //   if (shimmerTime < shimmerDuration) {
+  //     const progress =
+  //       shimmerTime / shimmerDuration;
+
+  //     const shimmerX =
+  //       target.x -
+  //       this.scaler.x(50) +
+  //       progress *
+  //       (target.width + this.scaler.x(100));
+
+  //     const shimmerWidth =
+  //       this.scaler.x(55);
+
+  //     const gradient =
+  //       context.createLinearGradient(
+  //         shimmerX - shimmerWidth,
+  //         0,
+  //         shimmerX + shimmerWidth,
+  //         0
+  //       );
+
+  //     gradient.addColorStop(
+  //       0,
+  //       "rgba(255,255,255,0)"
+  //     );
+
+  //     gradient.addColorStop(
+  //       0.32,
+  //       "rgba(53,244,255,0.15)"
+  //     );
+
+  //     gradient.addColorStop(
+  //       0.5,
+  //       "rgba(255,255,255,1)"
+  //     );
+
+  //     gradient.addColorStop(
+  //       0.68,
+  //       "rgba(53,244,255,0.15)"
+  //     );
+
+  //     gradient.addColorStop(
+  //       1,
+  //       "rgba(255,255,255,0)"
+  //     );
+
+  //     context.save();
+
+  //     context.strokeStyle = gradient;
+  //     context.lineWidth =
+  //       this.scaler.x(2.5);
+
+  //     context.shadowColor =
+  //       "#35f4ff";
+
+  //     context.shadowBlur =
+  //       this.scaler.x(14);
+
+  //     ShapeRenderer.roundRect(
+  //       context,
+  //       target.x,
+  //       target.y,
+  //       target.width,
+  //       target.height,
+  //       this.scaler.x(12)
+  //     );
+
+  //     context.stroke();
+
+  //     context.restore();
+  //   }
+  // }
+
+  drawSecondaryButtons(context) {
+    this.drawSecondaryButton(context, this.hitTargets.badges, "BADGES", "diamond", NEON_COLORS.blue);
+    this.drawSecondaryButton(context, this.hitTargets.skins, "SKINS", "circle", NEON_COLORS.yellow);
+  }
+
+  drawSecondaryButton(context, target, label, shapeName, color) {
+    this.drawThinPanel(context, target, "rgba(238, 244, 255, 0.22)", "rgba(238, 244, 255, 0.05)");
+
+    const iconX = target.x + this.scaler.x(34);
+    const iconY = target.y + target.height / 2;
+    const iconSize = this.scaler.x(18);
+
+    if (shapeName === "badge") {
+      this.drawBadgeIcon(context, iconX, iconY, iconSize);
+    } else if (shapeName === "skin") {
+      this.drawSkinIcon(context, iconX, iconY, iconSize);
+    }
+
+    context.save();
+    context.fillStyle = "rgba(238, 244, 255, 0.78)";
+    context.textAlign = "left";
+    context.textBaseline = "middle";
+    context.font = `600 ${this.scaler.x(13)}px Oxanium`;
+    context.letterSpacing = `${this.scaler.x(2)}px`;
+    context.fillText(label, target.x + this.scaler.x(52), target.y + target.height / 2);
+    context.restore();
+  }
+
+  drawThinPanel(context, rect, strokeColor, fillColor) {
+    context.save();
+    context.fillStyle = fillColor;
+    context.strokeStyle = strokeColor;
+    context.shadowColor = strokeColor;
+    context.shadowBlur = this.scaler.x(12);
+    context.lineWidth = this.scaler.x(1.2);
+    ShapeRenderer.roundRect(context, rect.x, rect.y, rect.width, rect.height, this.scaler.x(8));
+    context.fill();
+    context.stroke();
+    context.restore();
+  }
+
+}
+
+class GameOverScreen {
+  constructor(scaler) {
+    this.scaler = scaler;
+    this.hitTargets = {};
+  }
+
+  draw(context, data, currentTime) {
+    this.hitTargets = this.getLayout();
+
+    const progress =
+      data.transitionProgress ?? 1;
+
+    const eased =
+      1 - Math.pow(1 - progress, 3);
+
+    this.drawOverlay(context, eased);
+
+
+    // GAME OVER
+    const titleProgress = clamp(
+      progress / 0.45,
+      0,
+      1
+    );
+
+    if (titleProgress > 0) {
+      context.save();
+
+      context.globalAlpha =
+        titleProgress;
+
+      context.translate(
+        0,
+        this.scaler.y(
+          12 * (1 - titleProgress)
+        )
+      );
+
+      this.drawTitle(context, this.hitTargets);
+
+      context.restore();
+    }
+
+
+    // SCORE
+    const scoreProgress = clamp(
+      (progress - 0.18) / 0.55,
+      0,
+      1
+    );
+
+    if (scoreProgress > 0) {
+      context.save();
+
+      context.globalAlpha =
+        scoreProgress;
+
+      context.translate(
+        0,
+        this.scaler.y(
+          10 * (1 - scoreProgress)
+        )
+      );
+
+      this.drawScore(
+        context,
+        data.score,
+        this.hitTargets
+      );
+
+      context.restore();
+    }
+
+
+    // BEST
+    const bestProgress = clamp(
+      (progress - 0.38) / 0.45,
+      0,
+      1
+    );
+
+    if (bestProgress > 0) {
+      context.save();
+
+      context.globalAlpha =
+        bestProgress;
+
+      context.translate(
+        0,
+        this.scaler.y(
+          8 * (1 - bestProgress)
+        )
+      );
+
+      this.drawBest(
+        context,
+        data,
+        currentTime,
+        this.hitTargets
+      );
+
+      context.restore();
+    }
+
+
+    // HOME
+    const homeProgress = clamp(
+      (progress - 0.35) / 0.45,
+      0,
+      1
+    );
+
+    if (homeProgress > 0) {
+      context.save();
+      context.globalAlpha = homeProgress;
+
+      this.drawHomeButton(context);
+
+      context.restore();
+    }
+
+
+    // TAP TO RESTART
+    const restartProgress = clamp(
+      (progress - 0.60) / 0.40,
+      0,
+      1
+    );
+
+    if (restartProgress > 0) {
+      context.save();
+
+      context.globalAlpha =
+        restartProgress;
+
+      this.drawRestartHint(
+        context,
+        currentTime,
+        this.hitTargets
+      );
+
+      context.restore();
+    }
+  }
+
+  getLayout() {
+    const extraHeight = this.getResponsiveExtraHeight();
+    const groupOffsetY = extraHeight * 0.35;
+    const restartOffsetY = extraHeight * 0.7;
+
+    return {
+      home: {
+        x: this.scaler.x(22),
+        y: this.scaler.y(34),
+        width: this.scaler.x(58),
+        height: this.scaler.y(58)
+      },
+      titleY: this.scaler.y(315 + groupOffsetY),
+      scoreLabelY: this.scaler.y(375 + groupOffsetY),
+      scoreNumberY: this.scaler.y(455 + groupOffsetY),
+      bestLabelY: this.scaler.y(565 + groupOffsetY),
+      bestNumberY: this.scaler.y(615 + groupOffsetY),
+      restartY: this.scaler.y(735 + restartOffsetY)
+    };
+  }
+
+  getResponsiveExtraHeight() {
+    return Math.max(this.scaler.designHeight - this.scaler.baseDesignHeight, 0);
+  }
+
+  getHitTarget(point) {
+    const homeTarget = this.hitTargets.home || this.getLayout().home;
+
+    if (this.isPointInRect(point, homeTarget)) {
+      return "home";
+    }
+
+    return null;
+  }
+
+  isPointInRect(point, rect) {
+    return (
+      point.x >= rect.x &&
+      point.x <= rect.x + rect.width &&
+      point.y >= rect.y &&
+      point.y <= rect.y + rect.height
+    );
+  }
+
+  drawOverlay(context, progress = 1) {
+    context.save();
+
+    const opacity =
+      0.56 * progress;
+
+    context.fillStyle =
+      `rgba(0, 0, 0, ${opacity})`;
+
+    context.fillRect(
+      0,
+      0,
+      this.scaler.canvasWidth,
+      this.scaler.canvasHeight
+    );
+
+    context.restore();
+  }
+
+  drawHomeButton(context) {
+    const target = this.hitTargets.home;
+    const centerX = target.x + target.width / 2;
+    const centerY = target.y + target.height / 2;
+    const iconSize = this.scaler.x(22);
+
+    context.save();
+    context.strokeStyle = "rgba(238, 244, 255, 0.72)";
+    context.shadowColor = "rgba(255, 255, 255, 0.28)";
+    context.shadowBlur = this.scaler.x(8);
+    context.lineWidth = this.scaler.x(2.1);
+    context.lineCap = "round";
+    context.lineJoin = "round";
+
+    context.beginPath();
+    context.moveTo(centerX - iconSize * 0.62, centerY - iconSize * 0.06);
+    context.lineTo(centerX, centerY - iconSize * 0.62);
+    context.lineTo(centerX + iconSize * 0.62, centerY - iconSize * 0.06);
+    context.moveTo(centerX - iconSize * 0.42, centerY - iconSize * 0.02);
+    context.lineTo(centerX - iconSize * 0.42, centerY + iconSize * 0.55);
+    context.lineTo(centerX + iconSize * 0.42, centerY + iconSize * 0.55);
+    context.lineTo(centerX + iconSize * 0.42, centerY - iconSize * 0.02);
+    context.stroke();
+
+    context.restore();
+  }
+
+  drawTitle(context, layout) {
+    context.save();
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.fillStyle = "rgba(245, 248, 255, 0.96)";
+    context.shadowColor = "rgba(255, 255, 255, 0.38)";
+    context.shadowBlur = this.scaler.x(12);
+    context.font = `800 ${this.scaler.x(40)}px Orbitron`;
+    context.letterSpacing = `${this.scaler.x(8)}px`;
+    context.fillText("GAME OVER", this.scaler.canvasWidth / 2, layout.titleY);
+    context.restore();
+  }
+
+  drawScore(context, score, layout) {
+    const centerX = this.scaler.canvasWidth / 2;
+
+    context.save();
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+
+
+    // SCORE label
+    context.fillStyle = "rgba(127, 141, 163, 0.92)";
+    context.shadowColor = "transparent";
+    context.shadowBlur = 0;
+
+    context.font =
+      `600 ${this.scaler.x(18)}px Oxanium`;
+
+    context.letterSpacing =
+      `${this.scaler.x(5)}px`;
+
+    context.fillText(
+      "SCORE",
+      centerX,
+      layout.scoreLabelY
+    );
+
+
+    // Score principal
+    context.fillStyle = "#ffffff";
+
+    context.shadowColor =
+      "rgba(255,255,255,0.65)";
+
+    context.shadowBlur =
+      this.scaler.x(18);
+
+    context.font =
+      `400 ${this.scaler.x(100)}px "Bebas Neue"`;
+
+    context.letterSpacing = "0px";
+
+    context.fillText(
+      String(score),
+      centerX,
+      layout.scoreNumberY
+    );
+
+    context.restore();
+  }
+
+  drawBest(context, data, currentTime, layout) {
+    const centerX =
+      this.scaler.canvasWidth / 2;
+
+    const pulse =
+      (Math.sin(currentTime / 320) + 1) / 2;
+
+    const wasNewBest =
+      Boolean(data.wasNewBest);
+
+    context.save();
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+
+
+    // BEST / NEW BEST label
+    context.fillStyle = wasNewBest
+      ? "#ffffff"
+      : "rgba(127, 141, 163, 0.9)";
+
+    context.shadowColor = wasNewBest
+      ? "rgba(255,255,255,0.8)"
+      : "transparent";
+
+    context.shadowBlur = wasNewBest
+      ? this.scaler.x(8 + pulse * 8)
+      : 0;
+
+    context.font =
+      `600 ${this.scaler.x(17)}px Oxanium`;
+
+    context.letterSpacing =
+      `${this.scaler.x(5)}px`;
+
+    context.fillText(
+      wasNewBest ? "NEW BEST" : "BEST",
+      centerX,
+      layout.bestLabelY
+    );
+
+
+    // Best number
+    context.fillStyle =
+      "rgba(248,251,255,0.96)";
+
+    context.shadowColor = wasNewBest
+      ? "rgba(255,255,255,0.7)"
+      : "rgba(255,255,255,0.25)";
+
+    context.shadowBlur = wasNewBest
+      ? this.scaler.x(12 + pulse * 5)
+      : this.scaler.x(6);
+
+    context.font =
+      `400 ${this.scaler.x(54)}px "Bebas Neue"`;
+
+    context.letterSpacing = "0px";
+
+    context.fillText(
+      String(data.bestScore),
+      centerX,
+      layout.bestNumberY
+    );
+
+    context.restore();
+  }
+
+  drawRestartHint(context, currentTime, layout) {
+    const pulse = (Math.sin(currentTime / 420) + 1) / 2;
+
+    context.save();
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.globalAlpha = 0.62 + pulse * 0.26;
+    context.fillStyle = "rgba(245, 248, 255, 0.95)";
+    context.shadowColor = "rgba(255, 255, 255, 0.44)";
+    context.shadowBlur = this.scaler.x(8 + pulse * 8);
+    context.font = `600 ${this.scaler.x(20)}px Oxanium`;
+    context.letterSpacing = `${this.scaler.x(5)}px`;
+    context.fillText("TAP TO RESTART", this.scaler.canvasWidth / 2, layout.restartY);
+    context.restore();
+  }
+}
+
 class InputController {
   constructor(canvas, game) {
     this.canvas = canvas;
@@ -2593,11 +4244,13 @@ class InputController {
   handlePointerDown(event) {
     event.preventDefault();
 
-    if (
-      this.game.isWaitingToStart() ||
-      this.game.state === "ended"
-    ) {
-      this.game.reset();
+    if (this.game.isWaitingToStart()) {
+      this.game.handleHomeTap(this.getCanvasPoint(event));
+      return;
+    }
+
+    if (this.game.state === "ended") {
+      this.game.handleGameOverTap(this.getCanvasPoint(event));
       return;
     }
 
@@ -2664,12 +4317,22 @@ class NeonSwipeGame {
     this.canvas = canvas;
     this.restartButton = restartButton;
     this.context = context;
-    this.scaler = new GeometryScaler(GAME_CONFIG.designWidth, GAME_CONFIG.designHeight);
+    this.scaler = new GeometryScaler(
+      GAME_CONFIG.designWidth,
+      GAME_CONFIG.designHeight,
+      GAME_CONFIG.maxResponsiveDesignHeight
+    );
     this.arena = new Arena(this.scaler, RECEIVER_DEFINITIONS);
+    this.homeScreen = new HomeScreen(this.scaler);
+    this.gameOverScreen = new GameOverScreen(this.scaler);
     this.rules = new GameRules(this.arena);
     this.dynamicRuleSequence = new DynamicRuleSequenceController();
     this.receiverEffects = new ReceiverEffectsController();
     this.levelIntro = new LevelIntroController(this.receiverEffects, this.dynamicRuleSequence);
+    this.blinkController = new BlinkController({
+      visibleDurationMs: GAME_CONFIG.blinkVisibleDurationMs,
+      neutralDurationMs: GAME_CONFIG.blinkNeutralDurationMs
+    });
     this.spawnController = new SpawnController(this);
     this.challengeManager = new ChallengeManager();
     this.throwController = new ThrowController({
@@ -2684,9 +4347,18 @@ class NeonSwipeGame {
     this.inputController = new InputController(this.canvas, this);
 
     this.score = 0;
+    this.activeModifiers = {
+      blink: false,
+      pulse: false,
+      burst: false,
+      void: false
+    };
     this.lastAnimationTime = 0;
     this.centerMessage = "SWIPE";
     this.centerMessageUntil = 0;
+    this.previousBestScore = HOME_UI_DATA.bestScore;
+    this.gameOverWasNewBest = false;
+    this.gameOverStartedAt = 0;
     this.activeShapeRuleName = null;
     this.pendingLevelIntroPhase = null;
     this.movingReceiverOffset = 0;
@@ -2699,19 +4371,38 @@ class NeonSwipeGame {
 
     this.restartButton.addEventListener("click", () => this.reset());
     window.addEventListener("resize", () => this.resize());
+    window.visualViewport?.addEventListener?.("resize", () => this.resize());
   }
 
   resize() {
+    const viewportSize = this.getViewportSize();
+    const canvasSize = this.scaler.getCssSizeForViewport(
+      viewportSize.width,
+      viewportSize.height,
+      GAME_CONFIG.maxCanvasCssWidth
+    );
+
+    this.canvas.style.width = `${canvasSize.width}px`;
+    this.canvas.style.height = `${canvasSize.height}px`;
+
     const pixelRatio = this.scaler.updateFromCanvas(this.canvas);
     this.context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+  }
+
+  getViewportSize() {
+    return {
+      width: window.visualViewport?.width ?? window.innerWidth,
+      height: window.visualViewport?.height ?? window.innerHeight
+    };
   }
 
   reset() {
     this.clearPendingDuoSpawn();
     this.receiverEffects.reset();
     this.dynamicRuleSequence.reset();
-    // TEMP TEST LEVEL 18 - restore to 0 after validation
-    this.score = 23;
+    this.blinkController.reset();
+    // TEMP TEST BLINK LEVEL 14 - restore to 0 after validation
+    this.score = 0;
     this.state = "playing";
     this.resetLevelRuntime();
     this.movingReceiverOffset = 0;
@@ -2720,6 +4411,9 @@ class NeonSwipeGame {
     this.activeShapeRuleName = null;
     this.pendingLevelIntroPhase = null;
     this.particleSystem.clear();
+    this.previousBestScore = HOME_UI_DATA.bestScore;
+    this.gameOverWasNewBest = false;
+    this.gameOverStartedAt = 0;
     this.showCenterMessage("COLOR", 1100);
 
     this.spawnNextChallenge();
@@ -2729,6 +4423,7 @@ class NeonSwipeGame {
     this.clearPendingDuoSpawn();
     this.receiverEffects.reset();
     this.dynamicRuleSequence.reset();
+    this.blinkController.reset();
     this.score = 0;
     this.state = "waiting";
     this.resetLevelRuntime();
@@ -2737,6 +4432,9 @@ class NeonSwipeGame {
     this.activeShapeRuleName = null;
     this.pendingLevelIntroPhase = null;
     this.particleSystem.clear();
+    this.previousBestScore = HOME_UI_DATA.bestScore;
+    this.gameOverWasNewBest = false;
+    this.gameOverStartedAt = 0;
     this.centerMessage = "PRESS TO START";
     this.centerMessageUntil = Infinity;
 
@@ -2788,6 +4486,11 @@ class NeonSwipeGame {
       }
 
       if (shape.isBelowScreen(this.scaler.canvasHeight, this.scaler.y(28))) {
+        if (shape.isVoid && !shape.hasBeenThrown) {
+          this.resolveIgnoredVoidShape(shape);
+          return;
+        }
+
         this.endGame("GAME OVER");
         return;
       }
@@ -2823,6 +4526,8 @@ class NeonSwipeGame {
     const fallingShape = this.createShapeFromSpawn(spawn);
     const previousActiveShapeRuleName = this.activeShapeRuleName;
 
+    this.applyVoidModifierToShape(fallingShape, challengePhaseSnapshot);
+
     fallingShape.challengePhase = challengePhaseSnapshot;
     fallingShape.validationPhase = validationPhaseSnapshot;
     fallingShape.gravity = this.scaler.x(ChallengePhysics.getGravity(challengePhaseSnapshot));
@@ -2833,6 +4538,24 @@ class NeonSwipeGame {
       challengePhaseSnapshot.ruleName,
       previousActiveShapeRuleName
     );
+  }
+
+  applyVoidModifierToShape(fallingShape, challengePhase) {
+    fallingShape.isVoid = false;
+
+    if (!this.activeModifiers.void) return;
+    if (Math.random() >= GAME_CONFIG.voidSpawnChance) return;
+
+    fallingShape.isVoid = true;
+
+    if (challengePhase.ruleName === "SHAPE") {
+      fallingShape.shapeName = getRandomItem(VOID_SHAPES);
+      fallingShape.colorId = getRandomItem(AVAILABLE_COLOR_IDS);
+      return;
+    }
+
+    fallingShape.shapeName = getRandomItem(AVAILABLE_SHAPES);
+    fallingShape.colorId = getRandomItem(VOID_COLOR_IDS);
   }
 
   updateVisibleRuleForActiveShape(nextRuleName, previousRuleName = this.activeShapeRuleName) {
@@ -2894,7 +4617,7 @@ class NeonSwipeGame {
     this.currentChallengePhase = this.currentPhase;
     const firstShape = this.createDuoShape({
       x: this.scaler.x(GAME_CONFIG.designWidth * 0.27),
-      y: this.scaler.y(GAME_CONFIG.designHeight + 42),
+      y: this.scaler.y(this.scaler.designHeight + 42),
       velocityX: this.scaler.x(GAME_CONFIG.level7HorizontalImpulse),
       velocityY: this.scaler.y(GAME_CONFIG.spawnImpulse * GAME_CONFIG.level7SpawnImpulseMultiplier),
       state: "active"
@@ -2907,7 +4630,7 @@ class NeonSwipeGame {
 
       const secondShape = this.createDuoShape({
         x: this.scaler.x(GAME_CONFIG.designWidth * 0.73),
-        y: this.scaler.y(GAME_CONFIG.designHeight + 42),
+        y: this.scaler.y(this.scaler.designHeight + 42),
         velocityX: this.scaler.x(-GAME_CONFIG.level7HorizontalImpulse),
         velocityY: this.scaler.y(GAME_CONFIG.spawnImpulse * GAME_CONFIG.level7SpawnImpulseMultiplier),
         state: "inactive"
@@ -2969,7 +4692,20 @@ class NeonSwipeGame {
     );
   }
 
+  resolveIgnoredVoidShape(resolvedShape) {
+    resolvedShape.state = "resolved";
+
+    if (this.tryStartPendingLevelIntro()) return;
+
+    this.spawnNextChallenge();
+  }
+
   resolveReceiverTouch(resolvedShape, touchedReceiver) {
+    if (resolvedShape.isVoid) {
+      this.endGame("GAME OVER");
+      return;
+    }
+
     const challengePhase = resolvedShape.challengePhase || this.currentChallengePhase || this.currentPhase;
     const validationPhase = this.getValidationPhaseForShape(resolvedShape);
     const expectedReceiver = this.rules.getExpectedReceiver(resolvedShape, validationPhase);
@@ -3211,6 +4947,12 @@ class NeonSwipeGame {
 
   handleShapeThrown(thrownShape) {
     if (!thrownShape || this.activeChallengeUsesDuoShapes) return;
+
+    if (thrownShape.isVoid) {
+      this.endGame("GAME OVER");
+      return;
+    }
+
     if (this.pendingLevelIntroPhase) return;
 
     const nextSpawnDelayMs = getNextSpawnDelayMs(this.score);
@@ -3273,20 +5015,68 @@ class NeonSwipeGame {
     return this.stateController.isWaitingToStart;
   }
 
+  handleHomeTap(point) {
+    const hitTarget =
+      this.homeScreen.getHitTarget(point);
+
+    // Daily reste un bouton séparé
+    if (hitTarget === "daily") {
+      console.log("daily clicked");
+      return;
+    }
+
+    // Settings reste aussi séparé
+    if (hitTarget === "settings") {
+      console.log("settings clicked");
+      return;
+    }
+
+    // Tout le reste de l'écran lance la partie
+    this.reset();
+  }
+
   startOrRestartFromKeyboard() {
     if (this.state === "waiting" || this.state === "ended") {
       this.reset();
     }
   }
 
+  handleGameOverTap(point) {
+    const hitTarget = this.gameOverScreen.getHitTarget(point);
+
+    if (hitTarget === "home") {
+      this.showWaitingScreen();
+      return;
+    }
+
+    this.reset();
+  }
+
   endGame(message) {
+    if (this.state === "ended") return;
+
+    this.previousBestScore = HOME_UI_DATA.bestScore;
+
+    this.gameOverWasNewBest =
+      this.score > HOME_UI_DATA.bestScore;
+
+    if (this.gameOverWasNewBest) {
+      HOME_UI_DATA.bestScore = this.score;
+    }
+
+    this.gameOverStartedAt = performance.now();
+
     this.clearPendingDuoSpawn();
     this.receiverEffects.stopAll();
+
     this.state = "ended";
+
     this.centerMessage = message;
     this.centerMessageUntil = Infinity;
+
     this.activeShapeRuleName = null;
     this.pendingLevelIntroPhase = null;
+
     this.clearCurrentChallenge();
   }
 
@@ -3302,11 +5092,62 @@ class NeonSwipeGame {
   draw(currentTime) {
     this.context.clearRect(0, 0, this.scaler.canvasWidth, this.scaler.canvasHeight);
     this.drawBackground();
-    this.arena.draw(this.context, this.visiblePhase, this.wallColorAnimationState, this.receiverEffects.getHitFeedbackByReceiverId(currentTime), this.introVisualState);
+
+    if (this.isWaitingToStart()) {
+      this.homeScreen.draw(this.context, HOME_UI_DATA, currentTime);
+      return;
+    }
+
+    this.arena.draw(
+      this.context,
+      this.visiblePhase,
+      this.wallColorAnimationState,
+      this.receiverEffects.getHitFeedbackByReceiverId(currentTime),
+      this.introVisualState,
+      this.getModifierVisualState(currentTime)
+    );
+
+    if (this.state === "ended") {
+      // Garde la dernière forme figée à l'écran
+      this.drawActiveShape(currentTime);
+
+      // Laisse l'impact / les particules finir leur animation
+      this.particleSystem.draw(this.context);
+
+      const elapsedGameOverMs =
+        currentTime - this.gameOverStartedAt;
+
+      const transitionElapsedMs =
+        Math.max(
+          elapsedGameOverMs -
+          GAME_CONFIG.gameOverHoldDurationMs,
+          0
+        );
+
+      const transitionProgress = clamp(
+        transitionElapsedMs /
+        GAME_CONFIG.gameOverTransitionDurationMs,
+        0,
+        1
+      );
+
+      this.gameOverScreen.draw(
+        this.context,
+        {
+          score: this.score,
+          bestScore: HOME_UI_DATA.bestScore,
+          previousBestScore: this.previousBestScore,
+          wasNewBest: this.gameOverWasNewBest,
+          transitionProgress
+        },
+        currentTime
+      );
+
+      return;
+    }
 
     this.drawHud();
     this.drawActiveShape(currentTime);
-    this.drawSwipeGuide();
     this.particleSystem.draw(this.context);
     this.drawCenterLabel(currentTime);
   }
@@ -3335,7 +5176,7 @@ class NeonSwipeGame {
     this.context.shadowBlur = this.scaler.x(9);
     this.context.textAlign = "center";
     this.context.textBaseline = "middle";
-    this.context.font = `400 ${this.scaler.x(56)}px Orbitron`;
+    this.context.font = `400 ${this.scaler.x(56)}px "Bebas Neue"`;
     this.context.fillText(String(this.score).padStart(2, "0"), this.scaler.canvasWidth / 2, this.scaler.y(42));
 
     this.context.restore();
@@ -3465,24 +5306,6 @@ class NeonSwipeGame {
         );
         this.context.restore();
       });
-  }
-
-  drawSwipeGuide() {
-    const swipeGesture = this.inputController.activeSwipeGesture;
-    if (!swipeGesture || !this.activeShape || this.state !== "playing") return;
-    if (swipeGesture.distance < this.scaler.x(12)) return;
-
-    this.context.save();
-    this.context.strokeStyle = "rgba(238, 244, 255, 0.72)";
-    this.context.shadowColor = NEON_COLORS[this.activeShape.colorId];
-    this.context.shadowBlur = this.scaler.x(12);
-    this.context.lineWidth = this.scaler.x(2);
-    this.context.setLineDash([this.scaler.x(8), this.scaler.x(8)]);
-    this.context.beginPath();
-    this.context.moveTo(swipeGesture.startX, swipeGesture.startY);
-    this.context.lineTo(swipeGesture.currentX, swipeGesture.currentY);
-    this.context.stroke();
-    this.context.restore();
   }
 
   drawSwipeTrail(shape, currentTime) {
@@ -3623,12 +5446,24 @@ class NeonSwipeGame {
     this.context.restore();
   }
 
+  getModifierVisualState(currentTime) {
+    return {
+      blink: this.blinkController.getVisualState(
+        currentTime,
+        this.activeModifiers.blink
+      )
+    };
+  }
+
   getCenterLabelY(isRuleLabel) {
     if (this.state === "ended") {
       return this.scaler.canvasHeight / 2 - this.scaler.y(58);
     }
 
-    return this.scaler.y(isRuleLabel ? 486 : 376);
+    const extraHeight = Math.max(this.scaler.designHeight - this.scaler.baseDesignHeight, 0);
+    const ruleLabelY = 486 + extraHeight * 0.5;
+
+    return this.scaler.y(isRuleLabel ? ruleLabelY : 376);
   }
 
   get visiblePhase() {
