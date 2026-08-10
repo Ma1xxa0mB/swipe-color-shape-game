@@ -103,97 +103,43 @@ const HOME_UI_DATA = {
   dailyMaxAttempts: 4
 };
 
-const WALL_LAYOUT_A_RECEIVER_COLORS_BY_POSITION_ID = {
+const DEFAULT_COLOR_LAYOUT = {
   topLeft: "green",
   topRight: "red",
   bottomLeft: "blue",
   bottomRight: "yellow"
 };
 
-const WALL_LAYOUT_B_RECEIVER_COLORS_BY_POSITION_ID = {
-  topLeft: "blue",
-  topRight: "yellow",
-  bottomLeft: "red",
-  bottomRight: "green"
-};
-
-const WALL_LAYOUT_C_RECEIVER_COLORS_BY_POSITION_ID = {
-  topLeft: "yellow",
-  topRight: "blue",
-  bottomLeft: "green",
-  bottomRight: "red"
-};
-
-const WALL_LAYOUT_D_RECEIVER_COLORS_BY_POSITION_ID = {
-  topLeft: "red",
-  topRight: "green",
-  bottomLeft: "yellow",
-  bottomRight: "blue"
-};
-
-const PHASE_6_RECEIVER_COLORS_BY_POSITION_ID = WALL_LAYOUT_D_RECEIVER_COLORS_BY_POSITION_ID;
-
-const LEVEL_8_INITIAL_RECEIVER_COLORS_BY_POSITION_ID = WALL_LAYOUT_D_RECEIVER_COLORS_BY_POSITION_ID;
-const LEVEL_9_INITIAL_RECEIVER_COLORS_BY_POSITION_ID = WALL_LAYOUT_D_RECEIVER_COLORS_BY_POSITION_ID;
-const LEVEL_10_INITIAL_RECEIVER_COLORS_BY_POSITION_ID = WALL_LAYOUT_D_RECEIVER_COLORS_BY_POSITION_ID;
-const LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID = PHASE_6_RECEIVER_COLORS_BY_POSITION_ID;
-
-const DEFAULT_RECEIVER_SHAPES_BY_POSITION_ID = {
+const DEFAULT_SHAPE_LAYOUT = {
   topLeft: "triangle",
   topRight: "star",
   bottomLeft: "square",
   bottomRight: "circle"
 };
 
-const PHASE_5_RECEIVER_SHAPES_BY_POSITION_ID = {
-  topLeft: "star",
-  topRight: "square",
-  bottomLeft: "triangle",
-  bottomRight: "circle"
-};
-
-const LEVEL_6_RECEIVER_SHAPES_BY_POSITION_ID = {
-  topLeft: "circle",
-  topRight: "triangle",
-  bottomLeft: "star",
-  bottomRight: "square"
-};
-
-const LEVEL_7_RECEIVER_SHAPES_BY_POSITION_ID = {
-  topLeft: "square",
-  topRight: "circle",
-  bottomLeft: "triangle",
-  bottomRight: "star"
-};
-
-const PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID = {
-  topLeft: "circle",
-  topRight: "square",
-  bottomLeft: "star",
-  bottomRight: "triangle"
-};
 
 const GAME_PHASES = [
-  { level: 1, ruleName: "COLOR", startScore: 0, receiverColorsByPositionId: WALL_LAYOUT_A_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: DEFAULT_RECEIVER_SHAPES_BY_POSITION_ID },
-  { level: 2, ruleName: "SHAPE", startScore: 2, receiverColorsByPositionId: WALL_LAYOUT_A_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: DEFAULT_RECEIVER_SHAPES_BY_POSITION_ID },
-  { level: 3, ruleName: "COLOR", startScore: 4, receiverColorsByPositionId: WALL_LAYOUT_A_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: DEFAULT_RECEIVER_SHAPES_BY_POSITION_ID },
-  { level: 4, ruleName: "COLOR", startScore: 6, receiverColorsByPositionId: WALL_LAYOUT_B_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: DEFAULT_RECEIVER_SHAPES_BY_POSITION_ID },
-  { level: 5, ruleName: "COLOR", startScore: 8, receiverColorsByPositionId: WALL_LAYOUT_B_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_5_RECEIVER_SHAPES_BY_POSITION_ID },
-  { level: 6, ruleName: "COLOR", startScore: 10, receiverColorsByPositionId: WALL_LAYOUT_C_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: LEVEL_6_RECEIVER_SHAPES_BY_POSITION_ID },
-  { level: 7, ruleName: "COLOR", startScore: 12, receiverColorsByPositionId: WALL_LAYOUT_D_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: LEVEL_7_RECEIVER_SHAPES_BY_POSITION_ID },
-  { level: 8, ruleName: "COLOR", startScore: GAME_CONFIG.level8StartScore, receiverColorsByPositionId: LEVEL_8_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: LEVEL_7_RECEIVER_SHAPES_BY_POSITION_ID },
-  { level: 9, ruleName: "COLOR", startScore: GAME_CONFIG.level9StartScore, receiverColorsByPositionId: LEVEL_9_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: LEVEL_7_RECEIVER_SHAPES_BY_POSITION_ID },
-  { level: 10, ruleName: "COLOR", startScore: GAME_CONFIG.level10StartScore, receiverColorsByPositionId: LEVEL_10_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: LEVEL_7_RECEIVER_SHAPES_BY_POSITION_ID },
-  { level: 11, ruleName: "COLOR", startScore: GAME_CONFIG.level11StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID },
-  { level: 12, ruleName: "SHAPE", startScore: GAME_CONFIG.level12StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID },
-  { level: 13, ruleName: "COLOR", startScore: GAME_CONFIG.level13StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID },
-  { level: 14, ruleName: "COLOR", startScore: GAME_CONFIG.level14StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID },
-  { level: 15, ruleName: "COLOR", startScore: GAME_CONFIG.level15StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID },
-  { level: 16, ruleName: "COLOR", startScore: GAME_CONFIG.level16StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID },
-  { level: 17, ruleName: "COLOR", startScore: GAME_CONFIG.level17StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID },
-  { level: 18, ruleName: "COLOR", startScore: GAME_CONFIG.level18StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, projectileEntry: "movingGap" },
-  { level: 19, ruleName: "COLOR", startScore: GAME_CONFIG.level19StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesPreciseDuoSelection: true, projectileEntry: "movingGapDuo" }
+  { level: 1, ruleName: "COLOR", startScore: 0 },
+  { level: 2, ruleName: "SHAPE", startScore: 2 },
+  { level: 3, ruleName: "COLOR", startScore: 4 },
+  { level: 4, ruleName: "COLOR", startScore: 6 },
+  { level: 5, ruleName: "COLOR", startScore: 8 },
+  { level: 6, ruleName: "COLOR", startScore: 10 },
+  { level: 7, ruleName: "COLOR", startScore: 12 },
+  { level: 8, ruleName: "COLOR", startScore: GAME_CONFIG.level8StartScore },
+  { level: 9, ruleName: "COLOR", startScore: GAME_CONFIG.level9StartScore },
+  { level: 10, ruleName: "COLOR", startScore: GAME_CONFIG.level10StartScore },
+  { level: 11, ruleName: "COLOR", startScore: GAME_CONFIG.level11StartScore },
+  { level: 12, ruleName: "SHAPE", startScore: GAME_CONFIG.level12StartScore },
+  { level: 13, ruleName: "COLOR", startScore: GAME_CONFIG.level13StartScore },
+  { level: 14, ruleName: "COLOR", startScore: GAME_CONFIG.level14StartScore },
+  { level: 15, ruleName: "COLOR", startScore: GAME_CONFIG.level15StartScore },
+  { level: 16, ruleName: "COLOR", startScore: GAME_CONFIG.level16StartScore },
+  { level: 17, ruleName: "COLOR", startScore: GAME_CONFIG.level17StartScore },
+  { level: 18, ruleName: "COLOR", startScore: GAME_CONFIG.level18StartScore, projectileEntry: "movingGap" },
+  { level: 19, ruleName: "COLOR", startScore: GAME_CONFIG.level19StartScore, usesPreciseDuoSelection: true, projectileEntry: "movingGapDuo" }
 ];
+
 
 // const NEON_COLORS = {
 //   green: "#39ff72",
@@ -287,7 +233,11 @@ const LEVEL_MODIFIERS = {
   16: {},
   17: {},
   18: {},
-  19: { shapeSwipe: true }
+  19: {
+    shapeSwipe: true,
+    shortReceivers: true,
+    slide: true
+  }
 };
 
 // TEMP TEST MODIFIERS - remove this layer when level recipes become final.
@@ -2379,14 +2329,13 @@ class ReceiverPermutationController {
   }
 
   getPhaseWithCurrentPermutation(phase, permutationMode) {
-    if (!usesAnyPermutation(permutationMode)) return phase;
-
     return {
       ...phase,
       receiverColorsByPositionId: this.currentReceiverColorsByPositionId,
       receiverShapesByPositionId: this.currentReceiverShapesByPositionId
     };
   }
+
 
   get isActive() {
     return this.isAnimating && this.permutationProgress < 1;
@@ -3079,19 +3028,20 @@ class ThrowController {
 class ReceiverEffectsController {
   constructor() {
     this.permutation = new ReceiverPermutationController({
-      initialReceiverColorsByPositionId: LEVEL_8_INITIAL_RECEIVER_COLORS_BY_POSITION_ID,
-      initialReceiverShapesByPositionId: LEVEL_7_RECEIVER_SHAPES_BY_POSITION_ID
+      initialReceiverColorsByPositionId: DEFAULT_COLOR_LAYOUT,
+      initialReceiverShapesByPositionId: DEFAULT_SHAPE_LAYOUT
     });
     this.colorRotation = new ReceiverRotationController({
-      initialValuesByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID,
+      initialValuesByPositionId: DEFAULT_COLOR_LAYOUT,
       intervalMs: GAME_CONFIG.receiverRotationIntervalMs,
       durationMs: GAME_CONFIG.receiverRotationDurationMs
     });
     this.shapeRotation = new ReceiverRotationController({
-      initialValuesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID,
+      initialValuesByPositionId: DEFAULT_SHAPE_LAYOUT,
       intervalMs: GAME_CONFIG.shapeRotationIntervalMs,
       durationMs: GAME_CONFIG.shapeRotationDurationMs
     });
+
     this.lastColorRotationSyncKey = null;
     this.lastShapeRotationSyncKey = null;
     this.hitFeedbacks = [];
@@ -4989,6 +4939,8 @@ class NeonSwipeGame {
     this.inputController = new InputController(this.canvas, this);
 
     this.score = 0;
+    this.runReceiverColorsByPositionId = { ...DEFAULT_COLOR_LAYOUT };
+    this.runReceiverShapesByPositionId = { ...DEFAULT_SHAPE_LAYOUT };
     this.lastAnimationTime = 0;
     this.centerMessage = "SWIPE";
     this.centerMessageUntil = 0;
@@ -5033,6 +4985,11 @@ class NeonSwipeGame {
     };
   }
 
+  createRandomRunReceiverLayouts() {
+    this.runReceiverColorsByPositionId = createRandomReceiverLayout(AVAILABLE_COLOR_IDS);
+    this.runReceiverShapesByPositionId = createRandomReceiverLayout(AVAILABLE_SHAPES);
+  }
+
   reset() {
     this.clearAllPendingSpawnTimeouts();
     this.receiverEffects.reset();
@@ -5040,6 +4997,7 @@ class NeonSwipeGame {
     this.blinkController.reset();
     // TEMP TEST BLINK LEVEL 14 - restore to 0 after validation
     this.score = 0;
+    this.createRandomRunReceiverLayouts();
     this.state = "playing";
     this.resetLevelRuntime();
     this.movingReceiverOffset = 0;
@@ -5067,6 +5025,8 @@ class NeonSwipeGame {
     this.dynamicRuleSequence.reset();
     this.blinkController.reset();
     this.score = 0;
+    this.runReceiverColorsByPositionId = { ...DEFAULT_COLOR_LAYOUT };
+    this.runReceiverShapesByPositionId = { ...DEFAULT_SHAPE_LAYOUT };
     this.state = "waiting";
     this.resetLevelRuntime();
     this.movingReceiverOffset = 0;
@@ -5756,14 +5716,6 @@ class NeonSwipeGame {
       this.deferredNextChallengeBoundaryPhase = resolvedChallengePhase;
       this.startLevelIntroWhenReady();
       return;
-    }
-
-    if (resolvedChallengePhase?.level !== this.currentPhase.level) {
-      this.receiverEffects.syncPermutationToPhase(this.currentPhase);
-      this.receiverEffects.syncRotationsToPhase(
-        this.currentPhase,
-        this.activeModifiers.permutation
-      );
     }
 
     if (this.usesReceiverPermutation()) {
@@ -6729,8 +6681,14 @@ class NeonSwipeGame {
 
   get currentPhase() {
     const basePhase = this.rules.getCurrentPhase(this.score);
+    const phaseWithRunLayout = {
+      ...basePhase,
+      receiverColorsByPositionId: { ...this.runReceiverColorsByPositionId },
+      receiverShapesByPositionId: { ...this.runReceiverShapesByPositionId }
+    };
+
     return this.dynamicRuleSequence.getPhaseWithCurrentRule(
-      basePhase,
+      phaseWithRunLayout,
       this.activeModifiers.ruleSequence
     );
   }
@@ -6765,6 +6723,23 @@ class NeonSwipeGame {
     return null;
   }
 
+}
+
+function createRandomReceiverLayout(values) {
+  const shuffledValues = [...values];
+
+  for (let index = shuffledValues.length - 1; index > 0; index -= 1) {
+    const randomIndex = Math.floor(Math.random() * (index + 1));
+    [shuffledValues[index], shuffledValues[randomIndex]] = [
+      shuffledValues[randomIndex],
+      shuffledValues[index]
+    ];
+  }
+
+  return RECEIVER_DEFINITIONS.reduce((layoutByReceiverId, receiverDefinition, index) => {
+    layoutByReceiverId[receiverDefinition.id] = shuffledValues[index];
+    return layoutByReceiverId;
+  }, {});
 }
 
 function getRandomItem(items) {
