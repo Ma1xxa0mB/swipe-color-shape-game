@@ -208,6 +208,18 @@ const RULE_SEQUENCE_MODES = {
   hard: { minAnswers: 1, maxAnswers: 2 }
 };
 
+const GRAVITY_DIFFICULTIES = {
+  easy: {
+    gravityMultiplier: 0.78
+  },
+  normal: {
+    gravityMultiplier: 1
+  },
+  hard: {
+    gravityMultiplier: 1.28
+  }
+};
+
 const DEFAULT_MODIFIERS = {
   blink: false,
   pulse: false,
@@ -228,12 +240,13 @@ const DEFAULT_MODIFIERS = {
   shapeSwipe: false,
   multiShapeCount: 1,
   rhythmDifficulty: "easy",
+  gravityDifficulty: "normal",
   void: false
 };
 
 // TEMP TEST MODIFIERS - remove this layer when level recipes become final.
 const TEMP_TEST_MODIFIER_OVERRIDES = {
-  scatter: true
+  gravityDifficulty: "hard"
 };
 
 const LEVEL_MODIFIERS = {
@@ -294,6 +307,10 @@ function getModifiersForLevel(level) {
 
 function getRhythmConfig(rhythmDifficulty) {
   return RHYTHM_DIFFICULTIES[rhythmDifficulty] || RHYTHM_DIFFICULTIES.easy;
+}
+
+function getGravityDifficultyConfig(gravityDifficulty) {
+  return GRAVITY_DIFFICULTIES[gravityDifficulty] || GRAVITY_DIFFICULTIES.normal;
 }
 
 function getRhythmDelayMs(score, rhythmDifficulty) {
@@ -2812,12 +2829,15 @@ class ChallengePhysics {
     return GAME_CONFIG.spawnImpulse;
   }
 
-  static getGravity(challengePhase, spawnEntryMode = "bottom") {
+  static getGravity(challengePhase, spawnEntryMode = "bottom", gravityDifficulty = "normal") {
+    const gravityConfig = getGravityDifficultyConfig(gravityDifficulty);
+    let gravity = GAME_CONFIG.gravity * gravityConfig.gravityMultiplier;
+
     if (spawnEntryMode === "top") {
-      return GAME_CONFIG.gravity * GAME_CONFIG.topSpawnGravityMultiplier;
+      gravity *= GAME_CONFIG.topSpawnGravityMultiplier;
     }
 
-    return GAME_CONFIG.gravity;
+    return gravity;
   }
 }
 
@@ -5861,7 +5881,9 @@ class NeonSwipeGame {
     fallingShape.validationPhase = validationPhaseSnapshot;
     fallingShape.gravity = this.scaler.x(ChallengePhysics.getGravity(
       challengePhaseSnapshot,
-      fallingShape.spawnEntryMode
+      fallingShape.spawnEntryMode,
+      challengePhaseSnapshot.modifierSnapshot?.gravityDifficulty ||
+        this.activeModifiers.gravityDifficulty
     ));
     fallingShape.advancedSpawnState = "none";
 
@@ -7560,7 +7582,13 @@ class NeonSwipeGame {
   }
 
   get currentGravity() {
-    return this.scaler.x(ChallengePhysics.getGravity(this.currentChallengePhase || this.currentPhase));
+    const challengePhase = this.currentChallengePhase || this.currentPhase;
+    return this.scaler.x(ChallengePhysics.getGravity(
+      challengePhase,
+      "bottom",
+      challengePhase?.modifierSnapshot?.gravityDifficulty ||
+        this.activeModifiers.gravityDifficulty
+    ));
   }
 
   get introVisualState() {
