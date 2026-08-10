@@ -188,9 +188,9 @@ const GAME_PHASES = [
   { level: 12, ruleName: "SHAPE", startScore: GAME_CONFIG.level12StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicReceiverShapes: true },
   { level: 13, ruleName: "COLOR", startScore: GAME_CONFIG.level13StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2, usesRuleControlledReceiverRotation: true },
   { level: 14, ruleName: "COLOR", startScore: GAME_CONFIG.level14StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2 },
-  { level: 15, ruleName: "COLOR", startScore: GAME_CONFIG.level15StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2, projectileEntry: "top" },
-  { level: 16, ruleName: "COLOR", startScore: GAME_CONFIG.level16StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2, projectileEntry: "side" },
-  { level: 17, ruleName: "COLOR", startScore: GAME_CONFIG.level17StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2, projectileEntry: "random" },
+  { level: 15, ruleName: "COLOR", startScore: GAME_CONFIG.level15StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2 },
+  { level: 16, ruleName: "COLOR", startScore: GAME_CONFIG.level16StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2 },
+  { level: 17, ruleName: "COLOR", startScore: GAME_CONFIG.level17StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2 },
   { level: 18, ruleName: "COLOR", startScore: GAME_CONFIG.level18StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2, projectileEntry: "movingGap" },
   { level: 19, ruleName: "COLOR", startScore: GAME_CONFIG.level19StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2, usesPreciseDuoSelection: true, projectileEntry: "movingGapDuo" }
 ];
@@ -240,6 +240,7 @@ const AVAILABLE_COLOR_IDS = ["red", "yellow", "green", "blue"];
 const VOID_SHAPES = ["hexagon", "diamond", "rectangle"];
 const VOID_COLOR_IDS = ["pink", "purple", "white"];
 const RECEIVER_PERMUTATION_MODES = ["none", "color", "shape", "both"];
+const SPAWN_MODES = ["bottom", "top", "side"];
 
 function usesColorPermutation(permutationMode) {
   return permutationMode === "color" || permutationMode === "both";
@@ -2325,13 +2326,15 @@ class ChallengePhysics {
     return GAME_CONFIG.spawnImpulse;
   }
 
-  static getGravity(challengePhase) {
+  static getGravity(challengePhase, spawnEntryMode = "bottom") {
     if (challengePhase.usesPreciseDuoSelection) {
       return GAME_CONFIG.gravity * GAME_CONFIG.level19GravityMultiplier;
     }
-    if (challengePhase.projectileEntry === "top") {
+
+    if (spawnEntryMode === "top") {
       return GAME_CONFIG.gravity * GAME_CONFIG.topSpawnGravityMultiplier;
     }
+
     return GAME_CONFIG.gravity;
   }
 }
@@ -2400,18 +2403,22 @@ class SpawnController {
     this.strategies = {
       bottom: (phase) => this.getBottomSpawn(phase),
       top: () => this.getTopSpawn(),
-      left: () => this.getLeftSpawn(),
-      right: () => this.getRightSpawn(),
       side: () => this.getSideSpawn(),
-      random: (phase) => this.getRandomEntrySpawn(phase),
       movingGap: (phase) => this.getMovingGapSpawn(phase),
       movingGapDuo: (phase) => this.getMovingGapSpawn(phase)
     };
+    this.specialProjectileEntries = new Set(["movingGap", "movingGapDuo"]);
   }
 
   getSingleShapeSpawn(phase) {
-    const projectileEntry = phase.projectileEntry || "bottom";
-    const spawnStrategy = this.strategies[projectileEntry] || this.strategies.bottom;
+    const projectileEntry = phase.projectileEntry;
+
+    if (this.specialProjectileEntries.has(projectileEntry)) {
+      return this.strategies[projectileEntry](phase);
+    }
+
+    const spawnMode = this.game.getCurrentSpawnMode();
+    const spawnStrategy = this.strategies[spawnMode] || this.strategies.bottom;
     return spawnStrategy(phase);
   }
 
@@ -2422,7 +2429,8 @@ class SpawnController {
       x: scaler.x(GAME_CONFIG.designWidth / 2),
       y: scaler.y(scaler.designHeight + 38),
       velocityX: 0,
-      velocityY: scaler.y(this.game.currentChallengeSpawnImpulse)
+      velocityY: scaler.y(this.game.currentChallengeSpawnImpulse),
+      entryMode: "bottom"
     };
   }
 
@@ -2433,7 +2441,8 @@ class SpawnController {
       x: scaler.x(GAME_CONFIG.designWidth / 2),
       y: scaler.y(40),
       velocityX: 0,
-      velocityY: 0
+      velocityY: 0,
+      entryMode: "top"
     };
   }
 
@@ -2453,7 +2462,9 @@ class SpawnController {
       x: scaler.x(-GAME_CONFIG.shapeRadius - 8),
       y: spawnY,
       velocityX: scaler.x(GAME_CONFIG.sideEntryHorizontalImpulse),
-      velocityY: scaler.y(GAME_CONFIG.sideEntryUpwardImpulse)
+      velocityY: scaler.y(GAME_CONFIG.sideEntryUpwardImpulse),
+      entryMode: "side",
+      physicalSide: "left"
     };
   }
 
@@ -2469,16 +2480,10 @@ class SpawnController {
       x: scaler.x(GAME_CONFIG.designWidth + GAME_CONFIG.shapeRadius + 8),
       y: spawnY,
       velocityX: scaler.x(-GAME_CONFIG.sideEntryHorizontalImpulse),
-      velocityY: scaler.y(GAME_CONFIG.sideEntryUpwardImpulse)
+      velocityY: scaler.y(GAME_CONFIG.sideEntryUpwardImpulse),
+      entryMode: "side",
+      physicalSide: "right"
     };
-  }
-
-  getRandomEntrySpawn(phase) {
-    const randomEntry = getRandomItem(["bottom", "top", "left", "right"]);
-    return this.getSingleShapeSpawn({
-      ...phase,
-      projectileEntry: randomEntry
-    });
   }
 
   getMovingGapSpawn(phase) {
@@ -2497,7 +2502,8 @@ class SpawnController {
       x: spawnX,
       y: this.game.scaler.y(this.game.scaler.designHeight + 38),
       velocityX: this.getMovingBottomSpawnVelocityX(spawnX),
-      velocityY: this.game.scaler.y(this.game.currentChallengeSpawnImpulse)
+      velocityY: this.game.scaler.y(this.game.currentChallengeSpawnImpulse),
+      entryMode: "bottom"
     };
   }
 
@@ -4719,8 +4725,10 @@ class NeonSwipeGame {
       burst: false,
       twin: false,
       reveal: false,
-      slide: true,
-      shortReceivers: true,
+      spawn: "bottom",
+      randomSpawn: true,
+      slide: false,
+      shortReceivers: false,
       permutation: "both",
       void: false
     };
@@ -4924,12 +4932,17 @@ class NeonSwipeGame {
     );
     const fallingShape = this.createShapeFromSpawn(spawn);
 
+    fallingShape.spawnEntryMode = spawn.entryMode || "bottom";
+    fallingShape.spawnPhysicalSide = spawn.physicalSide || null;
+
     this.applyVoidModifierToShape(fallingShape, challengePhaseSnapshot);
     this.applyRevealModifierToShape(fallingShape, challengePhaseSnapshot);
-
     fallingShape.challengePhase = challengePhaseSnapshot;
     fallingShape.validationPhase = validationPhaseSnapshot;
-    fallingShape.gravity = this.scaler.x(ChallengePhysics.getGravity(challengePhaseSnapshot));
+    fallingShape.gravity = this.scaler.x(ChallengePhysics.getGravity(
+      challengePhaseSnapshot,
+      fallingShape.spawnEntryMode
+    ));
     fallingShape.advancedSpawnState = "none";
 
     return fallingShape;
@@ -4944,24 +4957,22 @@ class NeonSwipeGame {
   }
 
   shouldUseTwinModifierForCurrentChallenge() {
-    const projectileEntry = this.currentPhase.projectileEntry || "bottom";
-
     return Boolean(
       this.activeModifiers.twin &&
       !this.activeModifiers.burst &&
       !this.currentPhase.usesPreciseDuoSelection &&
       !this.currentPhase.usesDuoShapes &&
-      projectileEntry === "bottom"
+      !this.currentPhase.projectileEntry &&
+      !this.activeModifiers.randomSpawn &&
+      this.activeModifiers.spawn === "bottom"
     );
   }
 
   shouldApplyRevealModifierToShape(challengePhase, fallingShape) {
-    const projectileEntry = challengePhase.projectileEntry || "bottom";
-
     return Boolean(
       this.activeModifiers.reveal &&
       !challengePhase.usesPreciseDuoSelection &&
-      projectileEntry === "bottom" &&
+      fallingShape.spawnEntryMode === "bottom" &&
       fallingShape.velocityY < GAME_CONFIG.revealApexVelocityThreshold
     );
   }
@@ -5084,6 +5095,16 @@ class NeonSwipeGame {
 
   getSingleShapeSpawn(phase) {
     return this.spawnController.getSingleShapeSpawn(phase);
+  }
+
+  getCurrentSpawnMode() {
+    if (this.activeModifiers.randomSpawn) {
+      return getRandomItem(SPAWN_MODES);
+    }
+
+    return SPAWN_MODES.includes(this.activeModifiers.spawn)
+      ? this.activeModifiers.spawn
+      : "bottom";
   }
 
   createPhaseSnapshot(phase) {
