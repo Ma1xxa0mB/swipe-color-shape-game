@@ -19,10 +19,10 @@ const GAME_CONFIG = {
   maxThrowForce: 2400,
   upwardThrowBoost: 330,
   shapeRadius: 34,
-  level19SecondShapeDelayMs: 500,
-  level19SpawnImpulseMultiplier: 0.75,
-  level19GravityMultiplier: 0.4,
-  level19SelectionHitboxMultiplier: 1.75,
+  preciseDuoSecondShapeDelayMs: 500,
+  preciseDuoSpawnImpulseMultiplier: 0.75,
+  preciseDuoGravityMultiplier: 0.4,
+  shapeSwipeHitboxMultiplier: 1.75,
   burstShapeCount: 3,
   burstSecondShapeDelayMs: 400,
   burstThirdShapeDelayMs: 800,
@@ -87,8 +87,8 @@ const GAME_CONFIG = {
   level12IntroDurationMs: 2000,
   shapeRotationIntervalMs: 1000,
   shapeRotationDurationMs: 180,
-  level10WallRotationIntervalMs: 1000,
-  level10WallRotationDurationMs: 180,
+  receiverRotationIntervalMs: 1000,
+  receiverRotationDurationMs: 180,
   blinkVisibleDurationMs: 800,
   blinkNeutralDurationMs: 800,
   voidSpawnChance: 0.25,
@@ -176,23 +176,23 @@ const PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID = {
 const GAME_PHASES = [
   { level: 1, ruleName: "COLOR", startScore: 0, receiverColorsByPositionId: WALL_LAYOUT_A_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: DEFAULT_RECEIVER_SHAPES_BY_POSITION_ID },
   { level: 2, ruleName: "SHAPE", startScore: 2, receiverColorsByPositionId: WALL_LAYOUT_A_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: DEFAULT_RECEIVER_SHAPES_BY_POSITION_ID },
-  { level: 3, ruleName: "COLOR", startScore: 4, receiverColorsByPositionId: WALL_LAYOUT_A_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: DEFAULT_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 2, dynamicRuleMaxAnswers: 3 },
-  { level: 4, ruleName: "COLOR", startScore: 6, receiverColorsByPositionId: WALL_LAYOUT_B_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: DEFAULT_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 2, dynamicRuleMaxAnswers: 3 },
-  { level: 5, ruleName: "COLOR", startScore: 8, receiverColorsByPositionId: WALL_LAYOUT_B_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_5_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 2, dynamicRuleMaxAnswers: 3 },
-  { level: 6, ruleName: "COLOR", startScore: 10, receiverColorsByPositionId: WALL_LAYOUT_C_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: LEVEL_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 3 },
-  { level: 7, ruleName: "COLOR", startScore: 12, receiverColorsByPositionId: WALL_LAYOUT_D_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: LEVEL_7_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 3 },
-  { level: 8, ruleName: "COLOR", startScore: GAME_CONFIG.level8StartScore, receiverColorsByPositionId: LEVEL_8_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: LEVEL_7_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 3 },
-  { level: 9, ruleName: "COLOR", startScore: GAME_CONFIG.level9StartScore, receiverColorsByPositionId: LEVEL_9_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: LEVEL_7_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 3 },
-  { level: 10, ruleName: "COLOR", startScore: GAME_CONFIG.level10StartScore, receiverColorsByPositionId: LEVEL_10_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: LEVEL_7_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 3 },
-  { level: 11, ruleName: "COLOR", startScore: GAME_CONFIG.level11StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicWallColors: true },
-  { level: 12, ruleName: "SHAPE", startScore: GAME_CONFIG.level12StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicReceiverShapes: true },
-  { level: 13, ruleName: "COLOR", startScore: GAME_CONFIG.level13StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2, usesRuleControlledReceiverRotation: true },
-  { level: 14, ruleName: "COLOR", startScore: GAME_CONFIG.level14StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2 },
-  { level: 15, ruleName: "COLOR", startScore: GAME_CONFIG.level15StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2 },
-  { level: 16, ruleName: "COLOR", startScore: GAME_CONFIG.level16StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2 },
-  { level: 17, ruleName: "COLOR", startScore: GAME_CONFIG.level17StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2 },
-  { level: 18, ruleName: "COLOR", startScore: GAME_CONFIG.level18StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2, projectileEntry: "movingGap" },
-  { level: 19, ruleName: "COLOR", startScore: GAME_CONFIG.level19StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesDynamicRuleSequence: true, dynamicRuleMinAnswers: 1, dynamicRuleMaxAnswers: 2, usesPreciseDuoSelection: true, projectileEntry: "movingGapDuo" }
+  { level: 3, ruleName: "COLOR", startScore: 4, receiverColorsByPositionId: WALL_LAYOUT_A_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: DEFAULT_RECEIVER_SHAPES_BY_POSITION_ID },
+  { level: 4, ruleName: "COLOR", startScore: 6, receiverColorsByPositionId: WALL_LAYOUT_B_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: DEFAULT_RECEIVER_SHAPES_BY_POSITION_ID },
+  { level: 5, ruleName: "COLOR", startScore: 8, receiverColorsByPositionId: WALL_LAYOUT_B_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_5_RECEIVER_SHAPES_BY_POSITION_ID },
+  { level: 6, ruleName: "COLOR", startScore: 10, receiverColorsByPositionId: WALL_LAYOUT_C_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: LEVEL_6_RECEIVER_SHAPES_BY_POSITION_ID },
+  { level: 7, ruleName: "COLOR", startScore: 12, receiverColorsByPositionId: WALL_LAYOUT_D_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: LEVEL_7_RECEIVER_SHAPES_BY_POSITION_ID },
+  { level: 8, ruleName: "COLOR", startScore: GAME_CONFIG.level8StartScore, receiverColorsByPositionId: LEVEL_8_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: LEVEL_7_RECEIVER_SHAPES_BY_POSITION_ID },
+  { level: 9, ruleName: "COLOR", startScore: GAME_CONFIG.level9StartScore, receiverColorsByPositionId: LEVEL_9_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: LEVEL_7_RECEIVER_SHAPES_BY_POSITION_ID },
+  { level: 10, ruleName: "COLOR", startScore: GAME_CONFIG.level10StartScore, receiverColorsByPositionId: LEVEL_10_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: LEVEL_7_RECEIVER_SHAPES_BY_POSITION_ID },
+  { level: 11, ruleName: "COLOR", startScore: GAME_CONFIG.level11StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID },
+  { level: 12, ruleName: "SHAPE", startScore: GAME_CONFIG.level12StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID },
+  { level: 13, ruleName: "COLOR", startScore: GAME_CONFIG.level13StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID },
+  { level: 14, ruleName: "COLOR", startScore: GAME_CONFIG.level14StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID },
+  { level: 15, ruleName: "COLOR", startScore: GAME_CONFIG.level15StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID },
+  { level: 16, ruleName: "COLOR", startScore: GAME_CONFIG.level16StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID },
+  { level: 17, ruleName: "COLOR", startScore: GAME_CONFIG.level17StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID },
+  { level: 18, ruleName: "COLOR", startScore: GAME_CONFIG.level18StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, projectileEntry: "movingGap" },
+  { level: 19, ruleName: "COLOR", startScore: GAME_CONFIG.level19StartScore, receiverColorsByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID, receiverShapesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID, usesPreciseDuoSelection: true, projectileEntry: "movingGapDuo" }
 ];
 
 // const NEON_COLORS = {
@@ -241,6 +241,103 @@ const VOID_SHAPES = ["hexagon", "diamond", "rectangle"];
 const VOID_COLOR_IDS = ["pink", "purple", "white"];
 const RECEIVER_PERMUTATION_MODES = ["none", "color", "shape", "both"];
 const SPAWN_MODES = ["bottom", "top", "side"];
+const RECEIVER_ROTATION_MODES = ["none", "color", "shape", "both", "rule"];
+const RULE_SEQUENCE_MODE_NAMES = ["none", "easy", "normal", "hard"];
+const RULE_SEQUENCE_MODES = {
+  none: null,
+  easy: { minAnswers: 2, maxAnswers: 3 },
+  normal: { minAnswers: 1, maxAnswers: 3 },
+  hard: { minAnswers: 1, maxAnswers: 2 }
+};
+
+const DEFAULT_MODIFIERS = {
+  blink: false,
+  pulse: false,
+  burst: false,
+  twin: false,
+  reveal: false,
+  spawn: "bottom",
+  randomSpawn: false,
+  slide: false,
+  shortReceivers: false,
+  permutation: "none",
+  rotation: "none",
+  ruleSequence: "none",
+  shapeSwipe: false,
+  rhythmDifficulty: "medium",
+  void: false
+};
+
+const LEVEL_MODIFIERS = {
+  1: {},
+  2: {},
+  3: {},
+  4: {},
+  5: {},
+  6: {},
+  7: {},
+  8: {},
+  9: {},
+  10: {},
+  11: {},
+  12: {},
+  13: {},
+  14: {},
+  15: {},
+  16: {},
+  17: {},
+  18: {},
+  19: { shapeSwipe: true }
+};
+
+// TEMP TEST MODIFIERS - remove this layer when level recipes become final.
+const TEMP_TEST_MODIFIER_OVERRIDES = {
+  permutation: "both",
+  ruleSequence: "hard"
+};
+
+const RHYTHM_DIFFICULTIES = {
+  easy: {
+    trigger: "afterResolution",
+    startDelayMs: 280,
+    minDelayMs: 120,
+    progressionPerScore: 4
+  },
+  medium: {
+    trigger: "afterSwipe",
+    startDelayMs: 120,
+    minDelayMs: 50,
+    progressionPerScore: 2
+  },
+  hard: {
+    trigger: "afterSwipe",
+    startDelayMs: 0,
+    minDelayMs: 0,
+    progressionPerScore: 0
+  }
+};
+
+function getModifiersForLevel(level) {
+  return {
+    ...DEFAULT_MODIFIERS,
+    ...(LEVEL_MODIFIERS[level] || {}),
+    ...TEMP_TEST_MODIFIER_OVERRIDES
+  };
+}
+
+function getRhythmConfig(rhythmDifficulty) {
+  return RHYTHM_DIFFICULTIES[rhythmDifficulty] || RHYTHM_DIFFICULTIES.easy;
+}
+
+function getRhythmDelayMs(score, rhythmDifficulty) {
+  const rhythmConfig = getRhythmConfig(rhythmDifficulty);
+
+  return Math.max(
+    rhythmConfig.startDelayMs -
+    Math.max(score - 4, 0) * rhythmConfig.progressionPerScore,
+    rhythmConfig.minDelayMs
+  );
+}
 
 function usesColorPermutation(permutationMode) {
   return permutationMode === "color" || permutationMode === "both";
@@ -252,6 +349,26 @@ function usesShapePermutation(permutationMode) {
 
 function usesAnyPermutation(permutationMode) {
   return RECEIVER_PERMUTATION_MODES.includes(permutationMode) && permutationMode !== "none";
+}
+
+function usesColorRotation(rotationMode, ruleName) {
+  return (
+    rotationMode === "color" ||
+    rotationMode === "both" ||
+    (rotationMode === "rule" && ruleName === "COLOR")
+  );
+}
+
+function usesShapeRotation(rotationMode, ruleName) {
+  return (
+    rotationMode === "shape" ||
+    rotationMode === "both" ||
+    (rotationMode === "rule" && ruleName === "SHAPE")
+  );
+}
+
+function usesAnyRotation(rotationMode) {
+  return RECEIVER_ROTATION_MODES.includes(rotationMode) && rotationMode !== "none";
 }
 
 const KEYBOARD_TARGETS = {
@@ -2041,57 +2158,112 @@ class DynamicRuleSequenceController {
   reset() {
     this.activeRuleName = null;
     this.remainingAnswersInSequence = 0;
+    this.activeRuleSequenceMode = "none";
   }
 
-  getRuleNameForPhase(phase) {
-    if (!phase.usesDynamicRuleSequence) return phase.ruleName;
+  getRuleNameForPhase(phase, requestedRuleSequenceMode) {
+    if (this.hasActiveSequence()) {
+      return this.activeRuleName;
+    }
 
-    this.ensureSequenceHasStarted(phase);
+    if (!this.isSequenceModeEnabled(requestedRuleSequenceMode)) {
+      return phase.ruleName;
+    }
+
+    this.startSequence(phase.ruleName, requestedRuleSequenceMode);
     return this.activeRuleName;
   }
 
-  getPhaseWithCurrentRule(phase) {
-    if (!phase.usesDynamicRuleSequence) return phase;
+  getPhaseWithCurrentRule(phase, requestedRuleSequenceMode) {
+    if (this.hasActiveSequence()) {
+      return {
+        ...phase,
+        ruleName: this.activeRuleName
+      };
+    }
+
+    if (!this.isSequenceModeEnabled(requestedRuleSequenceMode)) {
+      return phase;
+    }
+
+    this.startSequence(phase.ruleName, requestedRuleSequenceMode);
 
     return {
       ...phase,
-      ruleName: this.getRuleNameForPhase(phase)
+      ruleName: this.activeRuleName
     };
   }
 
-  consumeSuccessfulAnswer(answeredPhase, nextPhase = answeredPhase) {
-    if (!answeredPhase.usesDynamicRuleSequence) return null;
+  consumeSuccessfulAnswer(
+    answeredPhase,
+    nextPhase = answeredPhase,
+    requestedNextRuleSequenceMode = "none"
+  ) {
+    if (!this.hasActiveSequence()) return null;
 
-    this.ensureSequenceHasStarted(answeredPhase);
     this.remainingAnswersInSequence -= 1;
 
     if (this.remainingAnswersInSequence > 0) return null;
 
+    if (!this.isSequenceModeEnabled(requestedNextRuleSequenceMode)) {
+      this.clearSequence();
+      return nextPhase.ruleName;
+    }
+
     this.activeRuleName = this.getOppositeRuleName(this.activeRuleName);
-    this.remainingAnswersInSequence = nextPhase.usesDynamicRuleSequence
-      ? this.createSequenceLength(nextPhase)
-      : 0;
+    this.activeRuleSequenceMode = requestedNextRuleSequenceMode;
+    this.remainingAnswersInSequence = this.createSequenceLength(requestedNextRuleSequenceMode);
     return this.activeRuleName;
   }
 
-  ensureSequenceHasStarted(phase) {
-    if (this.activeRuleName && this.remainingAnswersInSequence > 0) return;
-
-    this.activeRuleName = phase.ruleName;
-    this.remainingAnswersInSequence = this.createSequenceLength(phase);
+  startSequence(initialRuleName, ruleSequenceMode) {
+    this.activeRuleName = initialRuleName;
+    this.activeRuleSequenceMode = ruleSequenceMode;
+    this.remainingAnswersInSequence = this.createSequenceLength(ruleSequenceMode);
   }
 
-  createSequenceLength(phase) {
-    const minAnswers = phase.dynamicRuleMinAnswers;
-    const maxAnswers = phase.dynamicRuleMaxAnswers;
-    return minAnswers + Math.floor(Math.random() * (maxAnswers - minAnswers + 1));
+  createSequenceLength(ruleSequenceMode) {
+    const sequenceConfig = RULE_SEQUENCE_MODES[ruleSequenceMode];
+    if (!sequenceConfig) return 0;
+
+    return (
+      sequenceConfig.minAnswers +
+      Math.floor(
+        Math.random() *
+        (sequenceConfig.maxAnswers - sequenceConfig.minAnswers + 1)
+      )
+    );
   }
 
-  forceNewSequence(phase) {
-    if (!phase.usesDynamicRuleSequence) return;
+  forceNewSequence(phase, ruleSequenceMode) {
+    if (!this.isSequenceModeEnabled(ruleSequenceMode)) {
+      this.clearSequence();
+      return;
+    }
 
-    this.activeRuleName = this.activeRuleName || phase.ruleName;
-    this.remainingAnswersInSequence = this.createSequenceLength(phase);
+    this.startSequence(phase.ruleName, ruleSequenceMode);
+  }
+
+  hasActiveSequence() {
+    return Boolean(
+      this.activeRuleName &&
+      this.remainingAnswersInSequence > 0 &&
+      this.activeRuleSequenceMode !== "none"
+    );
+  }
+
+  willSwitchRuleAfterNextSuccessfulAnswer() {
+    return this.hasActiveSequence() && this.remainingAnswersInSequence <= 1;
+  }
+
+  clearSequence() {
+    this.activeRuleName = null;
+    this.remainingAnswersInSequence = 0;
+    this.activeRuleSequenceMode = "none";
+  }
+
+  isSequenceModeEnabled(ruleSequenceMode) {
+    return Boolean(RULE_SEQUENCE_MODES[ruleSequenceMode]);
   }
 
   getOppositeRuleName(ruleName) {
@@ -2216,6 +2388,10 @@ class ReceiverPermutationController {
     };
   }
 
+  get isActive() {
+    return this.isAnimating && this.permutationProgress < 1;
+  }
+
   get animationState() {
     if (!this.isAnimating || this.permutationProgress >= 1) return null;
 
@@ -2237,6 +2413,15 @@ class ReceiverRotationController {
 
   reset() {
     this.currentValuesByPositionId = { ...this.initialValuesByPositionId };
+    this.previousValuesByPositionId = null;
+    this.isActive = false;
+    this.lastRotationTime = 0;
+    this.rotationStartedAt = 0;
+    this.rotationProgress = 1;
+  }
+
+  syncValues(valuesByPositionId) {
+    this.currentValuesByPositionId = { ...valuesByPositionId };
     this.previousValuesByPositionId = null;
     this.isActive = false;
     this.lastRotationTime = 0;
@@ -2320,7 +2505,7 @@ class ReceiverRotationController {
 class ChallengePhysics {
   static getSpawnImpulse(challengePhase) {
     if (challengePhase.usesPreciseDuoSelection) {
-      return GAME_CONFIG.spawnImpulse * GAME_CONFIG.level19SpawnImpulseMultiplier;
+      return GAME_CONFIG.spawnImpulse * GAME_CONFIG.preciseDuoSpawnImpulseMultiplier;
     }
 
     return GAME_CONFIG.spawnImpulse;
@@ -2328,7 +2513,7 @@ class ChallengePhysics {
 
   static getGravity(challengePhase, spawnEntryMode = "bottom") {
     if (challengePhase.usesPreciseDuoSelection) {
-      return GAME_CONFIG.gravity * GAME_CONFIG.level19GravityMultiplier;
+      return GAME_CONFIG.gravity * GAME_CONFIG.preciseDuoGravityMultiplier;
     }
 
     if (spawnEntryMode === "top") {
@@ -2746,7 +2931,7 @@ class ChallengeManager {
       if (!fallingShape.canReceiveSwipe || fallingShape.hasBeenThrown) return false;
 
       const distanceFromShapeCenter = Math.hypot(point.x - fallingShape.x, point.y - fallingShape.y);
-      return distanceFromShapeCenter <= fallingShape.radius * GAME_CONFIG.level19SelectionHitboxMultiplier;
+      return distanceFromShapeCenter <= fallingShape.radius * GAME_CONFIG.shapeSwipeHitboxMultiplier;
     }) || null;
   }
 
@@ -2899,14 +3084,16 @@ class ReceiverEffectsController {
     });
     this.colorRotation = new ReceiverRotationController({
       initialValuesByPositionId: LEVEL_11_INITIAL_RECEIVER_COLORS_BY_POSITION_ID,
-      intervalMs: GAME_CONFIG.level10WallRotationIntervalMs,
-      durationMs: GAME_CONFIG.level10WallRotationDurationMs
+      intervalMs: GAME_CONFIG.receiverRotationIntervalMs,
+      durationMs: GAME_CONFIG.receiverRotationDurationMs
     });
     this.shapeRotation = new ReceiverRotationController({
       initialValuesByPositionId: PHASE_6_RECEIVER_SHAPES_BY_POSITION_ID,
       intervalMs: GAME_CONFIG.shapeRotationIntervalMs,
       durationMs: GAME_CONFIG.shapeRotationDurationMs
     });
+    this.lastColorRotationSyncKey = null;
+    this.lastShapeRotationSyncKey = null;
     this.hitFeedbacks = [];
   }
 
@@ -2914,6 +3101,8 @@ class ReceiverEffectsController {
     this.permutation.reset();
     this.colorRotation.reset();
     this.shapeRotation.reset();
+    this.lastColorRotationSyncKey = null;
+    this.lastShapeRotationSyncKey = null;
     this.hitFeedbacks = [];
   }
 
@@ -2938,9 +3127,33 @@ class ReceiverEffectsController {
     return this.permutation.update(currentTime);
   }
 
-  updateRotations(currentTime, phase, gameState) {
-    this.colorRotation.update(currentTime, gameState === "playing" && this.phaseUsesColorRotation(phase));
-    this.shapeRotation.update(currentTime, gameState === "playing" && this.phaseUsesShapeRotation(phase));
+  get isPermutationAnimating() {
+    return this.permutation.isActive;
+  }
+
+  updateRotations(currentTime, phase, gameState, rotationMode, permutationMode) {
+    const permutationPhase = this.getPhaseWithCurrentPermutationOnly(
+      phase,
+      permutationMode
+    );
+    const shouldRunColorRotation =
+      gameState === "playing" &&
+      this.usesColorRotation(rotationMode, phase.ruleName);
+
+    const shouldRunShapeRotation =
+      gameState === "playing" &&
+      this.usesShapeRotation(rotationMode, phase.ruleName);
+
+    if (shouldRunColorRotation) {
+      this.syncColorRotationIfNeeded(permutationPhase);
+    }
+
+    if (shouldRunShapeRotation) {
+      this.syncShapeRotationIfNeeded(permutationPhase);
+    }
+
+    this.colorRotation.update(currentTime, shouldRunColorRotation);
+    this.shapeRotation.update(currentTime, shouldRunShapeRotation);
   }
 
   startColorRotation(currentTime) {
@@ -2969,18 +3182,75 @@ class ReceiverEffectsController {
     this.shapeRotation.stop();
   }
 
-  getPhaseWithCurrentReceiverState(phase, permutationMode = "none") {
-    const receiverPermutationPhase = this.permutation.getPhaseWithCurrentPermutation(
+  syncRotationsToPhase(phase, permutationMode) {
+    const permutationPhase = this.getPhaseWithCurrentPermutationOnly(
+      phase,
+      permutationMode
+    );
+
+    this.colorRotation.syncValues(permutationPhase.receiverColorsByPositionId);
+    this.shapeRotation.syncValues(permutationPhase.receiverShapesByPositionId);
+    this.lastColorRotationSyncKey = this.createRotationSyncKey(
+      permutationPhase.receiverColorsByPositionId
+    );
+    this.lastShapeRotationSyncKey = this.createRotationSyncKey(
+      permutationPhase.receiverShapesByPositionId
+    );
+  }
+
+  syncColorRotationIfNeeded(permutationPhase) {
+    const nextSyncKey = this.createRotationSyncKey(
+      permutationPhase.receiverColorsByPositionId
+    );
+
+    if (this.colorRotation.isActive && this.lastColorRotationSyncKey === nextSyncKey) return;
+
+    this.colorRotation.syncValues(permutationPhase.receiverColorsByPositionId);
+    this.lastColorRotationSyncKey = nextSyncKey;
+  }
+
+  syncShapeRotationIfNeeded(permutationPhase) {
+    const nextSyncKey = this.createRotationSyncKey(
+      permutationPhase.receiverShapesByPositionId
+    );
+
+    if (this.shapeRotation.isActive && this.lastShapeRotationSyncKey === nextSyncKey) return;
+
+    this.shapeRotation.syncValues(permutationPhase.receiverShapesByPositionId);
+    this.lastShapeRotationSyncKey = nextSyncKey;
+  }
+
+  getPhaseWithCurrentPermutationOnly(phase, permutationMode = "none") {
+    return this.permutation.getPhaseWithCurrentPermutation(
+      phase,
+      permutationMode
+    );
+  }
+
+  createRotationSyncKey(valuesByPositionId) {
+    return RECEIVER_DEFINITIONS
+      .map((receiverDefinition) => `${receiverDefinition.id}:${valuesByPositionId[receiverDefinition.id]}`)
+      .join("|");
+  }
+
+  getPhaseWithCurrentReceiverState(phase, permutationMode = "none", rotationMode = "none") {
+    const receiverPermutationPhase = this.getPhaseWithCurrentPermutationOnly(
       phase,
       permutationMode
     );
 
     return {
       ...receiverPermutationPhase,
-      receiverColorsByPositionId: this.phaseUsesColorRotationLayout(receiverPermutationPhase)
+      receiverColorsByPositionId: this.usesColorRotationLayout(
+        rotationMode,
+        receiverPermutationPhase.ruleName
+      )
         ? this.colorRotation.currentValuesByPositionId
         : receiverPermutationPhase.receiverColorsByPositionId,
-      receiverShapesByPositionId: this.phaseUsesShapeRotationLayout(receiverPermutationPhase)
+      receiverShapesByPositionId: this.usesShapeRotationLayout(
+        rotationMode,
+        receiverPermutationPhase.ruleName
+      )
         ? this.shapeRotation.currentValuesByPositionId
         : receiverPermutationPhase.receiverShapesByPositionId
     };
@@ -3005,24 +3275,24 @@ class ReceiverEffectsController {
     };
   }
 
-  phaseUsesColorRotation(phase) {
-    return Boolean(phase.usesDynamicWallColors || (phase.usesRuleControlledReceiverRotation && phase.ruleName === "COLOR"));
+  usesColorRotation(rotationMode, ruleName) {
+    return usesColorRotation(rotationMode, ruleName);
   }
 
-  phaseUsesShapeRotation(phase) {
-    return Boolean(phase.usesDynamicReceiverShapes || (phase.usesRuleControlledReceiverRotation && phase.ruleName === "SHAPE"));
+  usesShapeRotation(rotationMode, ruleName) {
+    return usesShapeRotation(rotationMode, ruleName);
   }
 
-  phaseUsesColorRotationLayout(phase) {
-    return Boolean(phase.usesDynamicWallColors || phase.usesDynamicReceiverShapes || phase.usesRuleControlledReceiverRotation);
+  usesColorRotationLayout(rotationMode, ruleName) {
+    return this.usesColorRotation(rotationMode, ruleName);
   }
 
-  phaseUsesShapeRotationLayout(phase) {
-    return Boolean(phase.usesDynamicReceiverShapes || phase.usesRuleControlledReceiverRotation);
+  usesShapeRotationLayout(rotationMode, ruleName) {
+    return this.usesShapeRotation(rotationMode, ruleName);
   }
 
-  phaseUsesReceiverRotation(phase) {
-    return this.phaseUsesColorRotation(phase) || this.phaseUsesShapeRotation(phase);
+  usesReceiverRotation(rotationMode) {
+    return usesAnyRotation(rotationMode);
   }
 
   startHitFeedback(receiverId, currentTime) {
@@ -4719,19 +4989,6 @@ class NeonSwipeGame {
     this.inputController = new InputController(this.canvas, this);
 
     this.score = 0;
-    this.activeModifiers = {
-      blink: false,
-      pulse: false,
-      burst: false,
-      twin: false,
-      reveal: false,
-      spawn: "bottom",
-      randomSpawn: true,
-      slide: false,
-      shortReceivers: false,
-      permutation: "both",
-      void: false
-    };
     this.lastAnimationTime = 0;
     this.centerMessage = "SWIPE";
     this.centerMessageUntil = 0;
@@ -4740,6 +4997,7 @@ class NeonSwipeGame {
     this.gameOverStartedAt = 0;
     this.activeShapeRuleName = null;
     this.pendingLevelIntroPhase = null;
+    this.deferredNextChallengeBoundaryPhase = null;
     this.movingReceiverOffset = 0;
   }
 
@@ -4776,7 +5034,7 @@ class NeonSwipeGame {
   }
 
   reset() {
-    this.clearPendingDuoSpawn();
+    this.clearAllPendingSpawnTimeouts();
     this.receiverEffects.reset();
     this.dynamicRuleSequence.reset();
     this.blinkController.reset();
@@ -4786,9 +5044,14 @@ class NeonSwipeGame {
     this.resetLevelRuntime();
     this.movingReceiverOffset = 0;
     this.receiverEffects.syncPermutationToPhase(this.currentPhase);
+    this.receiverEffects.syncRotationsToPhase(
+      this.currentPhase,
+      this.activeModifiers.permutation
+    );
     this.clearCurrentChallenge();
     this.activeShapeRuleName = null;
     this.pendingLevelIntroPhase = null;
+    this.deferredNextChallengeBoundaryPhase = null;
     this.particleSystem.clear();
     this.previousBestScore = HOME_UI_DATA.bestScore;
     this.gameOverWasNewBest = false;
@@ -4799,7 +5062,7 @@ class NeonSwipeGame {
   }
 
   showWaitingScreen() {
-    this.clearPendingDuoSpawn();
+    this.clearAllPendingSpawnTimeouts();
     this.receiverEffects.reset();
     this.dynamicRuleSequence.reset();
     this.blinkController.reset();
@@ -4810,6 +5073,7 @@ class NeonSwipeGame {
     this.clearCurrentChallenge();
     this.activeShapeRuleName = null;
     this.pendingLevelIntroPhase = null;
+    this.deferredNextChallengeBoundaryPhase = null;
     this.particleSystem.clear();
     this.previousBestScore = HOME_UI_DATA.bestScore;
     this.gameOverWasNewBest = false;
@@ -4830,6 +5094,8 @@ class NeonSwipeGame {
       this.updateActiveShape(deltaSeconds);
     } else if (this.state === "receiverPermutation") {
       this.updateReceiverPermutation(currentTime);
+      this.updateMovingReceiverTracks(deltaSeconds);
+      this.updateActiveShape(deltaSeconds);
     } else if (this.isShowingLevelIntro) {
       this.updateLevelIntro(currentTime);
     } else {
@@ -5131,7 +5397,7 @@ class NeonSwipeGame {
       const secondShape = this.createShapeFromSpawn(this.getSingleShapeSpawn(this.currentChallengePhase));
       this.challengeManager.appendSecondDuoShape(secondShape);
       this.secondDuoShapeTimeoutId = null;
-    }, GAME_CONFIG.level19SecondShapeDelayMs);
+    }, GAME_CONFIG.preciseDuoSecondShapeDelayMs);
 
     this.challengeManager.setSecondShapeTimeout(secondShapeTimeoutId);
   }
@@ -5215,9 +5481,7 @@ class NeonSwipeGame {
 
   phaseUsesLiveReceiverStateForValidation(phase) {
     return Boolean(
-      phase?.usesDynamicWallColors ||
-      phase?.usesDynamicReceiverShapes ||
-      phase?.usesRuleControlledReceiverRotation ||
+      this.usesReceiverRotation() ||
       this.usesReceiverPermutation()
     );
   }
@@ -5226,12 +5490,18 @@ class NeonSwipeGame {
     resolvedShape.state = "resolved";
 
     if (this.challengeManager.isActiveBurstShape(resolvedShape)) {
-      this.advanceBurstSequenceAfterResolvedActiveShape(resolvedShape, true);
+      this.advanceBurstSequenceAfterResolvedActiveShape(
+        resolvedShape,
+        false
+      );
       return;
     }
 
     if (this.challengeManager.isActiveTwinShape(resolvedShape)) {
-      this.advanceTwinSequenceAfterResolvedActiveShape(resolvedShape, true);
+      this.advanceTwinSequenceAfterResolvedActiveShape(
+        resolvedShape,
+        false
+      );
       return;
     }
 
@@ -5241,7 +5511,11 @@ class NeonSwipeGame {
 
     if (this.tryStartPendingLevelIntro()) return;
 
-    this.spawnNextChallenge();
+    this.scheduleNextChallengeAfterResolution(
+      resolvedShape.challengePhase ||
+      this.currentChallengePhase ||
+      this.currentPhase
+    );
   }
 
   resolveReceiverTouch(resolvedShape, touchedReceiver) {
@@ -5301,25 +5575,33 @@ class NeonSwipeGame {
       return;
     }
 
-    this.dynamicRuleSequence.consumeSuccessfulAnswer(challengePhase, this.currentPhase);
-    const didRuleChange = this.currentRuleName !== challengePhase.ruleName;
+    const didRuleChange = false;
 
     if (challengePhase.usesDuoShapes) {
       this.finishDuoIfResolved(didRuleChange, challengePhase);
       return;
     }
 
-    const didAlreadyAdvanceSpawn = resolvedShape.advancedSpawnState === "scheduled" || resolvedShape.advancedSpawnState === "created";
+    const didAlreadyAdvanceSpawn = [
+      "scheduled",
+      "spawned"
+    ].includes(resolvedShape.advancedSpawnState);
     this.continueAfterResolvedChallenge(didRuleChange, challengePhase, {
       skipSpawn: didAlreadyAdvanceSpawn
     });
   }
 
   finishBurstShapeIfResolved(resolvedChallengePhase) {
-    this.dynamicRuleSequence.consumeSuccessfulAnswer(
-      resolvedChallengePhase,
-      this.currentPhase
-    );
+    const didCompleteBurst = this.isBurstChallengeFullyResolved();
+
+    if (didCompleteBurst) {
+      const didRuleChange = false;
+      const didAlreadyAdvanceSpawn = this.challengeManager.hasPendingNextSingleShape();
+      this.continueAfterResolvedChallenge(didRuleChange, resolvedChallengePhase, {
+        skipSpawn: didAlreadyAdvanceSpawn
+      });
+      return;
+    }
 
     if (this.usesReceiverPermutation()) {
       this.startReceiverPermutation(resolvedChallengePhase);
@@ -5327,40 +5609,64 @@ class NeonSwipeGame {
   }
 
   finishTwinShapeIfResolved(resolvedChallengePhase) {
-    this.dynamicRuleSequence.consumeSuccessfulAnswer(
-      resolvedChallengePhase,
-      this.currentPhase
-    );
+    const didCompleteTwin = this.isTwinChallengeFullyResolved();
+
+    if (didCompleteTwin) {
+      const didRuleChange = false;
+      const didAlreadyAdvanceSpawn = this.challengeManager.hasPendingNextSingleShape();
+      this.continueAfterResolvedChallenge(didRuleChange, resolvedChallengePhase, {
+        skipSpawn: didAlreadyAdvanceSpawn
+      });
+      return;
+    }
 
     if (this.usesReceiverPermutation()) {
       this.startReceiverPermutation(resolvedChallengePhase);
     }
   }
 
+  isBurstChallengeFullyResolved() {
+    const hasAllBurstShapes =
+      this.challengeManager.burstShapes.filter(Boolean).length ===
+      this.challengeManager.burstShapeCount;
+
+    const areAllBurstShapesResolved =
+      hasAllBurstShapes &&
+      this.challengeManager.burstShapes.every(
+        (shape) => shape?.state === "resolved"
+      );
+
+    if (!areAllBurstShapesResolved) return false;
+
+    return true;
+  }
+
+  isTwinChallengeFullyResolved() {
+    const hasAllTwinShapes =
+      this.challengeManager.twinShapes.filter(Boolean).length ===
+      this.challengeManager.twinShapeCount;
+
+    const areAllTwinShapesResolved =
+      hasAllTwinShapes &&
+      this.challengeManager.twinShapes.every(
+        (shape) => shape?.state === "resolved"
+      );
+
+    if (!areAllTwinShapesResolved) return false;
+
+    return true;
+  }
+
   advanceBurstSequenceAfterResolvedActiveShape(resolvedShape, shouldScheduleNextChallenge) {
     const didCompleteBurst = this.challengeManager.advanceBurstAfterActiveShape(resolvedShape);
 
     if (!didCompleteBurst || !shouldScheduleNextChallenge) return;
-
-    this.scheduleNextBurstChallengeAfterThrow(resolvedShape);
-  }
-
-  scheduleNextBurstChallengeAfterThrow(thrownShape) {
-    const nextSpawnDelayMs = getNextSpawnDelayMs(this.score) ?? 0;
-    this.scheduleNextSingleShapeAfterThrow(thrownShape, nextSpawnDelayMs);
   }
 
   advanceTwinSequenceAfterResolvedActiveShape(resolvedShape, shouldScheduleNextChallenge) {
     const didCompleteTwin = this.challengeManager.advanceTwinAfterActiveShape(resolvedShape);
 
     if (!didCompleteTwin || !shouldScheduleNextChallenge) return;
-
-    this.scheduleNextTwinChallengeAfterThrow(resolvedShape);
-  }
-
-  scheduleNextTwinChallengeAfterThrow(thrownShape) {
-    const nextSpawnDelayMs = getNextSpawnDelayMs(this.score) ?? 0;
-    this.scheduleNextSingleShapeAfterThrow(thrownShape, nextSpawnDelayMs);
   }
 
   updateDuoShapes(deltaSeconds) {
@@ -5403,13 +5709,39 @@ class NeonSwipeGame {
     const hasBothShapesSpawned = this.currentShapes.length === 2;
     if (!hasBothShapesSpawned || !this.challengeManager.areAllShapesResolved()) return;
 
-    this.clearPendingDuoSpawn();
-    this.dynamicRuleSequence.consumeSuccessfulAnswer(resolvedChallengePhase, this.currentPhase);
-    const didRuleChange = this.currentRuleName !== resolvedChallengePhase.ruleName;
+    this.clearPendingGroupSpawnTimeouts();
+    const didRuleChange = false;
     this.continueAfterResolvedChallenge(didRuleChange, resolvedChallengePhase);
   }
 
+  advanceRuleSequenceForNextLogicalChallenge(previousChallengePhase) {
+    this.dynamicRuleSequence.consumeSuccessfulAnswer(
+      previousChallengePhase,
+      this.currentPhase,
+      this.activeModifiers.ruleSequence
+    );
+  }
+
   continueAfterResolvedChallenge(shouldStartRuleTransition, resolvedChallengePhase = this.currentChallengePhase || this.currentPhase, options = {}) {
+
+    const isEasyRhythm =
+      this.getCurrentRhythmConfig().trigger === "afterResolution";
+
+    if (isEasyRhythm) {
+      const previousRuleName = this.currentRuleName;
+
+      this.advanceRuleSequenceForNextLogicalChallenge(
+        resolvedChallengePhase
+      );
+
+      const nextRuleName = this.currentRuleName;
+
+      if (previousRuleName !== nextRuleName) {
+        this.activeShapeRuleName = nextRuleName;
+        this.showRuleTransitionFeedback(nextRuleName);
+      }
+    }
+
     if (this.tryStartPendingLevelIntro()) return;
 
     if (!this.currentPhaseUsesReceiverRotation) {
@@ -5421,12 +5753,17 @@ class NeonSwipeGame {
     }
 
     if (this.shouldStartLevelIntro(resolvedChallengePhase)) {
+      this.deferredNextChallengeBoundaryPhase = resolvedChallengePhase;
       this.startLevelIntroWhenReady();
       return;
     }
 
     if (resolvedChallengePhase?.level !== this.currentPhase.level) {
       this.receiverEffects.syncPermutationToPhase(this.currentPhase);
+      this.receiverEffects.syncRotationsToPhase(
+        this.currentPhase,
+        this.activeModifiers.permutation
+      );
     }
 
     if (this.usesReceiverPermutation()) {
@@ -5435,8 +5772,88 @@ class NeonSwipeGame {
     }
 
     if (!options.skipSpawn) {
-      this.spawnNextChallenge();
+      this.scheduleNextChallengeAfterResolution(
+        resolvedChallengePhase
+      );
     }
+  }
+
+
+
+  scheduleNextChallengeAfterResolution(
+    previousChallengePhase =
+      this.currentChallengePhase ||
+      this.currentPhase,
+    options = {}
+  ) {
+    const isEasyRhythm =
+      this.getCurrentRhythmConfig().trigger === "afterResolution";
+
+    this.scheduleNextChallengeWithDelay(
+      this.getCurrentRhythmDelayMs(),
+      previousChallengePhase,
+      {
+        ...options,
+        shouldAdvanceRuleAtSpawn: !isEasyRhythm
+      }
+    );
+  }
+
+  scheduleNextChallengeWithDelay(
+    nextSpawnDelayMs,
+    previousChallengePhase,
+    options = {}
+  ) {
+    if (this.challengeManager.hasPendingNextSingleShape()) return;
+
+    const nextSingleShapeTimeoutId = window.setTimeout(() => {
+      this.challengeManager.nextSingleShapeTimeoutId = null;
+
+      this.spawnNextChallengeAtBoundary(
+        previousChallengePhase,
+        options
+      );
+    }, nextSpawnDelayMs);
+
+    this.challengeManager.setNextSingleShapeTimeout(
+      nextSingleShapeTimeoutId
+    );
+  }
+
+  spawnNextChallengeAtBoundary(
+    previousChallengePhase,
+    options = {}
+  ) {
+    if (
+      this.state === "ended" ||
+      this.state === "waiting"
+    ) return;
+
+    if (
+      this.isShowingLevelIntro ||
+      this.pendingLevelIntroPhase
+    ) {
+      this.deferredNextChallengeBoundaryPhase =
+        previousChallengePhase;
+      return;
+    }
+
+    if (
+      this.state === "receiverPermutation" ||
+      this.receiverEffects.isPermutationAnimating
+    ) {
+      this.deferredNextChallengeBoundaryPhase =
+        previousChallengePhase;
+      return;
+    }
+
+    if (options.shouldAdvanceRuleAtSpawn !== false) {
+      this.advanceRuleSequenceForNextLogicalChallenge(
+        previousChallengePhase
+      );
+    }
+
+    this.spawnNextChallenge();
   }
 
   showRuleTransitionFeedback(nextRuleName) {
@@ -5444,10 +5861,18 @@ class NeonSwipeGame {
     this.showCenterMessage(nextRuleName, GAME_CONFIG.ruleTransitionFeedbackDurationMs);
   }
 
-  clearPendingDuoSpawn() {
+  clearPendingGroupSpawnTimeouts() {
     this.challengeManager.clearSecondShapeTimeout();
-    this.challengeManager.clearNextSingleShapeTimeout();
     this.challengeManager.clearBurstShapeTimeouts();
+  }
+
+  clearAllPendingSpawnTimeouts() {
+    this.clearPendingGroupSpawnTimeouts();
+    this.challengeManager.clearNextSingleShapeTimeout();
+  }
+
+  clearPendingDuoSpawn() {
+    this.clearPendingGroupSpawnTimeouts();
   }
 
   resetLevelRuntime() {
@@ -5456,11 +5881,39 @@ class NeonSwipeGame {
   }
 
   updateReceiverPermutation(currentTime) {
+    const wasBlockingPermutation = this.state === "receiverPermutation";
     const didFinishPermutation = this.receiverEffects.updatePermutation(currentTime);
-    if (!didFinishPermutation || this.state !== "receiverPermutation") return;
+    if (!didFinishPermutation) return;
 
-    this.state = "playing";
-    this.spawnNextChallenge();
+    if (wasBlockingPermutation) {
+      this.state = "playing";
+    }
+
+    if (this.deferredNextChallengeBoundaryPhase) {
+      const deferredBoundaryPhase =
+        this.deferredNextChallengeBoundaryPhase;
+
+      this.deferredNextChallengeBoundaryPhase = null;
+
+      if (
+        this.getCurrentRhythmConfig().trigger === "afterResolution"
+      ) {
+        this.scheduleNextChallengeAfterResolution(
+          deferredBoundaryPhase
+        );
+        return;
+      }
+
+      this.spawnNextChallengeAtBoundary(
+        deferredBoundaryPhase
+      );
+
+      return;
+    }
+
+    if (wasBlockingPermutation) {
+      this.scheduleNextChallengeAfterResolution();
+    }
   }
 
   startReceiverPermutation(permutationPhase) {
@@ -5476,6 +5929,7 @@ class NeonSwipeGame {
     }
 
     this.clearPendingDuoSpawn();
+    this.deferredNextChallengeBoundaryPhase = permutationPhase;
     this.state = "receiverPermutation";
     this.clearCurrentChallenge();
     this.receiverEffects.startPermutation(
@@ -5490,6 +5944,20 @@ class NeonSwipeGame {
     if (!didFinishIntro) return;
 
     this.state = "playing";
+
+    if (this.deferredNextChallengeBoundaryPhase) {
+      const deferredBoundaryPhase = this.deferredNextChallengeBoundaryPhase;
+      this.deferredNextChallengeBoundaryPhase = null;
+      this.spawnNextChallengeAtBoundary(
+        deferredBoundaryPhase,
+        {
+          shouldAdvanceRuleAtSpawn:
+            this.getCurrentRhythmConfig().trigger !== "afterResolution"
+        }
+      );
+      return;
+    }
+
     this.spawnNextChallenge();
   }
 
@@ -5513,14 +5981,26 @@ class NeonSwipeGame {
     const introPhase = this.pendingLevelIntroPhase || this.currentPhase;
 
     this.pendingLevelIntroPhase = null;
-    this.clearPendingDuoSpawn();
+    this.clearPendingGroupSpawnTimeouts();
     this.receiverEffects.stopRotations();
+    this.receiverEffects.syncRotationsToPhase(
+      introPhase,
+      this.activeModifiers.permutation
+    );
     this.clearCurrentChallenge();
     this.state = this.levelIntro.start(introStartedAt, introPhase);
   }
 
   updateReceiverRotations(currentTime) {
-    this.receiverEffects.updateRotations(currentTime, this.visiblePhase, this.state);
+    const rotationPhase = this.currentChallengePhase || this.currentPhase;
+
+    this.receiverEffects.updateRotations(
+      currentTime,
+      rotationPhase,
+      this.state,
+      this.activeModifiers.rotation,
+      this.activeModifiers.permutation
+    );
   }
 
   updateMovingReceiverTracks(deltaSeconds) {
@@ -5534,7 +6014,7 @@ class NeonSwipeGame {
   }
 
   prepareSwipeFromPoint(startPoint) {
-    if (!this.currentChallengePhase?.usesPreciseDuoSelection) {
+    if (!this.activeModifiers.shapeSwipe) {
       return Boolean(this.activeShape?.canReceiveSwipe);
     }
 
@@ -5569,20 +6049,47 @@ class NeonSwipeGame {
     if (this.pendingLevelIntroPhase) return;
 
     if (this.challengeManager.isActiveBurstShape(thrownShape)) {
-      this.advanceBurstSequenceAfterResolvedActiveShape(thrownShape, true);
+      this.advanceBurstSequenceAfterResolvedActiveShape(
+        thrownShape,
+        false
+      );
       return;
     }
 
     if (this.challengeManager.isActiveTwinShape(thrownShape)) {
-      this.advanceTwinSequenceAfterResolvedActiveShape(thrownShape, true);
+      this.advanceTwinSequenceAfterResolvedActiveShape(
+        thrownShape,
+        false
+      );
       return;
     }
 
-    const nextSpawnDelayMs = getNextSpawnDelayMs(this.score);
-    if (nextSpawnDelayMs === null) return;
+    if (!this.shouldAdvanceSingleChallengeAfterSwipe()) return;
 
     this.challengeManager.moveActiveShapeToLaunchedShapes();
-    this.scheduleNextSingleShapeAfterThrow(thrownShape, nextSpawnDelayMs);
+    this.scheduleNextSingleShapeAfterThrow(
+      thrownShape,
+      this.getCurrentRhythmDelayMs()
+    );
+  }
+
+  shouldAdvanceChallengeAfterSwipe() {
+    return this.getCurrentRhythmConfig().trigger === "afterSwipe";
+  }
+
+  shouldAdvanceSingleChallengeAfterSwipe() {
+    return this.shouldAdvanceChallengeAfterSwipe();
+  }
+
+  getCurrentRhythmConfig() {
+    return getRhythmConfig(this.activeModifiers.rhythmDifficulty);
+  }
+
+  getCurrentRhythmDelayMs() {
+    return getRhythmDelayMs(
+      this.score,
+      this.activeModifiers.rhythmDifficulty
+    );
   }
 
   scheduleNextSingleShapeAfterThrow(thrownShape, nextSpawnDelayMs) {
@@ -5591,12 +6098,8 @@ class NeonSwipeGame {
     thrownShape.advancedSpawnState = "scheduled";
     const nextSingleShapeTimeoutId = window.setTimeout(() => {
       this.challengeManager.nextSingleShapeTimeoutId = null;
-
-      if (this.state !== "playing") return;
-      if (this.currentPhase.usesPreciseDuoSelection || this.currentPhase.usesDuoShapes) return;
-
-      thrownShape.advancedSpawnState = "created";
-      this.spawnNextChallenge();
+      thrownShape.advancedSpawnState = "spawned";
+      this.spawnNextChallengeAtBoundary(thrownShape.challengePhase);
     }, nextSpawnDelayMs);
 
     this.challengeManager.setNextSingleShapeTimeout(nextSingleShapeTimeoutId);
@@ -5689,7 +6192,7 @@ class NeonSwipeGame {
 
     this.gameOverStartedAt = performance.now();
 
-    this.clearPendingDuoSpawn();
+    this.clearAllPendingSpawnTimeouts();
     this.receiverEffects.stopAll();
 
     this.state = "ended";
@@ -5699,6 +6202,7 @@ class NeonSwipeGame {
 
     this.activeShapeRuleName = null;
     this.pendingLevelIntroPhase = null;
+    this.deferredNextChallengeBoundaryPhase = null;
 
     this.clearCurrentChallenge();
   }
@@ -6127,7 +6631,8 @@ class NeonSwipeGame {
   getPhaseWithCurrentWallColors(phase) {
     return this.receiverEffects.getPhaseWithCurrentReceiverState(
       phase,
-      this.activeModifiers.permutation
+      this.activeModifiers.permutation,
+      this.activeModifiers.rotation
     );
   }
 
@@ -6144,6 +6649,10 @@ class NeonSwipeGame {
     return usesAnyPermutation(this.activeModifiers.permutation);
   }
 
+  usesReceiverRotation() {
+    return usesAnyRotation(this.activeModifiers.rotation);
+  }
+
   hasEngagedSingleShapes() {
     if (this.activeChallengeUsesDuoShapes) return false;
 
@@ -6155,7 +6664,7 @@ class NeonSwipeGame {
   }
 
   get currentPhaseUsesReceiverRotation() {
-    return this.receiverEffects.phaseUsesReceiverRotation(this.currentPhase);
+    return this.usesReceiverRotation();
   }
 
   get isShowingLevelIntro() {
@@ -6220,11 +6729,18 @@ class NeonSwipeGame {
 
   get currentPhase() {
     const basePhase = this.rules.getCurrentPhase(this.score);
-    return this.dynamicRuleSequence.getPhaseWithCurrentRule(basePhase);
+    return this.dynamicRuleSequence.getPhaseWithCurrentRule(
+      basePhase,
+      this.activeModifiers.ruleSequence
+    );
   }
 
   get currentLevel() {
     return this.rules.getLevel(this.score);
+  }
+
+  get activeModifiers() {
+    return getModifiersForLevel(this.currentLevel);
   }
 
   get currentGravity() {
@@ -6261,15 +6777,6 @@ function getRandomItemExcept(items, excludedItem) {
   );
 
   return getRandomItem(availableItems);
-}
-
-function getNextSpawnDelayMs(score) {
-  if (score < 4) return null;
-
-  return Math.max(
-    200 - (score - 4) * 4,
-    50
-  );
 }
 
 function clamp(value, minValue, maxValue) {
