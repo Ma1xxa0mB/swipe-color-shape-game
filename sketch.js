@@ -98,6 +98,8 @@ const GAME_CONFIG = {
   pulseMinLengthMultiplier: 0.02,
   waveCycleDurationMs: 3200,
   waveMinLengthMultiplier: 0.02,
+  flowCycleDurationMs: 6000,
+  flowMinLengthMultiplier: 0.02,
   voidSpawnChance: 0.25,
   topSpawnGravityMultiplier: 0.65,
   gameOverHoldDurationMs: 250,
@@ -207,6 +209,7 @@ const DEFAULT_MODIFIERS = {
   blink: false,
   pulse: false,
   wave: false,
+  flow: false,
   burst: false,
   twin: false,
   reveal: false,
@@ -225,7 +228,13 @@ const DEFAULT_MODIFIERS = {
 
 // TEMP TEST MODIFIERS - remove this layer when level recipes become final.
 const TEMP_TEST_MODIFIER_OVERRIDES = {
-  wave: true
+  pulse: true,
+  slide:true,
+  shortReceivers:true,
+  blink:true,
+  reveal: true,
+  twin:true
+
 };
 
 const LEVEL_MODIFIERS = {
@@ -1312,7 +1321,9 @@ class Arena {
       isShortReceiver,
       modifierVisualState
     );
-    const waveMultiplier = modifierVisualState?.wave?.lengthMultiplier ?? 1;
+    const waveMultiplier = modifierVisualState?.flow
+      ? 1
+      : modifierVisualState?.wave?.lengthMultiplier ?? 1;
 
     return pulseAdjustedLength * waveMultiplier;
   }
@@ -1349,8 +1360,12 @@ class Arena {
   }
 
   getReceiverTrackStartDistance(receiver, modifierVisualState = null) {
+    return this.getReceiverVisibleTrackState(receiver, modifierVisualState).startDistance;
+  }
+
+  getReceiverVisibleTrackState(receiver, modifierVisualState = null) {
     const receiverModifierState = this.getReceiverModifierState(modifierVisualState);
-    const offset = receiverModifierState.isSliding
+    const movingOffset = receiverModifierState.isSliding
       ? receiverModifierState.movingOffset
       : 0;
     const baseLength = this.getReceiverBaseTrackLength(receiverModifierState.isShort);
@@ -1358,24 +1373,77 @@ class Arena {
       receiverModifierState.isShort,
       modifierVisualState
     );
+    const baseStartDistance = this.getReceiverBaseDistance(receiver) + movingOffset;
+    const pulseCenteringOffset = (baseLength - pulseAdjustedLength) / 2;
+    const pulseAdjustedStartDistance = baseStartDistance + pulseCenteringOffset;
+
+    if (modifierVisualState?.flow) {
+      return this.getReceiverFlowTrackState(
+        pulseAdjustedStartDistance,
+        pulseAdjustedLength,
+        modifierVisualState.flow
+      );
+    }
+
     const currentLength = this.getReceiverTrackLength(
       receiverModifierState.isShort,
       modifierVisualState
     );
-    const pulseCenteringOffset = (baseLength - pulseAdjustedLength) / 2;
     const waveStartOffset = modifierVisualState?.wave?.anchorSide === "end"
       ? pulseAdjustedLength - currentLength
       : 0;
+    const startDistance = pulseAdjustedStartDistance + waveStartOffset;
+    const iconDistance = modifierVisualState?.wave
+      ? (modifierVisualState.wave.iconEdge === "start"
+        ? startDistance
+        : startDistance + currentLength)
+      : startDistance + currentLength / 2;
 
-    return this.getReceiverBaseDistance(receiver) + offset + pulseCenteringOffset + waveStartOffset;
+    return {
+      startDistance,
+      length: currentLength,
+      iconDistance,
+      iconVisible: !modifierVisualState?.wave || modifierVisualState.wave.iconVisible,
+      trackVisible: true
+    };
+  }
+
+  getReceiverFlowTrackState(startDistance, baseLength, flowVisualState) {
+    const quarterLength = this.getRoundedTrackPerimeterLength() / this.receivers.length;
+    const cycleOffset = flowVisualState.cycleIndex * quarterLength;
+    const logicalStartDistance = startDistance + cycleOffset;
+    const minLength = baseLength * flowVisualState.minLengthMultiplier;
+    const isContracting = flowVisualState.progress < 0.5;
+    const phaseProgress = isContracting
+      ? flowVisualState.progress / 0.5
+      : (flowVisualState.progress - 0.5) / 0.5;
+    const easedProgress = (1 - Math.cos(phaseProgress * Math.PI)) / 2;
+    const visibleLength = isContracting
+      ? baseLength + (minLength - baseLength) * easedProgress
+      : minLength + (baseLength - minLength) * easedProgress;
+    const flowStartDistance = isContracting
+      ? logicalStartDistance + (baseLength - visibleLength)
+      : logicalStartDistance + baseLength;
+    const iconDistance = flowStartDistance + visibleLength;
+    const isNearlyCollapsed = visibleLength <= minLength + 0.001;
+
+    return {
+      startDistance: flowStartDistance,
+      length: visibleLength,
+      iconDistance,
+      iconVisible: !isNearlyCollapsed,
+      trackVisible: visibleLength > 0
+    };
   }
 
   getReceiverTrackSegments(receiver, currentPhase, modifierVisualState = null) {
-    const receiverModifierState = this.getReceiverModifierState(modifierVisualState);
+    const trackState = this.getReceiverVisibleTrackState(receiver, modifierVisualState);
+
+    if (!trackState.trackVisible) return [];
 
     return this.getRoundedTrackSegments(
-      this.getReceiverTrackStartDistance(receiver, modifierVisualState),
-      this.getReceiverTrackLength(receiverModifierState.isShort, modifierVisualState)
+      trackState.startDistance,
+      trackState.length
     );
   }
 
@@ -1408,19 +1476,11 @@ class Arena {
   }
 
   getMovingReceiverIconPoint(receiver, currentPhase, modifierVisualState = null) {
-    if (modifierVisualState?.wave && !modifierVisualState.wave.iconVisible) {
-      return null;
-    }
+    const trackState = this.getReceiverVisibleTrackState(receiver, modifierVisualState);
 
-    const receiverModifierState = this.getReceiverModifierState(modifierVisualState);
-    const startDistance = this.getReceiverTrackStartDistance(receiver, modifierVisualState);
-    const currentLength = this.getReceiverTrackLength(receiverModifierState.isShort, modifierVisualState);
-    const iconDistance = modifierVisualState?.wave
-      ? (modifierVisualState.wave.iconEdge === "start"
-        ? startDistance
-        : startDistance + currentLength)
-      : startDistance + currentLength / 2;
-    const iconPoint = this.getPointOnRoundedTrack(iconDistance);
+    if (!trackState.iconVisible) return null;
+
+    const iconPoint = this.getPointOnRoundedTrack(trackState.iconDistance);
     const iconInset = this.scaler.x(GAME_CONFIG.movingReceiverIconInset);
 
     return {
@@ -2632,6 +2692,32 @@ class WaveController {
   interpolateLength(start, end, progress) {
     const easedProgress = (1 - Math.cos(progress * Math.PI)) / 2;
     return start + (end - start) * easedProgress;
+  }
+}
+
+class FlowController {
+  constructor({ cycleDurationMs, minLengthMultiplier }) {
+    this.cycleDurationMs = cycleDurationMs;
+    this.minLengthMultiplier = minLengthMultiplier;
+    this.reset();
+  }
+
+  reset() {
+    this.startedAt = performance.now();
+  }
+
+  getVisualState(currentTime, isEnabled) {
+    if (!isEnabled) return null;
+
+    const elapsedMs = currentTime - this.startedAt;
+    const cycleIndex = Math.floor(elapsedMs / this.cycleDurationMs);
+    const elapsedCycleMs = elapsedMs % this.cycleDurationMs;
+
+    return {
+      progress: elapsedCycleMs / this.cycleDurationMs,
+      cycleIndex,
+      minLengthMultiplier: this.minLengthMultiplier
+    };
   }
 }
 
@@ -5153,6 +5239,10 @@ class NeonSwipeGame {
       cycleDurationMs: GAME_CONFIG.waveCycleDurationMs,
       minLengthMultiplier: GAME_CONFIG.waveMinLengthMultiplier
     });
+    this.flowController = new FlowController({
+      cycleDurationMs: GAME_CONFIG.flowCycleDurationMs,
+      minLengthMultiplier: GAME_CONFIG.flowMinLengthMultiplier
+    });
     this.spawnController = new SpawnController(this);
     this.challengeManager = new ChallengeManager();
     this.throwController = new ThrowController({
@@ -5223,6 +5313,7 @@ class NeonSwipeGame {
     this.blinkController.reset();
     this.pulseController.reset();
     this.waveController.reset();
+    this.flowController.reset();
     // TEMP TEST BLINK LEVEL 14 - restore to 0 after validation
     this.score = 0;
     this.createRandomRunReceiverLayouts();
@@ -5254,6 +5345,7 @@ class NeonSwipeGame {
     this.blinkController.reset();
     this.pulseController.reset();
     this.waveController.reset();
+    this.flowController.reset();
     this.score = 0;
     this.runReceiverColorsByPositionId = { ...DEFAULT_COLOR_LAYOUT };
     this.runReceiverShapesByPositionId = { ...DEFAULT_SHAPE_LAYOUT };
@@ -6900,6 +6992,10 @@ class NeonSwipeGame {
       wave: this.waveController.getVisualState(
         currentTime,
         this.activeModifiers.wave
+      ),
+      flow: this.flowController.getVisualState(
+        currentTime,
+        this.activeModifiers.flow
       ),
       receivers: {
         isSliding: Boolean(this.activeModifiers.slide),
