@@ -101,6 +101,8 @@ const GAME_CONFIG = {
   flowCycleDurationMs: 6000,
   flowMinLengthMultiplier: 0.02,
   pendulumCycleDurationMs: 2400,
+  scatterMinGap: 45,
+  scatterPlacementAttempts: 100,
   voidSpawnChance: 0.25,
   topSpawnGravityMultiplier: 0.65,
   gameOverHoldDurationMs: 250,
@@ -212,6 +214,7 @@ const DEFAULT_MODIFIERS = {
   wave: false,
   flow: false,
   pendulum: false,
+  scatter: false,
   burst: false,
   twin: false,
   reveal: false,
@@ -230,7 +233,7 @@ const DEFAULT_MODIFIERS = {
 
 // TEMP TEST MODIFIERS - remove this layer when level recipes become final.
 const TEMP_TEST_MODIFIER_OVERRIDES = {
-  pendulum: true
+  scatter: true
 };
 
 const LEVEL_MODIFIERS = {
@@ -1371,6 +1374,13 @@ class Arena {
     );
     const baseStartDistance = this.getReceiverBaseDistance(receiver) + movingOffset;
 
+    if (modifierVisualState?.scatter) {
+      return this.getReceiverScatterTrackState(
+        receiver,
+        modifierVisualState.scatter
+      );
+    }
+
     if (modifierVisualState?.pendulum) {
       return this.getReceiverPendulumTrackState(
         receiver,
@@ -1437,6 +1447,23 @@ class Arena {
       iconDistance,
       iconVisible: !isNearlyCollapsed,
       trackVisible: visibleLength > 0
+    };
+  }
+
+  getReceiverScatterTrackState(receiver, scatterVisualState) {
+    const receiverLength = this.scaler.x(GAME_CONFIG.shortReceiverTrackLength);
+    const startDistance = scatterVisualState.positionsByReceiverId?.[receiver.id];
+
+    return {
+      startDistance: typeof startDistance === "number"
+        ? startDistance
+        : this.getReceiverBaseDistance(receiver),
+      length: receiverLength,
+      iconDistance: (typeof startDistance === "number"
+        ? startDistance
+        : this.getReceiverBaseDistance(receiver)) + receiverLength / 2,
+      iconVisible: true,
+      trackVisible: true
     };
   }
 
@@ -2957,6 +2984,100 @@ class PendulumController {
 
     return {
       progress: (1 - Math.cos(phase * Math.PI * 2)) / 2
+    };
+  }
+}
+
+class ScatterController {
+  constructor() {
+    this.positionsByReceiverId = null;
+  }
+
+  reset() {
+    this.positionsByReceiverId = null;
+  }
+
+  randomize(arena) {
+    const perimeterLength = arena.getRoundedTrackPerimeterLength();
+    const receiverLength = arena.scaler.x(GAME_CONFIG.shortReceiverTrackLength);
+    const minimumSpacing = receiverLength + arena.scaler.x(GAME_CONFIG.scatterMinGap);
+    const centerDistances = this.createRandomCenterDistances(
+      arena.receivers.length,
+      perimeterLength,
+      minimumSpacing
+    );
+
+    this.positionsByReceiverId = arena.receivers.reduce(
+      (positionsByReceiverId, receiver, index) => {
+        positionsByReceiverId[receiver.id] = arena.normalizeOuterTrackDistance(
+          centerDistances[index] - receiverLength / 2
+        );
+        return positionsByReceiverId;
+      },
+      {}
+    );
+  }
+
+  createRandomCenterDistances(count, perimeterLength, minimumSpacing) {
+    const centerDistances = [];
+
+    for (let index = 0; index < count; index += 1) {
+      let acceptedDistance = null;
+
+      for (let attempt = 0; attempt < GAME_CONFIG.scatterPlacementAttempts; attempt += 1) {
+        const candidateDistance = Math.random() * perimeterLength;
+
+        if (this.isCenterDistanceAllowed(
+          candidateDistance,
+          centerDistances,
+          perimeterLength,
+          minimumSpacing
+        )) {
+          acceptedDistance = candidateDistance;
+          break;
+        }
+      }
+
+      if (acceptedDistance === null) {
+        return this.createFallbackCenterDistances(count, perimeterLength);
+      }
+
+      centerDistances.push(acceptedDistance);
+    }
+
+    return centerDistances;
+  }
+
+  createFallbackCenterDistances(count, perimeterLength) {
+    const spacing = perimeterLength / count;
+    const offset = Math.random() * spacing;
+
+    return Array.from(
+      { length: count },
+      (_, index) => offset + spacing * index
+    );
+  }
+
+  isCenterDistanceAllowed(candidateDistance, centerDistances, perimeterLength, minimumSpacing) {
+    return centerDistances.every((centerDistance) => {
+      return this.getCircularDistance(
+        candidateDistance,
+        centerDistance,
+        perimeterLength
+      ) >= minimumSpacing;
+    });
+  }
+
+  getCircularDistance(firstDistance, secondDistance, perimeterLength) {
+    const directDistance = Math.abs(firstDistance - secondDistance);
+    return Math.min(directDistance, perimeterLength - directDistance);
+  }
+
+  getVisualState(isEnabled) {
+    if (!isEnabled || !this.positionsByReceiverId) return null;
+
+    return {
+      positionsByReceiverId: this.positionsByReceiverId
     };
   }
 }
@@ -5486,6 +5607,7 @@ class NeonSwipeGame {
     this.pendulumController = new PendulumController({
       cycleDurationMs: GAME_CONFIG.pendulumCycleDurationMs
     });
+    this.scatterController = new ScatterController();
     this.spawnController = new SpawnController(this);
     this.challengeManager = new ChallengeManager();
     this.throwController = new ThrowController({
@@ -5549,6 +5671,7 @@ class NeonSwipeGame {
     this.runReceiverShapesByPositionId = createRandomReceiverLayout(AVAILABLE_SHAPES);
   }
 
+
   reset() {
     this.clearAllPendingSpawnTimeouts();
     this.receiverEffects.reset();
@@ -5558,6 +5681,7 @@ class NeonSwipeGame {
     this.waveController.reset();
     this.flowController.reset();
     this.pendulumController.reset();
+    this.scatterController.reset();
     // TEMP TEST BLINK LEVEL 14 - restore to 0 after validation
     this.score = 0;
     this.createRandomRunReceiverLayouts();
@@ -5579,6 +5703,10 @@ class NeonSwipeGame {
     this.gameOverStartedAt = 0;
     this.showCenterMessage("COLOR", 1100);
 
+    if (this.activeModifiers.scatter) {
+      this.scatterController.randomize(this.arena);
+    }
+
     this.spawnNextChallenge();
   }
 
@@ -5591,6 +5719,7 @@ class NeonSwipeGame {
     this.waveController.reset();
     this.flowController.reset();
     this.pendulumController.reset();
+    this.scatterController.reset();
     this.score = 0;
     this.runReceiverColorsByPositionId = { ...DEFAULT_COLOR_LAYOUT };
     this.runReceiverShapesByPositionId = { ...DEFAULT_SHAPE_LAYOUT };
@@ -5674,6 +5803,7 @@ class NeonSwipeGame {
   }
 
   spawnNextChallenge() {
+
     if (this.activeModifiers.multiShapeCount > 1) {
       this.spawnMultiShapes(
         this.activeModifiers.multiShapeCount
@@ -6187,6 +6317,10 @@ class NeonSwipeGame {
 
     resolvedShape.state = "resolved";
     this.score += 1;
+
+    if (this.activeModifiers.scatter) {
+      this.scatterController.randomize(this.arena);
+    }
 
     if (this.challengeManager.isBurstShape(resolvedShape)) {
       this.finishBurstShapeIfResolved(challengePhase);
@@ -7246,6 +7380,9 @@ class NeonSwipeGame {
         currentTime,
         this.activeModifiers.pendulum
       ),
+      scatter: this.scatterController.getVisualState(
+        this.activeModifiers.scatter
+      ),
       receivers: {
         isSliding: Boolean(this.activeModifiers.slide),
         isShort: Boolean(this.activeModifiers.shortReceivers),
@@ -7336,6 +7473,12 @@ class NeonSwipeGame {
 
   shouldStartModifierIntro(resolvedChallengePhase) {
     return Boolean(this.getModifierIntroContext(resolvedChallengePhase));
+  }
+
+  randomizeScatterForNextChallenge() {
+    if (!this.activeModifiers.scatter) return;
+
+    this.scatterController.randomize(this.arena);
   }
 
   get currentPhaseUsesReceiverRotation() {
