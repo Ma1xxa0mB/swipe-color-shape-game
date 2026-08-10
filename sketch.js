@@ -100,6 +100,7 @@ const GAME_CONFIG = {
   waveMinLengthMultiplier: 0.02,
   flowCycleDurationMs: 6000,
   flowMinLengthMultiplier: 0.02,
+  pendulumCycleDurationMs: 2400,
   voidSpawnChance: 0.25,
   topSpawnGravityMultiplier: 0.65,
   gameOverHoldDurationMs: 250,
@@ -210,6 +211,7 @@ const DEFAULT_MODIFIERS = {
   pulse: false,
   wave: false,
   flow: false,
+  pendulum: false,
   burst: false,
   twin: false,
   reveal: false,
@@ -228,13 +230,7 @@ const DEFAULT_MODIFIERS = {
 
 // TEMP TEST MODIFIERS - remove this layer when level recipes become final.
 const TEMP_TEST_MODIFIER_OVERRIDES = {
-  pulse: true,
-  slide:true,
-  shortReceivers:true,
-  blink:true,
-  reveal: true,
-  twin:true
-
+  pendulum: true
 };
 
 const LEVEL_MODIFIERS = {
@@ -1374,6 +1370,14 @@ class Arena {
       modifierVisualState
     );
     const baseStartDistance = this.getReceiverBaseDistance(receiver) + movingOffset;
+
+    if (modifierVisualState?.pendulum) {
+      return this.getReceiverPendulumTrackState(
+        receiver,
+        modifierVisualState.pendulum
+      );
+    }
+
     const pulseCenteringOffset = (baseLength - pulseAdjustedLength) / 2;
     const pulseAdjustedStartDistance = baseStartDistance + pulseCenteringOffset;
 
@@ -1436,8 +1440,188 @@ class Arena {
     };
   }
 
+  getReceiverPendulumTrackState(receiver, pendulumVisualState) {
+    const bounds = this.getOuterTrackBounds();
+    const receiverLength = this.scaler.x(
+      GAME_CONFIG.shortReceiverTrackLength
+    );
+
+    const horizontalTravelDistance =
+      (bounds.right - bounds.left) - receiverLength;
+
+    const middleX =
+      (bounds.left + bounds.right) / 2;
+
+    const middleY =
+      (bounds.top + bounds.bottom) / 2;
+
+    const progress =
+      pendulumVisualState.progress;
+
+    const side =
+      this.getReceiverPendulumSide(receiver);
+
+    if (side === "top") {
+      const centerX =
+        bounds.left +
+        receiverLength / 2 +
+        horizontalTravelDistance * progress;
+
+      return {
+        side,
+        start: {
+          x: centerX - receiverLength / 2,
+          y: bounds.top
+        },
+        end: {
+          x: centerX + receiverLength / 2,
+          y: bounds.top
+        },
+        iconPoint: {
+          x: centerX,
+          y:
+            bounds.top +
+            this.scaler.x(
+              GAME_CONFIG.movingReceiverIconInset
+            )
+        },
+        iconVisible: true,
+        trackVisible: true
+      };
+    }
+
+    if (side === "bottom") {
+      const centerX =
+        bounds.left +
+        receiverLength / 2 +
+        horizontalTravelDistance *
+        (1 - progress);
+
+      return {
+        side,
+        start: {
+          x: centerX - receiverLength / 2,
+          y: bounds.bottom
+        },
+        end: {
+          x: centerX + receiverLength / 2,
+          y: bounds.bottom
+        },
+        iconPoint: {
+          x: centerX,
+          y:
+            bounds.bottom -
+            this.scaler.x(
+              GAME_CONFIG.movingReceiverIconInset
+            )
+        },
+        iconVisible: true,
+        trackVisible: true
+      };
+    }
+
+    const verticalMinCenter =
+      middleY - horizontalTravelDistance / 2;
+
+    const verticalMaxCenter =
+      middleY + horizontalTravelDistance / 2;
+
+    if (side === "right") {
+      const centerY =
+        verticalMinCenter +
+        (verticalMaxCenter - verticalMinCenter) *
+        progress;
+
+      return {
+        side,
+        start: {
+          x: bounds.right,
+          y: centerY - receiverLength / 2
+        },
+        end: {
+          x: bounds.right,
+          y: centerY + receiverLength / 2
+        },
+        iconPoint: {
+          x:
+            bounds.right -
+            this.scaler.x(
+              GAME_CONFIG.movingReceiverIconInset
+            ),
+          y: centerY
+        },
+        iconVisible: true,
+        trackVisible: true
+      };
+    }
+
+    const centerY =
+      verticalMinCenter +
+      (verticalMaxCenter - verticalMinCenter) *
+      (1 - progress);
+
+    return {
+      side,
+      start: {
+        x: bounds.left,
+        y: centerY - receiverLength / 2
+      },
+      end: {
+        x: bounds.left,
+        y: centerY + receiverLength / 2
+      },
+      iconPoint: {
+        x:
+          bounds.left +
+          this.scaler.x(
+            GAME_CONFIG.movingReceiverIconInset
+          ),
+        y: centerY
+      },
+      iconVisible: true,
+      trackVisible: true
+    };
+  }
+
+
+  getReceiverPendulumSide(receiver) {
+    const sideByReceiverId = {
+      topRight: "top",
+      bottomRight: "right",
+      bottomLeft: "bottom",
+      topLeft: "left"
+    };
+
+    return sideByReceiverId[receiver.id] || "top";
+  }
+
+
   getReceiverTrackSegments(receiver, currentPhase, modifierVisualState = null) {
-    const trackState = this.getReceiverVisibleTrackState(receiver, modifierVisualState);
+    if (modifierVisualState?.pendulum) {
+      const trackState =
+        this.getReceiverPendulumTrackState(
+          receiver,
+          modifierVisualState.pendulum
+        );
+
+      if (!trackState.trackVisible) {
+        return [];
+      }
+
+      return [
+        {
+          start: trackState.start,
+          end: trackState.end,
+          side: trackState.side
+        }
+      ];
+    }
+
+    const trackState =
+      this.getReceiverVisibleTrackState(
+        receiver,
+        modifierVisualState
+      );
 
     if (!trackState.trackVisible) return [];
 
@@ -1475,17 +1659,51 @@ class Arena {
     return this.getReceiverTrackHitAreas(receiver, currentPhase, modifierVisualState);
   }
 
-  getMovingReceiverIconPoint(receiver, currentPhase, modifierVisualState = null) {
-    const trackState = this.getReceiverVisibleTrackState(receiver, modifierVisualState);
+  getMovingReceiverIconPoint(
+    receiver,
+    currentPhase,
+    modifierVisualState = null
+  ) {
+    if (modifierVisualState?.pendulum) {
+      const trackState =
+        this.getReceiverPendulumTrackState(
+          receiver,
+          modifierVisualState.pendulum
+        );
+
+      return trackState.iconVisible
+        ? trackState.iconPoint
+        : null;
+    }
+
+    const trackState =
+      this.getReceiverVisibleTrackState(
+        receiver,
+        modifierVisualState
+      );
 
     if (!trackState.iconVisible) return null;
 
-    const iconPoint = this.getPointOnRoundedTrack(trackState.iconDistance);
-    const iconInset = this.scaler.x(GAME_CONFIG.movingReceiverIconInset);
+    const iconPoint =
+      this.getPointOnRoundedTrack(
+        trackState.iconDistance
+      );
+
+    const iconInset =
+      this.scaler.x(
+        GAME_CONFIG.movingReceiverIconInset
+      );
 
     return {
-      x: iconPoint.x + iconPoint.inwardNormalX * iconInset,
-      y: iconPoint.y + iconPoint.inwardNormalY * iconInset
+      x:
+        iconPoint.x +
+        iconPoint.inwardNormalX *
+        iconInset,
+
+      y:
+        iconPoint.y +
+        iconPoint.inwardNormalY *
+        iconInset
     };
   }
 
@@ -2717,6 +2935,28 @@ class FlowController {
       progress: elapsedCycleMs / this.cycleDurationMs,
       cycleIndex,
       minLengthMultiplier: this.minLengthMultiplier
+    };
+  }
+}
+
+class PendulumController {
+  constructor({ cycleDurationMs }) {
+    this.cycleDurationMs = cycleDurationMs;
+    this.reset();
+  }
+
+  reset() {
+    this.startedAt = performance.now();
+  }
+
+  getVisualState(currentTime, isEnabled) {
+    if (!isEnabled) return null;
+
+    const elapsedMs = currentTime - this.startedAt;
+    const phase = (elapsedMs % this.cycleDurationMs) / this.cycleDurationMs;
+
+    return {
+      progress: (1 - Math.cos(phase * Math.PI * 2)) / 2
     };
   }
 }
@@ -5243,6 +5483,9 @@ class NeonSwipeGame {
       cycleDurationMs: GAME_CONFIG.flowCycleDurationMs,
       minLengthMultiplier: GAME_CONFIG.flowMinLengthMultiplier
     });
+    this.pendulumController = new PendulumController({
+      cycleDurationMs: GAME_CONFIG.pendulumCycleDurationMs
+    });
     this.spawnController = new SpawnController(this);
     this.challengeManager = new ChallengeManager();
     this.throwController = new ThrowController({
@@ -5314,6 +5557,7 @@ class NeonSwipeGame {
     this.pulseController.reset();
     this.waveController.reset();
     this.flowController.reset();
+    this.pendulumController.reset();
     // TEMP TEST BLINK LEVEL 14 - restore to 0 after validation
     this.score = 0;
     this.createRandomRunReceiverLayouts();
@@ -5346,6 +5590,7 @@ class NeonSwipeGame {
     this.pulseController.reset();
     this.waveController.reset();
     this.flowController.reset();
+    this.pendulumController.reset();
     this.score = 0;
     this.runReceiverColorsByPositionId = { ...DEFAULT_COLOR_LAYOUT };
     this.runReceiverShapesByPositionId = { ...DEFAULT_SHAPE_LAYOUT };
@@ -6996,6 +7241,10 @@ class NeonSwipeGame {
       flow: this.flowController.getVisualState(
         currentTime,
         this.activeModifiers.flow
+      ),
+      pendulum: this.pendulumController.getVisualState(
+        currentTime,
+        this.activeModifiers.pendulum
       ),
       receivers: {
         isSliding: Boolean(this.activeModifiers.slide),
