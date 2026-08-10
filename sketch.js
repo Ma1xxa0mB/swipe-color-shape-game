@@ -14,15 +14,16 @@ const GAME_CONFIG = {
   maxCanvasCssWidth: 540,
   gravity: 1450, // 1450
   spawnImpulse: -1300, // -1120
-  minSwipeDistance: 15,
+  minSwipeDistance: 10,
   minThrowForce: 1800,
   maxThrowForce: 2400,
   upwardThrowBoost: 330,
   shapeRadius: 34,
-  preciseDuoSecondShapeDelayMs: 500,
-  preciseDuoSpawnImpulseMultiplier: 0.75,
-  preciseDuoGravityMultiplier: 0.4,
-  shapeSwipeHitboxMultiplier: 1.75,
+  shapeSwipeHitboxMultiplier: 2.2,
+  multiShapeSpawnDelayMs: 250,
+  multiShapeGravityMultiplier: 0.75,
+  multiShapeMinHorizontalSpacing: 110,
+  multiShapeHorizontalImpulse: 200,
   burstShapeCount: 3,
   burstSecondShapeDelayMs: 400,
   burstThirdShapeDelayMs: 800,
@@ -81,10 +82,12 @@ const GAME_CONFIG = {
   movingGapEntryImpulse: 460,
   movingReceiverIconInset: 72,
   movingBottomSpawnSafetyMargin: 14,
+  bottomCornerSpawnInset: 105,
+  bottomCornerSpawnHorizontalImpulse: 110,
   movingBottomSpawnHorizontalImpulse: 110,
   movingBottomSpawnCenterZoneWidth: 90,
-  level11IntroDurationMs: 2000,
-  level12IntroDurationMs: 2000,
+  modifierIntroDurationMs: 2000,
+  modifierIntroEffectDelayMs: 200,
   shapeRotationIntervalMs: 1000,
   shapeRotationDurationMs: 180,
   receiverRotationIntervalMs: 1000,
@@ -119,25 +122,25 @@ const DEFAULT_SHAPE_LAYOUT = {
 
 
 const GAME_PHASES = [
-  { level: 1, ruleName: "COLOR", startScore: 0 },
-  { level: 2, ruleName: "SHAPE", startScore: 2 },
-  { level: 3, ruleName: "COLOR", startScore: 4 },
-  { level: 4, ruleName: "COLOR", startScore: 6 },
-  { level: 5, ruleName: "COLOR", startScore: 8 },
-  { level: 6, ruleName: "COLOR", startScore: 10 },
-  { level: 7, ruleName: "COLOR", startScore: 12 },
-  { level: 8, ruleName: "COLOR", startScore: GAME_CONFIG.level8StartScore },
-  { level: 9, ruleName: "COLOR", startScore: GAME_CONFIG.level9StartScore },
-  { level: 10, ruleName: "COLOR", startScore: GAME_CONFIG.level10StartScore },
-  { level: 11, ruleName: "COLOR", startScore: GAME_CONFIG.level11StartScore },
-  { level: 12, ruleName: "SHAPE", startScore: GAME_CONFIG.level12StartScore },
-  { level: 13, ruleName: "COLOR", startScore: GAME_CONFIG.level13StartScore },
-  { level: 14, ruleName: "COLOR", startScore: GAME_CONFIG.level14StartScore },
-  { level: 15, ruleName: "COLOR", startScore: GAME_CONFIG.level15StartScore },
-  { level: 16, ruleName: "COLOR", startScore: GAME_CONFIG.level16StartScore },
-  { level: 17, ruleName: "COLOR", startScore: GAME_CONFIG.level17StartScore },
-  { level: 18, ruleName: "COLOR", startScore: GAME_CONFIG.level18StartScore, projectileEntry: "movingGap" },
-  { level: 19, ruleName: "COLOR", startScore: GAME_CONFIG.level19StartScore, usesPreciseDuoSelection: true, projectileEntry: "movingGapDuo" }
+  { level: 1, ruleName: "COLOR", startScore: 0 }
+  // { level: 2, ruleName: "SHAPE", startScore: 2 },
+  // { level: 3, ruleName: "COLOR", startScore: 4 },
+  // { level: 4, ruleName: "COLOR", startScore: 6 },
+  // { level: 5, ruleName: "COLOR", startScore: 8 },
+  // { level: 6, ruleName: "COLOR", startScore: 10 },
+  // { level: 7, ruleName: "COLOR", startScore: 12 },
+  // { level: 8, ruleName: "COLOR", startScore: GAME_CONFIG.level8StartScore },
+  // { level: 9, ruleName: "COLOR", startScore: GAME_CONFIG.level9StartScore },
+  // { level: 10, ruleName: "COLOR", startScore: GAME_CONFIG.level10StartScore },
+  // { level: 11, ruleName: "COLOR", startScore: GAME_CONFIG.level11StartScore },
+  // { level: 12, ruleName: "SHAPE", startScore: GAME_CONFIG.level12StartScore },
+  // { level: 13, ruleName: "COLOR", startScore: GAME_CONFIG.level13StartScore },
+  // { level: 14, ruleName: "COLOR", startScore: GAME_CONFIG.level14StartScore },
+  // { level: 15, ruleName: "COLOR", startScore: GAME_CONFIG.level15StartScore },
+  // { level: 16, ruleName: "COLOR", startScore: GAME_CONFIG.level16StartScore },
+  // { level: 17, ruleName: "COLOR", startScore: GAME_CONFIG.level17StartScore },
+  // { level: 18, ruleName: "COLOR", startScore: GAME_CONFIG.level18StartScore },
+  // { level: 19, ruleName: "COLOR", startScore: GAME_CONFIG.level19StartScore }
 ];
 
 
@@ -186,7 +189,7 @@ const AVAILABLE_COLOR_IDS = ["red", "yellow", "green", "blue"];
 const VOID_SHAPES = ["hexagon", "diamond", "rectangle"];
 const VOID_COLOR_IDS = ["pink", "purple", "white"];
 const RECEIVER_PERMUTATION_MODES = ["none", "color", "shape", "both"];
-const SPAWN_MODES = ["bottom", "top", "side"];
+const SPAWN_MODES = ["bottom", "bottomCorners", "top", "side"];
 const RECEIVER_ROTATION_MODES = ["none", "color", "shape", "both", "rule"];
 const RULE_SEQUENCE_MODE_NAMES = ["none", "easy", "normal", "hard"];
 const RULE_SEQUENCE_MODES = {
@@ -208,42 +211,44 @@ const DEFAULT_MODIFIERS = {
   shortReceivers: false,
   permutation: "none",
   rotation: "none",
-  ruleSequence: "none",
+  ruleSequence: "easy",
   shapeSwipe: false,
-  rhythmDifficulty: "medium",
+  multiShapeCount: 1,
+  rhythmDifficulty: "easy",
   void: false
-};
-
-const LEVEL_MODIFIERS = {
-  1: {},
-  2: {},
-  3: {},
-  4: {},
-  5: {},
-  6: {},
-  7: {},
-  8: {},
-  9: {},
-  10: {},
-  11: {},
-  12: {},
-  13: {},
-  14: {},
-  15: {},
-  16: {},
-  17: {},
-  18: {},
-  19: {
-    shapeSwipe: true,
-    shortReceivers: true,
-    slide: true
-  }
 };
 
 // TEMP TEST MODIFIERS - remove this layer when level recipes become final.
 const TEMP_TEST_MODIFIER_OVERRIDES = {
-  permutation: "both",
-  ruleSequence: "hard"
+  multiShapeCount: 2,
+  shapeSwipe: true
+};
+
+const LEVEL_MODIFIERS = {
+  1: {}
+  // 2: {},
+  // 3: {},
+  // 4: {},
+  // 5: {},
+  // 6: {},
+  // 7: {},
+  // 8: {},
+  // 9: {},
+  // 10: {},
+  // 11: {},
+  // 12: {},
+  // 13: {},
+  // 14: {},
+  // 15: {},
+  // 16: {},
+  // 17: {},
+  // 18: {},
+  // 19: {
+  //   shapeSwipe: true,
+  //   shortReceivers: true,
+  //   slide: true,
+  //   multiShapeCount: 2
+  // }
 };
 
 const RHYTHM_DIFFICULTIES = {
@@ -2453,18 +2458,10 @@ class ReceiverRotationController {
 
 class ChallengePhysics {
   static getSpawnImpulse(challengePhase) {
-    if (challengePhase.usesPreciseDuoSelection) {
-      return GAME_CONFIG.spawnImpulse * GAME_CONFIG.preciseDuoSpawnImpulseMultiplier;
-    }
-
     return GAME_CONFIG.spawnImpulse;
   }
 
   static getGravity(challengePhase, spawnEntryMode = "bottom") {
-    if (challengePhase.usesPreciseDuoSelection) {
-      return GAME_CONFIG.gravity * GAME_CONFIG.preciseDuoGravityMultiplier;
-    }
-
     if (spawnEntryMode === "top") {
       return GAME_CONFIG.gravity * GAME_CONFIG.topSpawnGravityMultiplier;
     }
@@ -2498,8 +2495,8 @@ class GameStateController {
     return this.is("waiting");
   }
 
-  get isShowingLevelIntro() {
-    return this.is("level11Intro") || this.is("level12Intro")
+  get isShowingModifierIntro() {
+    return this.is("modifierIntro");
   }
 }
 
@@ -2535,24 +2532,19 @@ class SpawnController {
   constructor(game) {
     this.game = game;
     this.strategies = {
-      bottom: (phase) => this.getBottomSpawn(phase),
+      bottom: () => this.getBottomSpawn(),
+      bottomCorners: () => this.getBottomCornerSpawn(),
       top: () => this.getTopSpawn(),
-      side: () => this.getSideSpawn(),
-      movingGap: (phase) => this.getMovingGapSpawn(phase),
-      movingGapDuo: (phase) => this.getMovingGapSpawn(phase)
+      side: () => this.getSideSpawn()
     };
-    this.specialProjectileEntries = new Set(["movingGap", "movingGapDuo"]);
   }
 
   getSingleShapeSpawn(phase) {
-    const projectileEntry = phase.projectileEntry;
-
-    if (this.specialProjectileEntries.has(projectileEntry)) {
-      return this.strategies[projectileEntry](phase);
-    }
-
     const spawnMode = this.game.getCurrentSpawnMode();
-    const spawnStrategy = this.strategies[spawnMode] || this.strategies.bottom;
+    const spawnStrategy =
+      this.strategies[spawnMode] ||
+      this.strategies.bottom;
+
     return spawnStrategy(phase);
   }
 
@@ -2565,6 +2557,43 @@ class SpawnController {
       velocityX: 0,
       velocityY: scaler.y(this.game.currentChallengeSpawnImpulse),
       entryMode: "bottom"
+    };
+  }
+
+  getBottomCornerSpawn() {
+    const { scaler } = this.game;
+
+    const spawnFromLeft =
+      Math.random() < 0.5;
+
+    const spawnX = spawnFromLeft
+      ? GAME_CONFIG.bottomCornerSpawnInset
+      : GAME_CONFIG.designWidth -
+      GAME_CONFIG.bottomCornerSpawnInset;
+
+    const horizontalImpulse = spawnFromLeft
+      ? GAME_CONFIG.bottomCornerSpawnHorizontalImpulse
+      : -GAME_CONFIG.bottomCornerSpawnHorizontalImpulse;
+
+    return {
+      x: scaler.x(spawnX),
+
+      y: scaler.y(
+        scaler.designHeight + 38
+      ),
+
+      velocityX: scaler.x(
+        horizontalImpulse
+      ),
+
+      velocityY: scaler.y(
+        this.game.currentChallengeSpawnImpulse
+      ),
+
+      entryMode: "bottom",
+      physicalSide: spawnFromLeft
+        ? "left"
+        : "right"
     };
   }
 
@@ -2621,10 +2650,6 @@ class SpawnController {
   }
 
   getMovingGapSpawn(phase) {
-    if (!this.game.activeModifiers.slide) {
-      return this.getBottomSpawn(phase);
-    }
-
     const modifierVisualState = this.game.getModifierVisualState(performance.now());
     const spawnOptions = this.game.arena.getMovingBottomGapSpawnOptions(
       phase,
@@ -2660,19 +2685,22 @@ class SpawnController {
 
 class ChallengeManager {
   constructor() {
-    this.secondDuoShapeTimeoutId = null;
+    this.multiShapeTimeoutIds = [];
     this.nextSingleShapeTimeoutId = null;
     this.burstShapeTimeoutIds = [];
     this.clear();
   }
 
   clear() {
+    this.clearMultiShapeTimeouts();
     this.clearBurstShapeTimeouts();
     this.activeShape = null;
     this.currentShapes = [];
     this.activeShapeIndex = null;
     this.currentChallengePhase = null;
     this.selectedShape = null;
+    this.multiShapes = [];
+    this.multiShapeCount = 0;
     this.burstShapes = [];
     this.burstActiveIndex = null;
     this.burstShapeCount = 0;
@@ -2682,6 +2710,8 @@ class ChallengeManager {
   }
 
   setSingleShape(fallingShape, challengePhase = null) {
+    this.multiShapes = [];
+    this.multiShapeCount = 0;
     this.burstShapes = [];
     this.burstActiveIndex = null;
     this.burstShapeCount = 0;
@@ -2697,6 +2727,8 @@ class ChallengeManager {
   }
 
   startBurstChallenge(firstShape, challengePhase, shapeCount) {
+    this.multiShapes = [];
+    this.multiShapeCount = 0;
     this.twinShapes = [];
     this.twinActiveIndex = null;
     this.twinShapeCount = 0;
@@ -2772,6 +2804,8 @@ class ChallengeManager {
   }
 
   startTwinChallenge(firstShape, secondShape, challengePhase) {
+    this.multiShapes = [];
+    this.multiShapeCount = 0;
     this.burstShapes = [];
     this.burstActiveIndex = null;
     this.burstShapeCount = 0;
@@ -2837,7 +2871,7 @@ class ChallengeManager {
     return this.isTwinChallengeActive() && this.twinShapes[this.twinActiveIndex] === fallingShape;
   }
 
-  setFirstDuoShape(fallingShape, challengePhase) {
+  startMultiShapeChallenge(firstShape, challengePhase, shapeCount) {
     this.burstShapes = [];
     this.burstActiveIndex = null;
     this.burstShapeCount = 0;
@@ -2845,14 +2879,34 @@ class ChallengeManager {
     this.twinActiveIndex = null;
     this.twinShapeCount = 0;
     this.currentChallengePhase = challengePhase;
-    this.currentShapes = [fallingShape];
-    this.activeShape = fallingShape;
+    this.currentShapes = [firstShape];
+    this.multiShapes = [firstShape];
+    this.multiShapeCount = shapeCount;
+    this.activeShape = firstShape;
     this.activeShapeIndex = 0;
     this.selectedShape = null;
   }
 
-  appendSecondDuoShape(fallingShape) {
+  appendMultiShape(fallingShape, shapeIndex) {
+    this.multiShapes[shapeIndex] = fallingShape;
     this.currentShapes.push(fallingShape);
+  }
+
+  isMultiShapeChallengeActive() {
+    return this.multiShapeCount > 1;
+  }
+
+  isMultiShapeShape(fallingShape) {
+    return Boolean(fallingShape?.isMultiShape) || this.multiShapes.includes(fallingShape);
+  }
+
+  areAllMultiShapesResolved() {
+    const spawnedShapeCount = this.multiShapes.filter(Boolean).length;
+    return (
+      this.multiShapeCount > 1 &&
+      spawnedShapeCount === this.multiShapeCount &&
+      this.multiShapes.every((shape) => shape?.state === "resolved")
+    );
   }
 
   moveActiveShapeToLaunchedShapes() {
@@ -2875,6 +2929,12 @@ class ChallengeManager {
     this.selectedShape = null;
   }
 
+  clearActiveShapeSelection() {
+    this.activeShapeIndex = null;
+    this.activeShape = null;
+    this.selectedShape = null;
+  }
+
   findSelectableShapeAtPoint(point) {
     return this.currentShapes.find((fallingShape) => {
       if (!fallingShape.canReceiveSwipe || fallingShape.hasBeenThrown) return false;
@@ -2888,20 +2948,19 @@ class ChallengeManager {
     return this.currentShapes.length > 0 && this.currentShapes.every((fallingShape) => fallingShape.state === "resolved");
   }
 
-  clearActiveDuoShape() {
-    this.activeShapeIndex = null;
-    this.activeShape = null;
+  setMultiShapeTimeout(timeoutId) {
+    this.multiShapeTimeoutIds.push(timeoutId);
   }
 
-  setSecondShapeTimeout(timeoutId) {
-    this.secondDuoShapeTimeoutId = timeoutId;
+  removeMultiShapeTimeout(timeoutIdToRemove) {
+    this.multiShapeTimeoutIds = this.multiShapeTimeoutIds.filter(
+      (timeoutId) => timeoutId !== timeoutIdToRemove
+    );
   }
 
-  clearSecondShapeTimeout() {
-    if (this.secondDuoShapeTimeoutId === null) return;
-
-    window.clearTimeout(this.secondDuoShapeTimeoutId);
-    this.secondDuoShapeTimeoutId = null;
+  clearMultiShapeTimeouts() {
+    this.multiShapeTimeoutIds.forEach((timeoutId) => window.clearTimeout(timeoutId));
+    this.multiShapeTimeoutIds = [];
   }
 
   setNextSingleShapeTimeout(timeoutId) {
@@ -2938,18 +2997,16 @@ class ChallengeManager {
     return this.currentShapes.some((fallingShape) => fallingShape.state !== "resolved");
   }
 
-  getVisibleShapes(usesDuoShapes) {
-    return usesDuoShapes ? this.currentShapes : this.currentShapes;
+  getVisibleShapes() {
+    return this.currentShapes;
   }
 }
 
 class ThrowController {
-  constructor({ scaler, arena, getActiveShape, usesDuoShapes, activateNextDuoShape }) {
+  constructor({ scaler, arena, getActiveShape }) {
     this.scaler = scaler;
     this.arena = arena;
     this.getActiveShape = getActiveShape;
-    this.usesDuoShapes = usesDuoShapes;
-    this.activateNextDuoShape = activateNextDuoShape;
   }
 
   throwFromSwipe(swipeGesture) {
@@ -2962,8 +3019,12 @@ class ThrowController {
     };
     const throwForce = this.calculateSwipeThrowForce(swipeGesture.distance, swipeGesture.durationMs);
 
-    activeShape.throwToward(direction, throwForce, this.usesDuoShapes());
-    this.activateNextDuoShape();
+    activeShape.throwToward(
+      direction,
+      throwForce,
+      Boolean(activeShape.isMultiShape)
+    );
+
     return activeShape;
   }
 
@@ -2975,8 +3036,7 @@ class ThrowController {
     if (!direction) return;
 
     const throwForce = this.calculateThrowForce(direction, gestureDistance, gestureDurationMs);
-    activeShape.throwToward(direction, throwForce, this.usesDuoShapes());
-    this.activateNextDuoShape();
+    activeShape.throwToward(direction, throwForce, Boolean(activeShape.isMultiShape));
     return activeShape;
   }
 
@@ -3024,7 +3084,6 @@ class ThrowController {
     );
   }
 }
-
 class ReceiverEffectsController {
   constructor() {
     this.permutation = new ReceiverPermutationController({
@@ -3293,122 +3352,174 @@ class ReceiverEffectsController {
 
 }
 
-class LevelIntroController {
-  constructor(receiverEffects, dynamicRuleSequence) {
+class ModifierIntroController {
+  constructor(receiverEffects) {
     this.receiverEffects = receiverEffects;
-    this.dynamicRuleSequence = dynamicRuleSequence;
     this.reset();
   }
 
   reset() {
-    this.playedIntroByLevel = {
-      11: false,
-      12: false
-    };
-
     this.startedAt = 0;
     this.endsAt = 0;
-
+    this.activeIntro = null;
+    this.activeRuleName = null;
     this.hasStartedColorRotation = false;
     this.hasStartedShapeRotation = false;
   }
 
-  shouldStart(resolvedChallengePhase, nextPhase) {
-    const nextLevel = nextPhase.level;
-    const previousLevel = resolvedChallengePhase?.level;
-
-    if (previousLevel === nextLevel) return false;
-
+  shouldStart(previousModifiers, nextModifiers) {
     return Boolean(
-      this.playedIntroByLevel[nextLevel] === false
+      this.getIntroForModifierTransition(
+        previousModifiers,
+        nextModifiers
+      )
     );
   }
 
-  start(currentTime, introPhase) {
-    this.startedAt = currentTime;
+  getIntroForModifierTransition(previousModifiers, nextModifiers) {
+    return this.getRotationIntroForTransition(
+      previousModifiers?.rotation || "none",
+      nextModifiers?.rotation || "none"
+    );
+  }
 
-    this.hasStartedColorRotation = false;
-    this.hasStartedShapeRotation = false;
+  getRotationIntroForTransition(previousRotationMode, nextRotationMode) {
+    if (previousRotationMode === nextRotationMode) return null;
 
-    if (introPhase.level === 11) {
-      this.playedIntroByLevel[11] = true;
+    const previousCapabilities = this.getRotationCapabilities(previousRotationMode);
+    const nextCapabilities = this.getRotationCapabilities(nextRotationMode);
+    const addedCapabilities = nextCapabilities.filter(
+      (capability) => !previousCapabilities.includes(capability)
+    );
 
-      this.endsAt =
-        currentTime +
-        GAME_CONFIG.level11IntroDurationMs;
+    if (addedCapabilities.length === 0) return null;
 
-      return "level11Intro";
+    if (nextRotationMode === "both" && previousRotationMode === "none") {
+      return {
+        type: "rotation",
+        mode: "both",
+        label: "DUAL ROTATION"
+      };
     }
 
-    if (introPhase.level === 12) {
-      this.playedIntroByLevel[12] = true;
+    if (nextRotationMode === "rule") {
+      return {
+        type: "rotation",
+        mode: "rule",
+        label: "RULE ROTATION"
+      };
+    }
 
-      this.endsAt =
-        currentTime +
-        GAME_CONFIG.level12IntroDurationMs;
+    if (addedCapabilities.includes("color") && addedCapabilities.includes("shape")) {
+      return {
+        type: "rotation",
+        mode: "both",
+        label: "DUAL ROTATION"
+      };
+    }
 
-      return "level12Intro";
+    if (addedCapabilities.includes("color")) {
+      return {
+        type: "rotation",
+        mode: "color",
+        label: "COLOR ROTATION"
+      };
+    }
+
+    if (addedCapabilities.includes("shape")) {
+      return {
+        type: "rotation",
+        mode: "shape",
+        label: "SHAPE ROTATION"
+      };
     }
 
     return null;
   }
 
-  update(currentTime, state) {
-    const elapsedMs =
-      currentTime - this.startedAt;
+  getRotationCapabilities(rotationMode) {
+    if (rotationMode === "color") return ["color"];
+    if (rotationMode === "shape") return ["shape"];
+    if (rotationMode === "both") return ["color", "shape"];
+    if (rotationMode === "rule") return ["rule"];
+    return [];
+  }
 
-    if (state === "level11Intro") {
-      if (
-        elapsedMs >= 200 &&
-        !this.hasStartedColorRotation
-      ) {
-        this.receiverEffects.startColorRotation(
-          currentTime
-        );
+  start(currentTime, intro, activeRuleName) {
+    if (!intro) return null;
 
-        this.hasStartedColorRotation = true;
-      }
+    this.startedAt = currentTime;
+    this.endsAt = currentTime + GAME_CONFIG.modifierIntroDurationMs;
+    this.activeIntro = { ...intro };
+    this.activeRuleName = activeRuleName;
+    this.hasStartedColorRotation = false;
+    this.hasStartedShapeRotation = false;
 
-      if (this.hasStartedColorRotation) {
-        this.receiverEffects.updateColorRotation(
-          currentTime,
-          true
-        );
-      }
-    }
+    return "modifierIntro";
+  }
 
-    if (state === "level12Intro") {
-      if (
-        elapsedMs >= 200 &&
-        !this.hasStartedShapeRotation
-      ) {
-        this.receiverEffects.startShapeRotation(
-          currentTime
-        );
+  update(currentTime) {
+    if (!this.activeIntro) return true;
 
-        this.hasStartedShapeRotation = true;
-      }
+    const elapsedMs = currentTime - this.startedAt;
 
-      if (this.hasStartedShapeRotation) {
-        this.receiverEffects.updateShapeRotation(
-          currentTime,
-          true
-        );
-      }
+    if (elapsedMs >= GAME_CONFIG.modifierIntroEffectDelayMs) {
+      this.updateRotationIntro(currentTime);
     }
 
     return currentTime >= this.endsAt;
   }
 
-  getLines(state) {
-    if (state === "level12Intro") {
-      return ["SHAPE ROTATION"];
+  updateRotationIntro(currentTime) {
+    if (this.activeIntro?.type !== "rotation") return;
+
+    if (this.shouldDemonstrateColorRotation()) {
+      this.updateColorRotationIntro(currentTime);
     }
 
-    return ["COLOR ROTATION"];
+    if (this.shouldDemonstrateShapeRotation()) {
+      this.updateShapeRotationIntro(currentTime);
+    }
+  }
+
+  shouldDemonstrateColorRotation() {
+    return (
+      this.activeIntro.mode === "color" ||
+      this.activeIntro.mode === "both" ||
+      (this.activeIntro.mode === "rule" && this.activeRuleName === "COLOR")
+    );
+  }
+
+  shouldDemonstrateShapeRotation() {
+    return (
+      this.activeIntro.mode === "shape" ||
+      this.activeIntro.mode === "both" ||
+      (this.activeIntro.mode === "rule" && this.activeRuleName === "SHAPE")
+    );
+  }
+
+  updateColorRotationIntro(currentTime) {
+    if (!this.hasStartedColorRotation) {
+      this.receiverEffects.startColorRotation(currentTime);
+      this.hasStartedColorRotation = true;
+    }
+
+    this.receiverEffects.updateColorRotation(currentTime, true);
+  }
+
+  updateShapeRotationIntro(currentTime) {
+    if (!this.hasStartedShapeRotation) {
+      this.receiverEffects.startShapeRotation(currentTime);
+      this.hasStartedShapeRotation = true;
+    }
+
+    this.receiverEffects.updateShapeRotation(currentTime, true);
+  }
+
+  getLines() {
+    return [this.activeIntro?.label || ""];
   }
 }
-
 class HomeScreen {
   constructor(scaler) {
     this.scaler = scaler;
@@ -4920,7 +5031,9 @@ class NeonSwipeGame {
     this.rules = new GameRules(this.arena);
     this.dynamicRuleSequence = new DynamicRuleSequenceController();
     this.receiverEffects = new ReceiverEffectsController();
-    this.levelIntro = new LevelIntroController(this.receiverEffects, this.dynamicRuleSequence);
+    this.modifierIntro = new ModifierIntroController(
+      this.receiverEffects
+    );
     this.blinkController = new BlinkController({
       visibleDurationMs: GAME_CONFIG.blinkVisibleDurationMs,
       neutralDurationMs: GAME_CONFIG.blinkNeutralDurationMs
@@ -4930,9 +5043,7 @@ class NeonSwipeGame {
     this.throwController = new ThrowController({
       scaler: this.scaler,
       arena: this.arena,
-      getActiveShape: () => this.activeShape,
-      usesDuoShapes: () => this.activeChallengeUsesDuoShapes,
-      activateNextDuoShape: () => this.activateNextDuoShape()
+      getActiveShape: () => this.activeShape
     });
     this.particleSystem = new ParticleSystem(this.scaler);
     this.stateController = new GameStateController("ready");
@@ -4948,7 +5059,7 @@ class NeonSwipeGame {
     this.gameOverWasNewBest = false;
     this.gameOverStartedAt = 0;
     this.activeShapeRuleName = null;
-    this.pendingLevelIntroPhase = null;
+    this.pendingModifierIntro = null;
     this.deferredNextChallengeBoundaryPhase = null;
     this.movingReceiverOffset = 0;
   }
@@ -4999,7 +5110,7 @@ class NeonSwipeGame {
     this.score = 0;
     this.createRandomRunReceiverLayouts();
     this.state = "playing";
-    this.resetLevelRuntime();
+    this.resetRuntimeState();
     this.movingReceiverOffset = 0;
     this.receiverEffects.syncPermutationToPhase(this.currentPhase);
     this.receiverEffects.syncRotationsToPhase(
@@ -5008,7 +5119,7 @@ class NeonSwipeGame {
     );
     this.clearCurrentChallenge();
     this.activeShapeRuleName = null;
-    this.pendingLevelIntroPhase = null;
+    this.pendingModifierIntro = null;
     this.deferredNextChallengeBoundaryPhase = null;
     this.particleSystem.clear();
     this.previousBestScore = HOME_UI_DATA.bestScore;
@@ -5028,11 +5139,11 @@ class NeonSwipeGame {
     this.runReceiverColorsByPositionId = { ...DEFAULT_COLOR_LAYOUT };
     this.runReceiverShapesByPositionId = { ...DEFAULT_SHAPE_LAYOUT };
     this.state = "waiting";
-    this.resetLevelRuntime();
+    this.resetRuntimeState();
     this.movingReceiverOffset = 0;
     this.clearCurrentChallenge();
     this.activeShapeRuleName = null;
-    this.pendingLevelIntroPhase = null;
+    this.pendingModifierIntro = null;
     this.deferredNextChallengeBoundaryPhase = null;
     this.particleSystem.clear();
     this.previousBestScore = HOME_UI_DATA.bestScore;
@@ -5056,8 +5167,8 @@ class NeonSwipeGame {
       this.updateReceiverPermutation(currentTime);
       this.updateMovingReceiverTracks(deltaSeconds);
       this.updateActiveShape(deltaSeconds);
-    } else if (this.isShowingLevelIntro) {
-      this.updateLevelIntro(currentTime);
+    } else if (this.isShowingModifierIntro) {
+      this.updateModifierIntro(currentTime);
     } else {
       this.updateReceiverRotations(currentTime);
     }
@@ -5068,8 +5179,8 @@ class NeonSwipeGame {
   }
 
   updateActiveShape(deltaSeconds) {
-    if (this.activeChallengeUsesDuoShapes) {
-      this.updateDuoShapes(deltaSeconds);
+    if (this.activeChallengeUsesMultipleShapes) {
+      this.updateMultiShapes(deltaSeconds);
       return;
     }
 
@@ -5107,13 +5218,10 @@ class NeonSwipeGame {
   }
 
   spawnNextChallenge() {
-    if (this.currentPhase.usesPreciseDuoSelection) {
-      this.spawnPreciseDuoShapes();
-      return;
-    }
-
-    if (this.currentPhase.usesDuoShapes) {
-      this.spawnDuoShapes();
+    if (this.activeModifiers.multiShapeCount > 1) {
+      this.spawnMultiShapes(
+        this.activeModifiers.multiShapeCount
+      );
       return;
     }
 
@@ -5177,8 +5285,7 @@ class NeonSwipeGame {
   shouldUseBurstModifierForCurrentChallenge() {
     return Boolean(
       this.activeModifiers.burst &&
-      !this.currentPhase.usesPreciseDuoSelection &&
-      !this.currentPhase.usesDuoShapes
+      this.activeModifiers.multiShapeCount === 1
     );
   }
 
@@ -5186,18 +5293,17 @@ class NeonSwipeGame {
     return Boolean(
       this.activeModifiers.twin &&
       !this.activeModifiers.burst &&
-      !this.currentPhase.usesPreciseDuoSelection &&
-      !this.currentPhase.usesDuoShapes &&
-      !this.currentPhase.projectileEntry &&
+      this.activeModifiers.multiShapeCount === 1 &&
       !this.activeModifiers.randomSpawn &&
       this.activeModifiers.spawn === "bottom"
     );
   }
 
   shouldApplyRevealModifierToShape(challengePhase, fallingShape) {
+    const challengeModifiers = this.getChallengeModifiers(challengePhase);
+
     return Boolean(
-      this.activeModifiers.reveal &&
-      !challengePhase.usesPreciseDuoSelection &&
+      challengeModifiers.reveal &&
       fallingShape.spawnEntryMode === "bottom" &&
       fallingShape.velocityY < GAME_CONFIG.revealApexVelocityThreshold
     );
@@ -5288,9 +5394,11 @@ class NeonSwipeGame {
   }
 
   applyVoidModifierToShape(fallingShape, challengePhase) {
+    const challengeModifiers = this.getChallengeModifiers(challengePhase);
+
     fallingShape.isVoid = false;
 
-    if (!this.activeModifiers.void) return;
+    if (!challengeModifiers.void) return;
     if (Math.random() >= GAME_CONFIG.voidSpawnChance) return;
 
     fallingShape.isVoid = true;
@@ -5309,6 +5417,10 @@ class NeonSwipeGame {
     if (!this.shouldApplyRevealModifierToShape(challengePhase, fallingShape)) return;
 
     fallingShape.enableReveal(performance.now());
+  }
+
+  getChallengeModifiers(challengePhase) {
+    return challengePhase?.modifierSnapshot || this.activeModifiers;
   }
 
   updateVisibleRuleForActiveShape(nextRuleName, previousRuleName = this.activeShapeRuleName) {
@@ -5338,29 +5450,14 @@ class NeonSwipeGame {
 
     return {
       ...phase,
+      modifierSnapshot: phase.modifierSnapshot
+        ? { ...phase.modifierSnapshot }
+        : undefined,
       receiverColorsByPositionId: { ...phase.receiverColorsByPositionId },
       receiverShapesByPositionId: { ...phase.receiverShapesByPositionId }
     };
   }
 
-  spawnPreciseDuoShapes() {
-    this.clearPendingDuoSpawn();
-    this.currentChallengePhase = this.currentPhase;
-
-    const firstShape = this.createShapeFromSpawn(this.getSingleShapeSpawn(this.currentChallengePhase));
-    this.challengeManager.setFirstDuoShape(firstShape, this.currentChallengePhase);
-
-    const secondShapeTimeoutId = window.setTimeout(() => {
-      if (this.state !== "playing" || this.currentChallengePhase !== this.challengeManager.currentChallengePhase) return;
-      if (!this.currentChallengePhase?.usesPreciseDuoSelection) return;
-
-      const secondShape = this.createShapeFromSpawn(this.getSingleShapeSpawn(this.currentChallengePhase));
-      this.challengeManager.appendSecondDuoShape(secondShape);
-      this.secondDuoShapeTimeoutId = null;
-    }, GAME_CONFIG.preciseDuoSecondShapeDelayMs);
-
-    this.challengeManager.setSecondShapeTimeout(secondShapeTimeoutId);
-  }
 
   createShapeFromSpawn(spawn, state = "active") {
     return new FallingShape({
@@ -5375,50 +5472,157 @@ class NeonSwipeGame {
     });
   }
 
-  spawnDuoShapes() {
-    this.clearPendingDuoSpawn();
-    this.currentChallengePhase = this.currentPhase;
-    const firstShape = this.createDuoShape({
-      x: this.scaler.x(GAME_CONFIG.designWidth * 0.27),
-      y: this.scaler.y(this.scaler.designHeight + 42),
-      velocityX: this.scaler.x(GAME_CONFIG.level7HorizontalImpulse),
-      velocityY: this.scaler.y(GAME_CONFIG.spawnImpulse * GAME_CONFIG.level7SpawnImpulseMultiplier),
-      state: "active"
-    });
+  spawnMultiShapes(shapeCount) {
+    this.clearPendingMultiShapeSpawn();
+    const clampedShapeCount = clamp(Math.round(shapeCount), 2, 4);
+    this.currentChallengePhase = this.createPhaseSnapshot(this.currentPhase);
+    this.currentChallengePhase.multiShapeCount = clampedShapeCount;
+    this.currentChallengePhase.modifierSnapshot = { ...this.activeModifiers };
 
-    this.challengeManager.setFirstDuoShape(firstShape, this.currentChallengePhase);
+    const previousActiveShapeRuleName = this.activeShapeRuleName;
+    const spawnXPositions = this.createMultiShapeSpawnXPositions(clampedShapeCount);
 
-    this.secondDuoShapeTimeoutId = window.setTimeout(() => {
-      if (this.state !== "playing" || !this.activeChallengeUsesDuoShapes) return;
+    spawnXPositions.forEach((spawnX, shapeIndex) => {
+      const spawnDelayMs = shapeIndex * GAME_CONFIG.multiShapeSpawnDelayMs;
 
-      const secondShape = this.createDuoShape({
-        x: this.scaler.x(GAME_CONFIG.designWidth * 0.73),
-        y: this.scaler.y(this.scaler.designHeight + 42),
-        velocityX: this.scaler.x(-GAME_CONFIG.level7HorizontalImpulse),
-        velocityY: this.scaler.y(GAME_CONFIG.spawnImpulse * GAME_CONFIG.level7SpawnImpulseMultiplier),
-        state: "inactive"
-      });
-
-      this.challengeManager.appendSecondDuoShape(secondShape);
-      if (this.activeShapeIndex === 0 && this.currentShapes[0].hasBeenThrown) {
-        secondShape.state = "active";
-        this.activeShapeIndex = 1;
-        this.activeShape = secondShape;
+      if (spawnDelayMs === 0) {
+        const firstShape = this.createMultiShapeFromSpawnX(spawnX, shapeIndex);
+        this.challengeManager.startMultiShapeChallenge(
+          firstShape,
+          firstShape.challengePhase,
+          clampedShapeCount
+        );
+        this.updateVisibleRuleForActiveShape(
+          firstShape.challengePhase.ruleName,
+          previousActiveShapeRuleName
+        );
+        return;
       }
-    }, GAME_CONFIG.level7SecondShapeDelayMs);
+
+      this.scheduleMultiShapeSpawn(shapeIndex, spawnX, spawnDelayMs);
+    });
   }
 
-  createDuoShape({ x, y, velocityX, velocityY, state }) {
-    return new FallingShape({
-      x,
-      y,
-      radius: this.scaler.x(GAME_CONFIG.shapeRadius),
-      colorId: getRandomItem(AVAILABLE_COLOR_IDS),
-      shapeName: getRandomItem(AVAILABLE_SHAPES),
-      velocityX,
-      velocityY,
-      state
+  scheduleMultiShapeSpawn(shapeIndex, preferredSpawnX, delayMs) {
+    const multiShapeChallengePhase = this.currentChallengePhase;
+    const timeoutId = window.setTimeout(() => {
+      this.challengeManager.removeMultiShapeTimeout(timeoutId);
+
+      if (this.state !== "playing") return;
+      if (!this.challengeManager.isMultiShapeChallengeActive()) return;
+      if (this.currentChallengePhase !== multiShapeChallengePhase) return;
+
+      const fallingShape = this.createMultiShapeFromSpawnX(
+        preferredSpawnX,
+        shapeIndex
+      );
+      this.challengeManager.appendMultiShape(fallingShape, shapeIndex);
+    }, delayMs);
+
+    this.challengeManager.setMultiShapeTimeout(timeoutId);
+  }
+
+  createMultiShapeFromSpawnX(preferredSpawnX, shapeIndex) {
+    const spawn = this.createMultiShapeSpawn(preferredSpawnX);
+    const fallingShape = this.createConfiguredShapeFromSpawn(
+      spawn,
+      this.currentChallengePhase
+    );
+
+    fallingShape.isMultiShape = true;
+    fallingShape.multiShapeIndex = shapeIndex;
+    fallingShape.gravity *= GAME_CONFIG.multiShapeGravityMultiplier;
+    return fallingShape;
+  }
+
+  createMultiShapeSpawn(preferredSpawnX) {
+    const spawnX = this.activeModifiers.slide
+      ? this.getSafeMultiShapeSlideSpawnX(preferredSpawnX)
+      : preferredSpawnX;
+
+    return {
+      x: spawnX,
+      y: this.scaler.y(this.scaler.designHeight + 38),
+      velocityX: this.getMultiShapeHorizontalVelocity(spawnX),
+      velocityY: this.scaler.y(this.currentChallengeSpawnImpulse),
+      entryMode: "bottom"
+    };
+  }
+
+  getSafeMultiShapeSlideSpawnX(preferredSpawnX) {
+    const modifierVisualState = this.getModifierVisualState(performance.now());
+    const spawnOptions = this.arena.getMovingBottomGapSpawnOptions(
+      this.currentChallengePhase,
+      modifierVisualState
+    );
+
+    if (!spawnOptions.length) return preferredSpawnX;
+
+    return spawnOptions.reduce((closestSpawnX, spawnOption) => {
+      const currentDistance = Math.abs(spawnOption.spawnX - preferredSpawnX);
+      const closestDistance = Math.abs(closestSpawnX - preferredSpawnX);
+      return currentDistance < closestDistance
+        ? spawnOption.spawnX
+        : closestSpawnX;
+    }, spawnOptions[0].spawnX);
+  }
+
+  createMultiShapeSpawnXPositions(shapeCount) {
+    const safeMargin = this.scaler.x(
+      GAME_CONFIG.shapeRadius +
+      GAME_CONFIG.movingBottomSpawnSafetyMargin
+    );
+    const minX = safeMargin;
+    const maxX = this.scaler.x(GAME_CONFIG.designWidth) - safeMargin;
+    const spacing = this.scaler.x(GAME_CONFIG.multiShapeMinHorizontalSpacing);
+    const availableWidth = Math.max(maxX - minX, spacing * (shapeCount - 1));
+    const slotWidth = availableWidth / shapeCount;
+
+    const positions = Array.from({ length: shapeCount }, (_, index) => {
+      const slotStart = minX + index * slotWidth;
+      const slotEnd = index === shapeCount - 1
+        ? maxX
+        : Math.min(maxX, slotStart + slotWidth);
+      const jitterInset = Math.min(slotWidth * 0.24, spacing * 0.35);
+      const randomMin = Math.min(slotEnd, slotStart + jitterInset);
+      const randomMax = Math.max(randomMin, slotEnd - jitterInset);
+      return randomMin + Math.random() * (randomMax - randomMin || 1);
     });
+
+    for (let index = 1; index < positions.length; index += 1) {
+      if (positions[index] - positions[index - 1] < spacing) {
+        positions[index] = Math.min(maxX, positions[index - 1] + spacing);
+      }
+    }
+
+    return this.shuffleMultiShapeSpawnOrder(positions);
+  }
+
+  shuffleMultiShapeSpawnOrder(positions) {
+    const shuffledPositions = [...positions];
+
+    for (let index = shuffledPositions.length - 1; index > 0; index -= 1) {
+      const randomIndex = Math.floor(Math.random() * (index + 1));
+      [shuffledPositions[index], shuffledPositions[randomIndex]] = [
+        shuffledPositions[randomIndex],
+        shuffledPositions[index]
+      ];
+    }
+
+    return shuffledPositions;
+  }
+
+  getMultiShapeHorizontalVelocity(spawnX) {
+    const centerX = this.scaler.x(GAME_CONFIG.designWidth / 2);
+    const centerZoneHalfWidth = this.scaler.x(
+      GAME_CONFIG.movingBottomSpawnCenterZoneWidth / 2
+    );
+    const impulse = this.scaler.x(GAME_CONFIG.multiShapeHorizontalImpulse);
+
+    if (spawnX < centerX - centerZoneHalfWidth) return impulse;
+    if (spawnX > centerX + centerZoneHalfWidth) return -impulse;
+
+    return (Math.random() < 0.5 ? -1 : 1) * impulse * 0.35;
   }
 
   getCollisionPhaseForShape(shape) {
@@ -5469,7 +5673,15 @@ class NeonSwipeGame {
       return;
     }
 
-    if (this.tryStartPendingLevelIntro()) return;
+    if (this.challengeManager.isMultiShapeShape(resolvedShape)) {
+      this.finishMultiShapeIfResolved(
+        false,
+        resolvedShape.challengePhase || this.currentChallengePhase || this.currentPhase
+      );
+      return;
+    }
+
+    if (this.tryStartPendingModifierIntro()) return;
 
     this.scheduleNextChallengeAfterResolution(
       resolvedShape.challengePhase ||
@@ -5530,15 +5742,14 @@ class NeonSwipeGame {
       return;
     }
 
-    if (challengePhase.usesPreciseDuoSelection) {
-      this.finishPreciseDuoIfResolved(challengePhase);
-      return;
-    }
 
     const didRuleChange = false;
 
-    if (challengePhase.usesDuoShapes) {
-      this.finishDuoIfResolved(didRuleChange, challengePhase);
+    if (this.challengeManager.isMultiShapeShape(resolvedShape)) {
+      this.finishMultiShapeIfResolved(
+        didRuleChange,
+        challengePhase
+      );
       return;
     }
 
@@ -5629,19 +5840,21 @@ class NeonSwipeGame {
     if (!didCompleteTwin || !shouldScheduleNextChallenge) return;
   }
 
-  updateDuoShapes(deltaSeconds) {
+  updateMultiShapes(deltaSeconds) {
     if (this.currentShapes.length === 0) return;
 
     this.currentShapes.forEach((shape) => {
       if (shape.state !== "resolved") {
-        shape.update(deltaSeconds, this.currentGravity);
+        shape.update(deltaSeconds, shape.gravity || this.currentGravity);
       }
     });
 
     for (const shape of this.currentShapes) {
+      if (shape.state === "resolved") continue;
+
       const touchedReceiver = this.arena.findReceiverHitByShape(
         shape,
-        this.visiblePhase,
+        this.getCollisionPhaseForShape(shape),
         this.getModifierVisualState(performance.now())
       );
       if (touchedReceiver) {
@@ -5649,29 +5862,38 @@ class NeonSwipeGame {
         return;
       }
 
-      if (shape.state !== "resolved" && shape.isBelowScreen(this.scaler.canvasHeight, this.scaler.y(28))) {
+      if (shape.isBelowScreen(this.scaler.canvasHeight, this.scaler.y(28))) {
+        if (shape.isVoid && !shape.hasBeenThrown) {
+          this.resolveIgnoredVoidShape(shape);
+          return;
+        }
+
         this.endGame("GAME OVER");
         return;
       }
     }
   }
 
-  finishDuoIfResolved(shouldStartRuleTransition, resolvedChallengePhase) {
-    const hasBothShapesSpawned = this.currentShapes.length === 2;
-    const areBothShapesResolved = hasBothShapesSpawned && this.currentShapes.every((shape) => shape.state === "resolved");
+  finishMultiShapeIfResolved(
+    shouldStartRuleTransition,
+    resolvedChallengePhase
+  ) {
+    const areAllShapesResolved =
+      this.challengeManager.areAllMultiShapesResolved();
 
-    if (areBothShapesResolved) {
-      this.continueAfterResolvedChallenge(shouldStartRuleTransition, resolvedChallengePhase);
+    if (areAllShapesResolved) {
+      this.continueAfterResolvedChallenge(
+        shouldStartRuleTransition,
+        resolvedChallengePhase
+      );
+      return;
     }
-  }
 
-  finishPreciseDuoIfResolved(resolvedChallengePhase) {
-    const hasBothShapesSpawned = this.currentShapes.length === 2;
-    if (!hasBothShapesSpawned || !this.challengeManager.areAllShapesResolved()) return;
-
-    this.clearPendingGroupSpawnTimeouts();
-    const didRuleChange = false;
-    this.continueAfterResolvedChallenge(didRuleChange, resolvedChallengePhase);
+    if (this.usesReceiverPermutation()) {
+      this.startReceiverPermutation(
+        resolvedChallengePhase
+      );
+    }
   }
 
   advanceRuleSequenceForNextLogicalChallenge(previousChallengePhase) {
@@ -5702,7 +5924,7 @@ class NeonSwipeGame {
       }
     }
 
-    if (this.tryStartPendingLevelIntro()) return;
+    if (this.tryStartPendingModifierIntro()) return;
 
     if (!this.currentPhaseUsesReceiverRotation) {
       this.receiverEffects.stopRotations();
@@ -5712,9 +5934,12 @@ class NeonSwipeGame {
       this.showRuleTransitionFeedback(this.currentRuleName);
     }
 
-    if (this.shouldStartLevelIntro(resolvedChallengePhase)) {
+    const modifierIntroContext =
+      this.getModifierIntroContext(resolvedChallengePhase);
+
+    if (modifierIntroContext) {
       this.deferredNextChallengeBoundaryPhase = resolvedChallengePhase;
-      this.startLevelIntroWhenReady();
+      this.startModifierIntroWhenReady(modifierIntroContext);
       return;
     }
 
@@ -5782,8 +6007,8 @@ class NeonSwipeGame {
     ) return;
 
     if (
-      this.isShowingLevelIntro ||
-      this.pendingLevelIntroPhase
+      this.isShowingModifierIntro ||
+      this.pendingModifierIntro
     ) {
       this.deferredNextChallengeBoundaryPhase =
         previousChallengePhase;
@@ -5814,7 +6039,7 @@ class NeonSwipeGame {
   }
 
   clearPendingGroupSpawnTimeouts() {
-    this.challengeManager.clearSecondShapeTimeout();
+    this.challengeManager.clearMultiShapeTimeouts();
     this.challengeManager.clearBurstShapeTimeouts();
   }
 
@@ -5823,12 +6048,12 @@ class NeonSwipeGame {
     this.challengeManager.clearNextSingleShapeTimeout();
   }
 
-  clearPendingDuoSpawn() {
-    this.clearPendingGroupSpawnTimeouts();
+  clearPendingMultiShapeSpawn() {
+    this.challengeManager.clearMultiShapeTimeouts();
   }
 
-  resetLevelRuntime() {
-    this.levelIntro.reset();
+  resetRuntimeState() {
+    this.modifierIntro.reset();
     this.movingReceiverOffset = 0;
   }
 
@@ -5871,7 +6096,7 @@ class NeonSwipeGame {
   startReceiverPermutation(permutationPhase) {
     const permutationMode = this.activeModifiers.permutation;
 
-    if (this.hasEngagedSingleShapes()) {
+    if (this.hasEngagedShapes()) {
       this.receiverEffects.startPermutation(
         performance.now(),
         permutationPhase,
@@ -5880,10 +6105,13 @@ class NeonSwipeGame {
       return;
     }
 
-    this.clearPendingDuoSpawn();
-    this.deferredNextChallengeBoundaryPhase = permutationPhase;
+    this.clearPendingGroupSpawnTimeouts();
+    this.deferredNextChallengeBoundaryPhase =
+      permutationPhase;
+
     this.state = "receiverPermutation";
     this.clearCurrentChallenge();
+
     this.receiverEffects.startPermutation(
       performance.now(),
       permutationPhase,
@@ -5891,8 +6119,8 @@ class NeonSwipeGame {
     );
   }
 
-  updateLevelIntro(currentTime) {
-    const didFinishIntro = this.levelIntro.update(currentTime, this.state, this.currentPhase);
+  updateModifierIntro(currentTime) {
+    const didFinishIntro = this.modifierIntro.update(currentTime);
     if (!didFinishIntro) return;
 
     this.state = "playing";
@@ -5913,34 +6141,42 @@ class NeonSwipeGame {
     this.spawnNextChallenge();
   }
 
-  startLevelIntroWhenReady() {
-    this.pendingLevelIntroPhase = this.currentPhase;
+  startModifierIntroWhenReady(modifierIntroContext) {
+    this.pendingModifierIntro = modifierIntroContext;
 
-    if (this.hasEngagedSingleShapes()) return;
+    if (this.hasEngagedShapes()) return;
 
-    this.startLevelIntro();
+    this.startModifierIntro();
   }
 
-  tryStartPendingLevelIntro() {
-    if (!this.pendingLevelIntroPhase || this.hasEngagedSingleShapes()) return false;
+  tryStartPendingModifierIntro() {
+    if (!this.pendingModifierIntro || this.hasEngagedShapes()) return false;
 
-    this.startLevelIntro();
+    this.startModifierIntro();
     return true;
   }
 
-  startLevelIntro() {
+  startModifierIntro() {
     const introStartedAt = performance.now();
-    const introPhase = this.pendingLevelIntroPhase || this.currentPhase;
+    const modifierIntroContext = this.pendingModifierIntro;
+    if (!modifierIntroContext?.intro) return;
 
-    this.pendingLevelIntroPhase = null;
+    const introPhase = modifierIntroContext.phase || this.currentPhase;
+    const intro = modifierIntroContext.intro;
+
+    this.pendingModifierIntro = null;
     this.clearPendingGroupSpawnTimeouts();
     this.receiverEffects.stopRotations();
     this.receiverEffects.syncRotationsToPhase(
       introPhase,
-      this.activeModifiers.permutation
+      modifierIntroContext.modifiers?.permutation || this.activeModifiers.permutation
     );
     this.clearCurrentChallenge();
-    this.state = this.levelIntro.start(introStartedAt, introPhase);
+    this.state = this.modifierIntro.start(
+      introStartedAt,
+      intro,
+      introPhase.ruleName
+    );
   }
 
   updateReceiverRotations(currentTime) {
@@ -5966,7 +6202,7 @@ class NeonSwipeGame {
   }
 
   prepareSwipeFromPoint(startPoint) {
-    if (!this.activeModifiers.shapeSwipe) {
+    if (!this.requiresPreciseShapeSelection) {
       return Boolean(this.activeShape?.canReceiveSwipe);
     }
 
@@ -5991,14 +6227,19 @@ class NeonSwipeGame {
   }
 
   handleShapeThrown(thrownShape) {
-    if (!thrownShape || this.activeChallengeUsesDuoShapes) return;
+    if (!thrownShape) return;
 
     if (thrownShape.isVoid) {
       this.endGame("GAME OVER");
       return;
     }
 
-    if (this.pendingLevelIntroPhase) return;
+    if (this.pendingModifierIntro) return;
+
+    if (this.challengeManager.isMultiShapeShape(thrownShape)) {
+      this.challengeManager.clearActiveShapeSelection();
+      return;
+    }
 
     if (this.challengeManager.isActiveBurstShape(thrownShape)) {
       this.advanceBurstSequenceAfterResolvedActiveShape(
@@ -6055,22 +6296,6 @@ class NeonSwipeGame {
     }, nextSpawnDelayMs);
 
     this.challengeManager.setNextSingleShapeTimeout(nextSingleShapeTimeoutId);
-  }
-
-  activateNextDuoShape() {
-    if (!this.activeChallengeUsesDuoShapes) return;
-    if (this.currentChallengePhase?.usesPreciseDuoSelection) return;
-
-    if (this.activeShapeIndex === 0 && this.currentShapes[1]) {
-      this.currentShapes[1].state = "active";
-      this.activeShapeIndex = 1;
-      this.activeShape = this.currentShapes[1];
-      return;
-    }
-
-    if (this.activeShapeIndex === 1) {
-      this.challengeManager.clearActiveDuoShape();
-    }
   }
 
   resolveThrowDirection(target) {
@@ -6153,7 +6378,7 @@ class NeonSwipeGame {
     this.centerMessageUntil = Infinity;
 
     this.activeShapeRuleName = null;
-    this.pendingLevelIntroPhase = null;
+    this.pendingModifierIntro = null;
     this.deferredNextChallengeBoundaryPhase = null;
 
     this.clearCurrentChallenge();
@@ -6329,7 +6554,7 @@ class NeonSwipeGame {
   }
 
   drawActiveShape(currentTime) {
-    const visibleShapes = this.challengeManager.getVisibleShapes(this.activeChallengeUsesDuoShapes);
+    const visibleShapes = this.challengeManager.getVisibleShapes();
 
     visibleShapes
       .filter((shape) => shape.state !== "resolved")
@@ -6460,8 +6685,8 @@ class NeonSwipeGame {
   }
 
   drawCenterLabel(currentTime) {
-    if (this.isShowingLevelIntro) {
-      this.drawLevelIntroLabel();
+    if (this.isShowingModifierIntro) {
+      this.drawModifierIntroLabel();
       return;
     }
 
@@ -6512,8 +6737,8 @@ class NeonSwipeGame {
     this.context.restore();
   }
 
-  drawLevelIntroLabel() {
-    const [firstWord, secondWord] = this.levelIntroLines[0].split(" ");
+  drawModifierIntroLabel() {
+    const [firstWord, secondWord] = this.modifierIntroLines[0].split(" ");
     const centerY = this.scaler.canvasHeight / 2;
 
     this.context.save();
@@ -6588,9 +6813,12 @@ class NeonSwipeGame {
     );
   }
 
-  get activeChallengeUsesDuoShapes() {
-    const challengePhase = this.currentChallengePhase || this.currentPhase;
-    return Boolean(challengePhase.usesDuoShapes || challengePhase.usesPreciseDuoSelection);
+  get activeChallengeUsesMultipleShapes() {
+    return this.challengeManager.isMultiShapeChallengeActive() || this.activeModifiers.multiShapeCount > 1;
+  }
+
+  get requiresPreciseShapeSelection() {
+    return this.activeModifiers.shapeSwipe || this.activeChallengeUsesMultipleShapes;
   }
 
   get currentChallengeSpawnImpulse() {
@@ -6605,26 +6833,49 @@ class NeonSwipeGame {
     return usesAnyRotation(this.activeModifiers.rotation);
   }
 
-  hasEngagedSingleShapes() {
-    if (this.activeChallengeUsesDuoShapes) return false;
-
-    return this.challengeManager.hasUnresolvedShapes() || this.challengeManager.hasPendingNextSingleShape();
+  hasEngagedShapes() {
+    return (
+      this.challengeManager.hasUnresolvedShapes() ||
+      this.challengeManager.hasPendingNextSingleShape()
+    );
   }
 
-  shouldStartLevelIntro(resolvedChallengePhase) {
-    return this.levelIntro.shouldStart(resolvedChallengePhase, this.currentPhase);
+  getModifierIntroContext(resolvedChallengePhase) {
+    const previousLevel = resolvedChallengePhase?.level;
+    const nextLevel = this.currentLevel;
+
+    if (!previousLevel || previousLevel === nextLevel) return null;
+
+    const previousModifiers = getModifiersForLevel(previousLevel);
+    const nextModifiers = getModifiersForLevel(nextLevel);
+    const intro = this.modifierIntro.getIntroForModifierTransition(
+      previousModifiers,
+      nextModifiers
+    );
+
+    if (!intro) return null;
+
+    return {
+      intro,
+      phase: this.createPhaseSnapshot(this.currentPhase),
+      modifiers: { ...nextModifiers }
+    };
+  }
+
+  shouldStartModifierIntro(resolvedChallengePhase) {
+    return Boolean(this.getModifierIntroContext(resolvedChallengePhase));
   }
 
   get currentPhaseUsesReceiverRotation() {
     return this.usesReceiverRotation();
   }
 
-  get isShowingLevelIntro() {
-    return this.stateController.isShowingLevelIntro;
+  get isShowingModifierIntro() {
+    return this.stateController.isShowingModifierIntro;
   }
 
-  get levelIntroLines() {
-    return this.levelIntro.getLines(this.state);
+  get modifierIntroLines() {
+    return this.modifierIntro.getLines();
   }
 
   get activeShape() {
@@ -6657,14 +6908,6 @@ class NeonSwipeGame {
 
   set currentChallengePhase(nextChallengePhase) {
     this.challengeManager.currentChallengePhase = nextChallengePhase;
-  }
-
-  get secondDuoShapeTimeoutId() {
-    return this.challengeManager.secondDuoShapeTimeoutId;
-  }
-
-  set secondDuoShapeTimeoutId(nextTimeoutId) {
-    this.challengeManager.secondDuoShapeTimeoutId = nextTimeoutId;
   }
 
   get state() {
@@ -6706,21 +6949,14 @@ class NeonSwipeGame {
   }
 
   get introVisualState() {
-    if (!this.isShowingLevelIntro) {
+    if (!this.isShowingModifierIntro) {
       return null;
     }
 
-    if (
-      this.state === "level11Intro" ||
-      this.state === "level12Intro"
-    ) {
-      return {
-        railOpacity: 0.18,
-        iconOpacity: 0.18
-      };
-    }
-
-    return null;
+    return {
+      railOpacity: 0.18,
+      iconOpacity: 0.18
+    };
   }
 
 }
