@@ -210,13 +210,18 @@ const RULE_SEQUENCE_MODES = {
 
 const GRAVITY_DIFFICULTIES = {
   easy: {
-    gravityMultiplier: 0.78
+    upwardGravityMultiplier: 0.50,
+    downwardGravityMultiplier: 0.50
   },
+
   normal: {
-    gravityMultiplier: 1
+    upwardGravityMultiplier: 1,
+    downwardGravityMultiplier: 1
   },
+
   hard: {
-    gravityMultiplier: 1.28
+    upwardGravityMultiplier: 2.5,
+    downwardGravityMultiplier: 1.5
   }
 };
 
@@ -240,13 +245,13 @@ const DEFAULT_MODIFIERS = {
   shapeSwipe: false,
   multiShapeCount: 1,
   rhythmDifficulty: "easy",
-  gravityDifficulty: "normal",
+  fallDifficulty: "normal",
   void: false
 };
 
 // TEMP TEST MODIFIERS - remove this layer when level recipes become final.
 const TEMP_TEST_MODIFIER_OVERRIDES = {
-  gravityDifficulty: "hard"
+  fallDifficulty: "hard"
 };
 
 const LEVEL_MODIFIERS = {
@@ -309,8 +314,8 @@ function getRhythmConfig(rhythmDifficulty) {
   return RHYTHM_DIFFICULTIES[rhythmDifficulty] || RHYTHM_DIFFICULTIES.easy;
 }
 
-function getGravityDifficultyConfig(gravityDifficulty) {
-  return GRAVITY_DIFFICULTIES[gravityDifficulty] || GRAVITY_DIFFICULTIES.normal;
+function getGravityDifficultyConfig(fallDifficulty) {
+  return GRAVITY_DIFFICULTIES[fallDifficulty] || GRAVITY_DIFFICULTIES.normal;
 }
 
 function getRhythmDelayMs(score, rhythmDifficulty) {
@@ -510,14 +515,23 @@ class FallingShape {
     this.revealLockedAt = null;
   }
 
-  update(deltaSeconds, gravity) {
+  update(deltaSeconds, upwardGravity, downwardGravity) {
     const previousVelocityY = this.velocityY;
+
+    const gravity =
+      this.velocityY < 0
+        ? upwardGravity
+        : downwardGravity;
 
     this.velocityY += gravity * deltaSeconds;
     this.velocityX *= 0.996;
     this.x += this.velocityX * deltaSeconds;
     this.y += this.velocityY * deltaSeconds;
-    this.updateRevealState(previousVelocityY, performance.now());
+
+    this.updateRevealState(
+      previousVelocityY,
+      performance.now()
+    );
   }
 
   throwToward(direction, force, shouldLockAfterThrow) {
@@ -2825,19 +2839,47 @@ class ReceiverRotationController {
 
 
 class ChallengePhysics {
-  static getSpawnImpulse(challengePhase) {
-    return GAME_CONFIG.spawnImpulse;
+  static getSpawnImpulse(
+    challengePhase,
+    fallDifficulty = "normal"
+  ) {
+    const gravityConfig =
+      getGravityDifficultyConfig(fallDifficulty);
+
+    const impulseMultiplier =
+      Math.sqrt(
+        gravityConfig.upwardGravityMultiplier
+      );
+
+    return (
+      GAME_CONFIG.spawnImpulse *
+      impulseMultiplier
+    );
   }
 
-  static getGravity(challengePhase, spawnEntryMode = "bottom", gravityDifficulty = "normal") {
-    const gravityConfig = getGravityDifficultyConfig(gravityDifficulty);
-    let gravity = GAME_CONFIG.gravity * gravityConfig.gravityMultiplier;
+  static getGravityValues(
+    challengePhase,
+    spawnEntryMode = "bottom",
+    fallDifficulty = "normal"
+  ) {
+    const gravityConfig =
+      getGravityDifficultyConfig(fallDifficulty);
+
+    let baseGravity = GAME_CONFIG.gravity;
 
     if (spawnEntryMode === "top") {
-      gravity *= GAME_CONFIG.topSpawnGravityMultiplier;
+      baseGravity *= GAME_CONFIG.topSpawnGravityMultiplier;
     }
 
-    return gravity;
+    return {
+      upwardGravity:
+        baseGravity *
+        gravityConfig.upwardGravityMultiplier,
+
+      downwardGravity:
+        baseGravity *
+        gravityConfig.downwardGravityMultiplier
+    };
   }
 }
 
@@ -5793,7 +5835,11 @@ class NeonSwipeGame {
 
     this.currentShapes.forEach((shape) => {
       if (shape.state !== "resolved") {
-        shape.update(deltaSeconds, shape.gravity || this.currentGravity);
+        shape.update(
+          deltaSeconds,
+          shape.upwardGravity,
+          shape.downwardGravity
+        );
       }
     });
 
@@ -5879,12 +5925,19 @@ class NeonSwipeGame {
     this.applyRevealModifierToShape(fallingShape, challengePhaseSnapshot);
     fallingShape.challengePhase = challengePhaseSnapshot;
     fallingShape.validationPhase = validationPhaseSnapshot;
-    fallingShape.gravity = this.scaler.x(ChallengePhysics.getGravity(
-      challengePhaseSnapshot,
-      fallingShape.spawnEntryMode,
-      challengePhaseSnapshot.modifierSnapshot?.gravityDifficulty ||
-        this.activeModifiers.gravityDifficulty
-    ));
+    const gravityValues =
+      ChallengePhysics.getGravityValues(
+        challengePhaseSnapshot,
+        fallingShape.spawnEntryMode,
+        challengePhaseSnapshot.modifierSnapshot?.fallDifficulty ||
+        this.activeModifiers.fallDifficulty
+      );
+
+    fallingShape.upwardGravity =
+      this.scaler.x(gravityValues.upwardGravity);
+
+    fallingShape.downwardGravity =
+      this.scaler.x(gravityValues.downwardGravity);
     fallingShape.advancedSpawnState = "none";
 
     return fallingShape;
@@ -6139,7 +6192,11 @@ class NeonSwipeGame {
 
     fallingShape.isMultiShape = true;
     fallingShape.multiShapeIndex = shapeIndex;
-    fallingShape.gravity *= GAME_CONFIG.multiShapeGravityMultiplier;
+    fallingShape.upwardGravity *=
+      GAME_CONFIG.multiShapeGravityMultiplier;
+
+    fallingShape.downwardGravity *=
+      GAME_CONFIG.multiShapeGravityMultiplier;
     return fallingShape;
   }
 
@@ -6457,7 +6514,11 @@ class NeonSwipeGame {
 
     this.currentShapes.forEach((shape) => {
       if (shape.state !== "resolved") {
-        shape.update(deltaSeconds, shape.gravity || this.currentGravity);
+        shape.update(
+          deltaSeconds,
+          shape.upwardGravity,
+          shape.downwardGravity
+        );
       }
     });
 
@@ -7453,7 +7514,14 @@ class NeonSwipeGame {
   }
 
   get currentChallengeSpawnImpulse() {
-    return ChallengePhysics.getSpawnImpulse(this.currentChallengePhase || this.currentPhase);
+    const challengePhase =
+      this.currentChallengePhase || this.currentPhase;
+
+    return ChallengePhysics.getSpawnImpulse(
+      challengePhase,
+      challengePhase?.modifierSnapshot?.fallDifficulty ||
+      this.activeModifiers.fallDifficulty
+    );
   }
 
   usesReceiverPermutation() {
@@ -7579,16 +7647,6 @@ class NeonSwipeGame {
 
   get activeModifiers() {
     return getModifiersForLevel(this.currentLevel);
-  }
-
-  get currentGravity() {
-    const challengePhase = this.currentChallengePhase || this.currentPhase;
-    return this.scaler.x(ChallengePhysics.getGravity(
-      challengePhase,
-      "bottom",
-      challengePhase?.modifierSnapshot?.gravityDifficulty ||
-        this.activeModifiers.gravityDifficulty
-    ));
   }
 
   get introVisualState() {
