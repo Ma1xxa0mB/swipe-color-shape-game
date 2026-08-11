@@ -61,19 +61,6 @@ const GAME_CONFIG = {
   impactRingEndRadius: 85,
   impactRingMaxOpacity: 0.85,
   impactRingLineWidth: 4,
-  level8StartScore: 14,
-  level9StartScore: 17,
-  level10StartScore: 20,
-  level11StartScore: 24,
-  level12StartScore: 27,
-  level13StartScore: 30,
-  level14StartScore: 36,
-  shortReceiverTrackLength: 160,
-  level15StartScore: 39,
-  level16StartScore: 42,
-  level17StartScore: 48,
-  level18StartScore: 53,
-  level19StartScore: 58,
   sideEntryHeightRatio: 0.58,
   sideEntryHorizontalImpulse: 460,
   sideEntryUpwardImpulse: -920,
@@ -107,6 +94,7 @@ const GAME_CONFIG = {
   topSpawnGravityMultiplier: 0.65,
   gameOverHoldDurationMs: 250,
   gameOverTransitionDurationMs: 700,
+  shortReceiverTrackLength: 160
 };
 
 const HOME_UI_DATA = {
@@ -128,29 +116,6 @@ const DEFAULT_SHAPE_LAYOUT = {
   bottomLeft: "square",
   bottomRight: "circle"
 };
-
-
-const GAME_PHASES = [
-  { level: 1, ruleName: "COLOR", startScore: 0 }
-  // { level: 2, ruleName: "SHAPE", startScore: 2 },
-  // { level: 3, ruleName: "COLOR", startScore: 4 },
-  // { level: 4, ruleName: "COLOR", startScore: 6 },
-  // { level: 5, ruleName: "COLOR", startScore: 8 },
-  // { level: 6, ruleName: "COLOR", startScore: 10 },
-  // { level: 7, ruleName: "COLOR", startScore: 12 },
-  // { level: 8, ruleName: "COLOR", startScore: GAME_CONFIG.level8StartScore },
-  // { level: 9, ruleName: "COLOR", startScore: GAME_CONFIG.level9StartScore },
-  // { level: 10, ruleName: "COLOR", startScore: GAME_CONFIG.level10StartScore },
-  // { level: 11, ruleName: "COLOR", startScore: GAME_CONFIG.level11StartScore },
-  // { level: 12, ruleName: "SHAPE", startScore: GAME_CONFIG.level12StartScore },
-  // { level: 13, ruleName: "COLOR", startScore: GAME_CONFIG.level13StartScore },
-  // { level: 14, ruleName: "COLOR", startScore: GAME_CONFIG.level14StartScore },
-  // { level: 15, ruleName: "COLOR", startScore: GAME_CONFIG.level15StartScore },
-  // { level: 16, ruleName: "COLOR", startScore: GAME_CONFIG.level16StartScore },
-  // { level: 17, ruleName: "COLOR", startScore: GAME_CONFIG.level17StartScore },
-  // { level: 18, ruleName: "COLOR", startScore: GAME_CONFIG.level18StartScore },
-  // { level: 19, ruleName: "COLOR", startScore: GAME_CONFIG.level19StartScore }
-];
 
 
 // const NEON_COLORS = {
@@ -210,16 +175,21 @@ const RULE_SEQUENCE_MODES = {
 
 const GRAVITY_DIFFICULTIES = {
   easy: {
-    upwardGravityMultiplier: 0.50,
-    downwardGravityMultiplier: 0.50
+    upwardGravityMultiplier: 0.85,
+    downwardGravityMultiplier: 0.85
   },
 
-  normal: {
+  medium: {
     upwardGravityMultiplier: 1,
     downwardGravityMultiplier: 1
   },
 
   hard: {
+    upwardGravityMultiplier: 1.5,
+    downwardGravityMultiplier: 1.5
+  },
+
+  veryHard: {
     upwardGravityMultiplier: 2.5,
     downwardGravityMultiplier: 1.5
   }
@@ -238,10 +208,12 @@ const DEFAULT_MODIFIERS = {
   spawn: "bottom",
   randomSpawn: false,
   slide: false,
+  slideDirection: "clockwise",
   shortReceivers: false,
   permutation: "none",
+  permutationFrequency: "none",
   rotation: "none",
-  ruleSequence: "easy",
+  ruleSequence: "none",
   shapeSwipe: false,
   multiShapeCount: 1,
   rhythmDifficulty: "easy",
@@ -250,12 +222,66 @@ const DEFAULT_MODIFIERS = {
 };
 
 // TEMP TEST MODIFIERS - remove this layer when level recipes become final.
-const TEMP_TEST_MODIFIER_OVERRIDES = {
-  fallDifficulty: "hard"
-};
+// const TEMP_TEST_MODIFIER_OVERRIDES = {
+//   fallDifficulty: "hard"
+// };
+
+const GAME_PHASES = [
+  { level: 1, ruleName: "COLOR", startScore: 0 },
+  { level: 2, ruleName: "SHAPE", startScore: 2 },
+  { level: 3, ruleName: "COLOR", startScore: 4 },
+  { level: 4, ruleName: "COLOR", startScore: 6 },
+  { level: 5, ruleName: "SHAPE", startScore: 8 },
+  { level: 6, ruleName: "COLOR", startScore: 10 },
+  { level: 7, ruleName: "SHAPE", startScore: 12 },
+  { level: 8, ruleName: "COLOR", startScore: 14 },
+  { level: 9, ruleName: "SHAPE", startScore: 16 },
+  { level: 10, ruleName: "COLOR", startScore: 22 },
+  { level: 11, ruleName: "SHAPE", startScore: 26 },
+  { level: 12, ruleName: "COLOR", startScore: 28 },
+  { level: 13, ruleName: "SHAPE", startScore: 30 },
+  { level: 14, ruleName: "COLOR", startScore: 32 },
+  { level: 15, ruleName: "SHAPE", startScore: 39 },
+  { level: 16, ruleName: "SHAPE", startScore: 40 },
+  // { level: 12, ruleName: "SHAPE", startScore: GAME_CONFIG.level12StartScore },
+  // { level: 13, ruleName: "COLOR", startScore: GAME_CONFIG.level13StartScore },
+  // { level: 14, ruleName: "COLOR", startScore: GAME_CONFIG.level14StartScore },
+  // { level: 15, ruleName: "COLOR", startScore: GAME_CONFIG.level15StartScore },
+  // { level: 16, ruleName: "COLOR", startScore: GAME_CONFIG.level16StartScore },
+  // { level: 17, ruleName: "COLOR", startScore: GAME_CONFIG.level17StartScore },
+  // { level: 18, ruleName: "COLOR", startScore: GAME_CONFIG.level18StartScore },
+  // { level: 19, ruleName: "COLOR", startScore: GAME_CONFIG.level19StartScore }
+];
+
+// level10StartScore: 20,
+// level11StartScore: 24,
+// level12StartScore: 27,
+// level13StartScore: 30,
+// level14StartScore: 36,
+// shortReceiverTrackLength: 160,
+// level15StartScore: 39,
+// level16StartScore: 42,
+// level17StartScore: 48,
+// level18StartScore: 53,
+// level19StartScore: 58,
 
 const LEVEL_MODIFIERS = {
-  1: {}
+  1: {},
+  2: {},
+  3: { permutation: "color", permutationFrequency: "once", ruleSequence: "easy", },
+  4: { permutation: "color", permutationFrequency: "once", ruleSequence: "easy", },
+  5: { permutation: "shape", permutationFrequency: "once", ruleSequence: "easy", },
+  6: { permutation: "both", permutationFrequency: "once", ruleSequence: "normal", },
+  7: { permutation: "color", permutationFrequency: "each", ruleSequence: "normal", fallDifficulty: "medium", },
+  8: { permutation: "shape", permutationFrequency: "each", ruleSequence: "normal", fallDifficulty: "medium", },
+  9: { permutation: "both", permutationFrequency: "each", ruleSequence: "normal", fallDifficulty: "medium", },
+  10: { slide: true, ruleSequence: "normal", fallDifficulty: "medium", },
+  11: { permutation: "both", permutationFrequency: "once", slide: true, ruleSequence: "normal", fallDifficulty: "medium", },
+  12: { permutation: "both", permutationFrequency: "once", slide: true, ruleSequence: "hard", fallDifficulty: "medium", rhythmDifficulty: "medium", },
+  13: { permutation: "both", permutationFrequency: "each", slide: true, ruleSequence: "hard", fallDifficulty: "medium", rhythmDifficulty: "medium", },
+  14: { slideDirection: "counterClockwise", permutation: "both", permutationFrequency: "each", slide: true, ruleSequence: "hard", fallDifficulty: "medium", rhythmDifficulty: "medium", },
+  15: { permutation: "both", permutationFrequency: "once", slide: true, ruleSequence: "hard", fallDifficulty: "medium", rhythmDifficulty: "medium", },
+  16: { flow: true, ruleSequence: "hard", fallDifficulty: "medium", rhythmDifficulty: "medium", },
   // 2: {},
   // 3: {},
   // 4: {},
@@ -284,15 +310,15 @@ const LEVEL_MODIFIERS = {
 const RHYTHM_DIFFICULTIES = {
   easy: {
     trigger: "afterResolution",
-    startDelayMs: 280,
-    minDelayMs: 120,
+    startDelayMs: 50,
+    minDelayMs: 0,
     progressionPerScore: 4
   },
   medium: {
     trigger: "afterSwipe",
-    startDelayMs: 120,
+    startDelayMs: 200,
     minDelayMs: 50,
-    progressionPerScore: 2
+    progressionPerScore: 3
   },
   hard: {
     trigger: "afterSwipe",
@@ -306,7 +332,7 @@ function getModifiersForLevel(level) {
   return {
     ...DEFAULT_MODIFIERS,
     ...(LEVEL_MODIFIERS[level] || {}),
-    ...TEMP_TEST_MODIFIER_OVERRIDES
+    //...TEMP_TEST_MODIFIER_OVERRIDES
   };
 }
 
@@ -315,7 +341,7 @@ function getRhythmConfig(rhythmDifficulty) {
 }
 
 function getGravityDifficultyConfig(fallDifficulty) {
-  return GRAVITY_DIFFICULTIES[fallDifficulty] || GRAVITY_DIFFICULTIES.normal;
+  return GRAVITY_DIFFICULTIES[fallDifficulty] || GRAVITY_DIFFICULTIES.medium;
 }
 
 function getRhythmDelayMs(score, rhythmDifficulty) {
@@ -1395,9 +1421,10 @@ class Arena {
 
   getReceiverVisibleTrackState(receiver, modifierVisualState = null) {
     const receiverModifierState = this.getReceiverModifierState(modifierVisualState);
-    const movingOffset = receiverModifierState.isSliding
-      ? receiverModifierState.movingOffset
-      : 0;
+    const movingOffset =
+      receiverModifierState.isSliding || modifierVisualState?.flow
+        ? receiverModifierState.movingOffset
+        : 0;
     const baseLength = this.getReceiverBaseTrackLength(receiverModifierState.isShort);
     const pulseAdjustedLength = this.getReceiverPulseAdjustedTrackLength(
       receiverModifierState.isShort,
@@ -1457,7 +1484,7 @@ class Arena {
     const quarterLength = this.getRoundedTrackPerimeterLength() / this.receivers.length;
     const cycleOffset = flowVisualState.cycleIndex * quarterLength;
     const logicalStartDistance = startDistance + cycleOffset;
-    const minLength = baseLength * flowVisualState.minLengthMultiplier;
+    const minLength = 0
     const isContracting = flowVisualState.progress < 0.5;
     const phaseProgress = isContracting
       ? flowVisualState.progress / 0.5
@@ -1469,7 +1496,8 @@ class Arena {
     const flowStartDistance = isContracting
       ? logicalStartDistance + (baseLength - visibleLength)
       : logicalStartDistance + baseLength;
-    const iconDistance = flowStartDistance + visibleLength;
+    const iconDistance =
+  flowStartDistance + visibleLength / 2;
     const isNearlyCollapsed = visibleLength <= minLength + 0.001;
 
     return {
@@ -3010,20 +3038,51 @@ class FlowController {
   }
 
   reset() {
-    this.startedAt = performance.now();
+    this.startedAt = null;
+    this.isAligning = false;
+  }
+
+  startAlignment() {
+    if (this.startedAt !== null || this.isAligning) return;
+
+    this.isAligning = true;
+  }
+
+  startFlow(currentTime) {
+    this.isAligning = false;
+    this.startedAt = currentTime;
   }
 
   getVisualState(currentTime, isEnabled) {
-    if (!isEnabled) return null;
+    if (!isEnabled) {
+      this.reset();
+      return null;
+    }
 
-    const elapsedMs = currentTime - this.startedAt;
-    const cycleIndex = Math.floor(elapsedMs / this.cycleDurationMs);
-    const elapsedCycleMs = elapsedMs % this.cycleDurationMs;
+    if (this.startedAt === null) {
+      return null;
+    }
+
+    const elapsedMs =
+      currentTime - this.startedAt;
+
+    const cycleIndex =
+      Math.floor(
+        elapsedMs / this.cycleDurationMs
+      );
+
+    const elapsedCycleMs =
+      elapsedMs % this.cycleDurationMs;
 
     return {
-      progress: elapsedCycleMs / this.cycleDurationMs,
+      progress:
+        elapsedCycleMs /
+        this.cycleDurationMs,
+
       cycleIndex,
-      minLengthMultiplier: this.minLengthMultiplier
+
+      minLengthMultiplier:
+        this.minLengthMultiplier
     };
   }
 }
@@ -5694,6 +5753,7 @@ class NeonSwipeGame {
     this.pendingModifierIntro = null;
     this.deferredNextChallengeBoundaryPhase = null;
     this.movingReceiverOffset = 0;
+
   }
 
   start() {
@@ -6443,7 +6503,7 @@ class NeonSwipeGame {
       return;
     }
 
-    if (this.usesReceiverPermutation()) {
+    if (this.usesRepeatedPermutation()) {
       this.startReceiverPermutation(resolvedChallengePhase);
     }
   }
@@ -6460,7 +6520,7 @@ class NeonSwipeGame {
       return;
     }
 
-    if (this.usesReceiverPermutation()) {
+    if (this.usesRepeatedPermutation()) {
       this.startReceiverPermutation(resolvedChallengePhase);
     }
   }
@@ -6562,7 +6622,7 @@ class NeonSwipeGame {
       return;
     }
 
-    if (this.usesReceiverPermutation()) {
+    if (this.usesRepeatedPermutation()) {
       this.startReceiverPermutation(
         resolvedChallengePhase
       );
@@ -6616,7 +6676,12 @@ class NeonSwipeGame {
       return;
     }
 
-    if (this.usesReceiverPermutation()) {
+    if (this.shouldStartOncePermutation(resolvedChallengePhase)) {
+      this.startReceiverPermutation(this.currentPhase);
+      return;
+    }
+
+    if (this.usesRepeatedPermutation()) {
       this.startReceiverPermutation(resolvedChallengePhase);
       return;
     }
@@ -6766,6 +6831,16 @@ class NeonSwipeGame {
     }
   }
 
+  updateReceiverRotations(currentTime) {
+    this.receiverEffects.updateRotations(
+      currentTime,
+      this.currentPhase,
+      this.state,
+      this.activeModifiers.rotation,
+      this.activeModifiers.permutation
+    );
+  }
+
   startReceiverPermutation(permutationPhase) {
     const permutationMode = this.activeModifiers.permutation;
 
@@ -6852,26 +6927,116 @@ class NeonSwipeGame {
     );
   }
 
-  updateReceiverRotations(currentTime) {
-    const rotationPhase = this.currentChallengePhase || this.currentPhase;
-
-    this.receiverEffects.updateRotations(
-      currentTime,
-      rotationPhase,
-      this.state,
-      this.activeModifiers.rotation,
-      this.activeModifiers.permutation
-    );
-  }
-
   updateMovingReceiverTracks(deltaSeconds) {
+    const perimeterLength =
+      this.arena.getOuterTrackPerimeterLength();
+
+    const quarterLength =
+      perimeterLength /
+      this.arena.receivers.length;
+
+
+    // FLOW vient de devenir actif :
+    // il reprend le mouvement actuel du Slide.
+    if (
+      this.activeModifiers.flow &&
+      this.flowController.startedAt === null &&
+      !this.flowController.isAligning
+    ) {
+      this.flowController.startAlignment();
+    }
+
+
+    // PHASE D'ALIGNEMENT FLOW
+    if (
+      this.activeModifiers.flow &&
+      this.flowController.isAligning
+    ) {
+      const previousOffset =
+        this.movingReceiverOffset;
+
+      // Flow continue dans le sens naturel clockwise.
+      const nextOffset =
+        (
+          previousOffset +
+          GAME_CONFIG.movingReceiverSpeed *
+          deltaSeconds
+        ) %
+        perimeterLength;
+
+
+      const previousQuarterIndex =
+        Math.floor(
+          previousOffset /
+          quarterLength
+        );
+
+      const nextQuarterIndex =
+        Math.floor(
+          nextOffset /
+          quarterLength
+        );
+
+      const wrappedAround =
+        nextOffset < previousOffset;
+
+
+      // On vient de franchir un quart exact.
+      if (
+        nextQuarterIndex !== previousQuarterIndex ||
+        wrappedAround
+      ) {
+        this.movingReceiverOffset =
+          wrappedAround
+            ? 0
+            : (previousQuarterIndex + 1) *
+            quarterLength;
+
+        this.flowController.startFlow(
+          performance.now()
+        );
+
+        return;
+      }
+
+
+      this.movingReceiverOffset =
+        nextOffset;
+
+      return;
+    }
+
+
+    // Une fois Flow démarré,
+    // plus de mouvement Slide continu.
+    if (this.activeModifiers.flow) {
+      return;
+    }
+
+
+    // Mode normal sans Slide.
     if (!this.activeModifiers.slide) {
       this.movingReceiverOffset = 0;
       return;
     }
 
-    const perimeterLength = this.arena.getOuterTrackPerimeterLength();
-    this.movingReceiverOffset = (this.movingReceiverOffset + GAME_CONFIG.movingReceiverSpeed * deltaSeconds) % perimeterLength;
+
+    // SLIDE classique.
+    const directionMultiplier =
+      this.activeModifiers.slideDirection ===
+        "counterClockwise"
+        ? -1
+        : 1;
+
+    this.movingReceiverOffset =
+      (
+        this.movingReceiverOffset +
+        GAME_CONFIG.movingReceiverSpeed *
+        directionMultiplier *
+        deltaSeconds +
+        perimeterLength
+      ) %
+      perimeterLength;
   }
 
   prepareSwipeFromPoint(startPoint) {
@@ -7467,9 +7632,17 @@ class NeonSwipeGame {
         this.activeModifiers.scatter
       ),
       receivers: {
-        isSliding: Boolean(this.activeModifiers.slide),
-        isShort: Boolean(this.activeModifiers.shortReceivers),
-        movingOffset: this.movingReceiverOffset
+        isSliding: Boolean(
+          this.activeModifiers.slide ||
+          this.flowController.isAligning
+        ),
+
+        isShort: Boolean(
+          this.activeModifiers.shortReceivers
+        ),
+
+        movingOffset:
+          this.movingReceiverOffset
       }
     };
   }
@@ -7526,6 +7699,33 @@ class NeonSwipeGame {
 
   usesReceiverPermutation() {
     return usesAnyPermutation(this.activeModifiers.permutation);
+  }
+
+  usesRepeatedPermutation() {
+    return (
+      this.usesReceiverPermutation() &&
+      this.activeModifiers.permutationFrequency === "each"
+    );
+  }
+
+  shouldStartOncePermutation(resolvedChallengePhase) {
+    const previousLevel = resolvedChallengePhase?.level;
+    const nextLevel = this.currentLevel;
+
+    if (!previousLevel || previousLevel === nextLevel) {
+      return false;
+    }
+
+    const previousModifiers =
+      getModifiersForLevel(previousLevel);
+
+    const nextModifiers =
+      getModifiersForLevel(nextLevel);
+
+    return (
+      nextModifiers.permutation !== "none" &&
+      nextModifiers.permutationFrequency === "once"
+    );
   }
 
   usesReceiverRotation() {
