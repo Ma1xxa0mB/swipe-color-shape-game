@@ -165,13 +165,29 @@ const VOID_COLOR_IDS = ["pink", "purple", "white"];
 const RECEIVER_PERMUTATION_MODES = ["none", "color", "shape", "both"];
 const SPAWN_MODES = ["bottom", "bottomCorners", "top", "side"];
 const RECEIVER_ROTATION_MODES = ["none", "color", "shape", "both", "rule"];
-const RULE_SEQUENCE_MODE_NAMES = ["none", "easy", "normal", "hard"];
+const RULE_SEQUENCE_MODE_NAMES = ["none", "easy", "medium", "hard", "veryHard"];
 const RULE_SEQUENCE_MODES = {
   none: null,
-  easy: { minAnswers: 2, maxAnswers: 3 },
-  normal: { minAnswers: 1, maxAnswers: 3 },
-  hard: { minAnswers: 1, maxAnswers: 2 }
+  easy: { minAnswers: 2, maxAnswers: 4 },
+  medium: { minAnswers: 2, maxAnswers: 3 },
+  hard: { minAnswers: 1, maxAnswers: 3 },
+  veryHard: { minAnswers: 1, maxAnswers: 2 }
 };
+
+const RULE_SEQUENCE_PHASES = [
+  { startScore: 0, mode: "none" },
+  { startScore: 4, mode: "easy" },
+  { startScore: 24, mode: "medium" },
+  { startScore: 44, mode: "hard" },
+  {startScore: 64, mode: "veryHard" }
+];
+
+function getRuleSequenceModeForScore(score) {
+  return [...RULE_SEQUENCE_PHASES]
+    .reverse()
+    .find((phase) => score >= phase.startScore)
+    ?.mode || "none";
+}
 
 const GRAVITY_DIFFICULTIES = {
   easy: {
@@ -213,7 +229,6 @@ const DEFAULT_MODIFIERS = {
   permutation: "none",
   permutationFrequency: "none",
   rotation: "none",
-  ruleSequence: "none",
   shapeSwipe: false,
   multiShapeCount: 1,
   rhythmDifficulty: "easy",
@@ -229,20 +244,21 @@ const DEFAULT_MODIFIERS = {
 const GAME_PHASES = [
   { level: 1, ruleName: "COLOR", startScore: 0 },
   { level: 2, ruleName: "SHAPE", startScore: 2 },
+
   { level: 3, ruleName: "COLOR", startScore: 4 },
   { level: 4, ruleName: "COLOR", startScore: 6 },
-  { level: 5, ruleName: "SHAPE", startScore: 8 },
+  { level: 5, ruleName: "COLOR", startScore: 8 },
   { level: 6, ruleName: "COLOR", startScore: 10 },
-  { level: 7, ruleName: "SHAPE", startScore: 12 },
+  { level: 7, ruleName: "COLOR", startScore: 12 },
   { level: 8, ruleName: "COLOR", startScore: 14 },
-  { level: 9, ruleName: "SHAPE", startScore: 16 },
+  { level: 9, ruleName: "COLOR", startScore: 16 },
   { level: 10, ruleName: "COLOR", startScore: 22 },
-  { level: 11, ruleName: "SHAPE", startScore: 26 },
+  { level: 11, ruleName: "COLOR", startScore: 26 },
   { level: 12, ruleName: "COLOR", startScore: 28 },
-  { level: 13, ruleName: "SHAPE", startScore: 30 },
+  { level: 13, ruleName: "COLOR", startScore: 30 },
   { level: 14, ruleName: "COLOR", startScore: 32 },
-  { level: 15, ruleName: "SHAPE", startScore: 39 },
-  { level: 16, ruleName: "SHAPE", startScore: 40 },
+  { level: 15, ruleName: "COLOR", startScore: 39 },
+  { level: 16, ruleName: "COLOR", startScore: 40 }
   // { level: 12, ruleName: "SHAPE", startScore: GAME_CONFIG.level12StartScore },
   // { level: 13, ruleName: "COLOR", startScore: GAME_CONFIG.level13StartScore },
   // { level: 14, ruleName: "COLOR", startScore: GAME_CONFIG.level14StartScore },
@@ -268,20 +284,20 @@ const GAME_PHASES = [
 const LEVEL_MODIFIERS = {
   1: {},
   2: {},
-  3: { permutation: "color", permutationFrequency: "once", ruleSequence: "easy", },
-  4: { permutation: "color", permutationFrequency: "once", ruleSequence: "easy", },
-  5: { permutation: "shape", permutationFrequency: "once", ruleSequence: "easy", },
-  6: { permutation: "both", permutationFrequency: "once", ruleSequence: "normal", },
-  7: { permutation: "color", permutationFrequency: "each", ruleSequence: "normal", fallDifficulty: "medium", },
-  8: { permutation: "shape", permutationFrequency: "each", ruleSequence: "normal", fallDifficulty: "medium", },
-  9: { permutation: "both", permutationFrequency: "each", ruleSequence: "normal", fallDifficulty: "medium", },
-  10: { slide: true, ruleSequence: "normal", fallDifficulty: "medium", },
-  11: { permutation: "both", permutationFrequency: "once", slide: true, ruleSequence: "normal", fallDifficulty: "medium", },
-  12: { permutation: "both", permutationFrequency: "once", slide: true, ruleSequence: "hard", fallDifficulty: "medium", rhythmDifficulty: "medium", },
-  13: { permutation: "both", permutationFrequency: "each", slide: true, ruleSequence: "hard", fallDifficulty: "medium", rhythmDifficulty: "medium", },
-  14: { slideDirection: "counterClockwise", permutation: "both", permutationFrequency: "each", slide: true, ruleSequence: "hard", fallDifficulty: "medium", rhythmDifficulty: "medium", },
-  15: { permutation: "both", permutationFrequency: "once", slide: true, ruleSequence: "hard", fallDifficulty: "medium", rhythmDifficulty: "medium", },
-  16: { flow: true, ruleSequence: "hard", fallDifficulty: "medium", rhythmDifficulty: "medium", },
+  3: { permutation: "color", permutationFrequency: "once" },
+  4: { permutation: "color", permutationFrequency: "once" },
+  5: { permutation: "shape", permutationFrequency: "once" },
+  6: { permutation: "both", permutationFrequency: "once", },
+  7: { permutation: "color", permutationFrequency: "each", fallDifficulty: "medium", },
+  8: { permutation: "shape", permutationFrequency: "each", fallDifficulty: "medium", },
+  9: { permutation: "both", permutationFrequency: "each", fallDifficulty: "medium", },
+  10: { slide: true, fallDifficulty: "medium", },
+  11: { permutation: "both", permutationFrequency: "once", slide: true, fallDifficulty: "medium", },
+  12: { permutation: "both", permutationFrequency: "once", slide: true, fallDifficulty: "medium", rhythmDifficulty: "medium", },
+  13: { permutation: "both", permutationFrequency: "each", slide: true, fallDifficulty: "medium", rhythmDifficulty: "medium", },
+  14: { slideDirection: "counterClockwise", permutation: "both", permutationFrequency: "each", slide: true, fallDifficulty: "medium", rhythmDifficulty: "medium", },
+  15: { permutation: "both", permutationFrequency: "once", slide: true, fallDifficulty: "medium", rhythmDifficulty: "medium", },
+  16: { flow: true, fallDifficulty: "medium", rhythmDifficulty: "medium", },
   // 2: {},
   // 3: {},
   // 4: {},
@@ -1481,31 +1497,75 @@ class Arena {
   }
 
   getReceiverFlowTrackState(startDistance, baseLength, flowVisualState) {
-    const quarterLength = this.getRoundedTrackPerimeterLength() / this.receivers.length;
-    const cycleOffset = flowVisualState.cycleIndex * quarterLength;
-    const logicalStartDistance = startDistance + cycleOffset;
-    const minLength = 0
-    const isContracting = flowVisualState.progress < 0.5;
-    const phaseProgress = isContracting
-      ? flowVisualState.progress / 0.5
-      : (flowVisualState.progress - 0.5) / 0.5;
-    const easedProgress = (1 - Math.cos(phaseProgress * Math.PI)) / 2;
-    const visibleLength = isContracting
-      ? baseLength + (minLength - baseLength) * easedProgress
-      : minLength + (baseLength - minLength) * easedProgress;
-    const flowStartDistance = isContracting
-      ? logicalStartDistance + (baseLength - visibleLength)
-      : logicalStartDistance + baseLength;
+    const quarterLength =
+      this.getRoundedTrackPerimeterLength() /
+      this.receivers.length;
+
+    const cycleOffset =
+      flowVisualState.cycleIndex * quarterLength;
+
+    const logicalStartDistance =
+      startDistance + cycleOffset;
+
+    const minLength =
+      this.scaler.x(
+        GAME_CONFIG.shortReceiverTrackLength
+      );
+
+    const isContracting =
+      flowVisualState.progress < 0.5;
+
+    const phaseProgress =
+      isContracting
+        ? flowVisualState.progress / 0.5
+        : (flowVisualState.progress - 0.5) / 0.5;
+
+    const easedProgress =
+      (1 - Math.cos(phaseProgress * Math.PI)) / 2;
+
+
+    const visibleLength =
+      isContracting
+        ? baseLength -
+        (baseLength - minLength) *
+        easedProgress
+        : minLength +
+        (baseLength - minLength) *
+        easedProgress;
+
+
+    let flowStartDistance;
+
+    if (isContracting) {
+      // Le début avance pendant que le receiver rétrécit.
+      // L'autre extrémité reste fixée.
+      flowStartDistance =
+        logicalStartDistance +
+        (baseLength - visibleLength);
+    } else {
+      // On repart EXACTEMENT de la position atteinte
+      // lorsqu'il était en taille shortReceiver.
+      //
+      // Puis le début avance progressivement jusqu'au
+      // début du quart suivant pendant que l'autre côté grandit.
+      flowStartDistance =
+        logicalStartDistance +
+        (baseLength - minLength) +
+        minLength * easedProgress;
+    }
+
+
     const iconDistance =
-  flowStartDistance + visibleLength / 2;
-    const isNearlyCollapsed = visibleLength <= minLength + 0.001;
+      flowStartDistance +
+      visibleLength / 2;
+
 
     return {
       startDistance: flowStartDistance,
       length: visibleLength,
       iconDistance,
-      iconVisible: !isNearlyCollapsed,
-      trackVisible: visibleLength > 0
+      iconVisible: true,
+      trackVisible: true
     };
   }
 
@@ -6633,7 +6693,7 @@ class NeonSwipeGame {
     this.dynamicRuleSequence.consumeSuccessfulAnswer(
       previousChallengePhase,
       this.currentPhase,
-      this.activeModifiers.ruleSequence
+      this.currentRuleSequenceMode
     );
   }
 
@@ -6643,7 +6703,8 @@ class NeonSwipeGame {
       this.getCurrentRhythmConfig().trigger === "afterResolution";
 
     if (isEasyRhythm) {
-      const previousRuleName = this.currentRuleName;
+      const previousRuleName =
+        resolvedChallengePhase.ruleName;
 
       this.advanceRuleSequenceForNextLogicalChallenge(
         resolvedChallengePhase
@@ -7837,12 +7898,16 @@ class NeonSwipeGame {
 
     return this.dynamicRuleSequence.getPhaseWithCurrentRule(
       phaseWithRunLayout,
-      this.activeModifiers.ruleSequence
+      this.currentRuleSequenceMode
     );
   }
 
   get currentLevel() {
     return this.rules.getLevel(this.score);
+  }
+
+  get currentRuleSequenceMode() {
+    return getRuleSequenceModeForScore(this.score);
   }
 
   get activeModifiers() {
